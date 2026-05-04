@@ -114,6 +114,7 @@
         import { checkAuth, injectSidebar } from '../assets/js/layout.js';
         import { showToast, formatDate, getStatus, getTypeBadgeClass } from '../assets/js/helpers.js';
         import { getAllAuthorizations, getAuthorization, deleteAuthorization, filterAuthorizations } from '../assets/js/database.js';
+        import { downloadGeneratedPDF } from '../assets/js/pdf-generator.js';
 
         injectSidebar('archive');
 
@@ -347,6 +348,11 @@
                 if (rec.pdfUrl) {
                     footerHtml += `<a href="${rec.pdfUrl}" target="_blank" class="btn btn-secondary"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Voir le PDF</a>`;
                 }
+                // bouton imprimer — génère le PDF officiel depuis les données archivées
+                footerHtml += `<button class="btn btn-secondary" id="btnPrint">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                    Imprimer
+                </button>`;
                 if (currentUser?.role === 'admin') {
                     footerHtml += `<button class="btn btn-danger" id="btnDelete" data-id="${rec.id}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> Supprimer</button>`;
                 }
@@ -356,6 +362,16 @@
                 document.getElementById('detailModal').classList.add('show');
 
                 document.getElementById('btnCloseModal').addEventListener('click', closeModal);
+
+                // bouton imprimer : génère le PDF et ouvre la boite d'impression
+                document.getElementById('btnPrint').addEventListener('click', () => {
+                    try {
+                        downloadGeneratedPDF(rec);
+                        showToast('PDF généré — utilisez Ctrl+P pour imprimer', 'info');
+                    } catch (e) {
+                        showToast('Erreur génération PDF: ' + e.message, 'error');
+                    }
+                });
 
                 const btnDelete = document.getElementById('btnDelete');
                 if (btnDelete) {
