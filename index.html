@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ANAC Archives DTA</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+    <!-- ecran de chargement le temps que Firebase verifie l'auth -->
+    <div class="loading-screen">
+        <div class="logo-container">
+            <div class="logo-circle">
+                <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                </svg>
+            </div>
+            <h1>ANAC Archives DTA</h1>
+            <p>Système d'archivage des autorisations</p>
+            <div class="spinner"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { auth } from './assets/js/firebase-config.js';
+        import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+        // petit délai pour laisser le temps à l'animation de s'afficher,
+        // sinon ca passe trop vite et c'est moche
+        setTimeout(() => {
+            onAuthStateChanged(auth, (user) => {
+                if (user) {
+                    window.location.href = 'pages/dashboard.html';
+                } else {
+                    window.location.href = 'pages/login.html';
+                }
+            });
+        }, 1500);
+    </script>
+</body>
+</html>

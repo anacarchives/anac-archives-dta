@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paramètres - ANAC Archives DTA</title>
+    <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+    <div class="app-container">
+        <main class="main-content">
+            <div class="topbar">
+                <div>
+                    <div class="page-title">Paramètres</div>
+                    <div class="page-subtitle">Configuration et informations système</div>
+                </div>
+            </div>
+            
+            <div class="content-wrapper" style="max-width: 800px;">
+                
+                <!-- Profil -->
+                <div class="section-card">
+                    <div class="section-title">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                        Mon profil
+                    </div>
+                    
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <div class="detail-label">Nom</div>
+                            <div class="detail-value" id="profileName">—</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Email</div>
+                            <div class="detail-value" id="profileEmail">—</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Rôle</div>
+                            <div class="detail-value" id="profileRole">—</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">UID</div>
+                            <div class="detail-value" style="font-family:monospace; font-size:12px;" id="profileUid">—</div>
+                        </div>
+                    </div>
+                    
+                    <div class="btn-row">
+                        <button class="btn btn-secondary" id="btnChangePassword">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                            Changer mon mot de passe
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Informations système -->
+                <div class="section-card">
+                    <div class="section-title">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                        À propos du système
+                    </div>
+                    
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <div class="detail-label">Application</div>
+                            <div class="detail-value">ANAC Archives DTA</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Version</div>
+                            <div class="detail-value">1.0.0</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Service</div>
+                            <div class="detail-value">Direction du Transport Aérien</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Organisation</div>
+                            <div class="detail-value">ANAC Mauritanie</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Configuration (admin) -->
+                <div class="section-card" id="adminSection" style="display:none;">
+                    <div class="section-title">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                        Configuration (Administrateur)
+                    </div>
+                    
+                    <div style="background:var(--bg); border-radius:8px; padding:14px; font-size:13px; color:var(--text-light); line-height:1.6;">
+                        <strong style="color:var(--text);">Configuration Firebase</strong> — Les paramètres techniques (clés API, projet Firebase, etc.) se trouvent dans le fichier <code style="background:white; padding:2px 6px; border-radius:4px;">assets/js/firebase-config.js</code>.
+                        
+                        <p style="margin-top:10px;"><strong style="color:var(--text);">Console Firebase :</strong> 
+                        <a href="https://console.firebase.google.com" target="_blank" style="color:var(--primary);">console.firebase.google.com</a></p>
+                        
+                        <p style="margin-top:10px;"><strong style="color:var(--text);">Statistiques d'utilisation :</strong></p>
+                        <ul style="margin-top:6px; padding-left:20px;">
+                            <li>Total documents archivés : <span id="totalDocs">—</span></li>
+                            <li>Plan Firebase actuel : Gratuit (Spark)</li>
+                            <li>Limite documents Firestore : 50 000 lectures/jour</li>
+                            <li>Limite stockage : 1 Go gratuit</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <!-- Aide -->
+                <div class="section-card">
+                    <div class="section-title">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                        Aide rapide
+                    </div>
+                    
+                    <div style="font-size:14px; line-height:1.8; color:var(--text);">
+                        <p style="margin-bottom:10px;"><strong>📥 Pour archiver une autorisation :</strong> Allez dans "Nouvelle saisie", glissez le PDF scanné, l'IA remplit les champs automatiquement, vérifiez et enregistrez.</p>
+                        <p style="margin-bottom:10px;"><strong>🔍 Pour rechercher :</strong> Utilisez la page "Archive" avec les filtres (numéro, opérateur, immatriculation, date, type).</p>
+                        <p style="margin-bottom:10px;"><strong>📄 Pour générer un nouveau document :</strong> Page "Générateur" — remplissez le formulaire et téléchargez le PDF prêt à imprimer (pensez à utiliser le papier à entête ANAC).</p>
+                        <p style="margin-bottom:10px;"><strong>📦 Pour exporter en masse :</strong> Page "Export" — choisissez les filtres, téléchargez en Excel ou en ZIP de PDF.</p>
+                        <p><strong>⚠️ Problème ?</strong> Contactez l'administrateur du système.</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script type="module">
+        import { checkAuth, injectSidebar } from '../assets/js/layout.js';
+        import { showToast } from '../assets/js/helpers.js';
+        import { auth } from '../assets/js/firebase-config.js';
+        import { sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getStats } from '../assets/js/database.js';
+        
+        injectSidebar('settings');
+        
+        checkAuth(async (user, userData) => {
+            document.getElementById('profileName').textContent = userData.name || '—';
+            document.getElementById('profileEmail').textContent = userData.email || user.email;
+            document.getElementById('profileRole').innerHTML = userData.role === 'admin' ? 
+                '<span class="role-badge admin">Administrateur</span>' : 
+                '<span class="role-badge agent">Agent</span>';
+            document.getElementById('profileUid').textContent = user.uid;
+            
+            if (userData.role === 'admin') {
+                document.getElementById('adminSection').style.display = 'block';
+                try {
+                    const stats = await getStats();
+                    document.getElementById('totalDocs').textContent = stats.total;
+                } catch (e) {
+                    console.error(e);
+                }
+            }
+        });
+        
+        document.getElementById('btnChangePassword').addEventListener('click', async () => {
+            if (!auth.currentUser) return;
+            if (!confirm(`Un email de réinitialisation va être envoyé à ${auth.currentUser.email}.\nContinuer ?`)) return;
+            
+            try {
+                await sendPasswordResetEmail(auth, auth.currentUser.email);
+                showToast('Email de réinitialisation envoyé', 'success');
+            } catch (e) {
+                showToast('Erreur: ' + e.message, 'error');
+            }
+        });
+    </script>
+</body>
+</html>

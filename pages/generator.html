@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Générateur - ANAC Archives DTA</title>
+    <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+    <div class="app-container">
+        <main class="main-content">
+            <div class="topbar">
+                <div>
+                    <div class="page-title">Générateur de documents</div>
+                    <div class="page-subtitle">Remplissez les champs et générez un PDF officiel prêt à imprimer</div>
+                </div>
+            </div>
+            
+            <div class="content-wrapper" style="max-width: 900px;">
+                <div class="section-card">
+                    <div class="section-title">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                        Informations de l'autorisation
+                    </div>
+                    <div class="section-subtitle">Le PDF généré laisse un espace en haut pour l'entête ANAC qui sera ajouté à l'impression</div>
+                    
+                    <form id="genForm">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label class="form-label">N° Autorisation *</label>
+                                <input type="text" id="numero" class="form-input" required placeholder="ex: SAT-0303-26">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">Type *</label>
+                                <select id="typeCode" class="form-select" required>
+                                    <option value="">— Sélectionner —</option>
+                                    <option value="SAT">SAT - Survol et Atterrissage</option>
+                                    <option value="SUR">SUR - Survol uniquement</option>
+                                    <option value="ATT">ATT - Atterrissage uniquement</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">Date d'émission *</label>
+                                <input type="date" id="dateEmission" class="form-input" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">Date de réception</label>
+                                <input type="date" id="dateReception" class="form-input">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">Opérateur *</label>
+                                <input type="text" id="operateur" class="form-input" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">Destinataire (A/To) *</label>
+                                <input type="text" id="destinataire" class="form-input" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">Type d'aéronef *</label>
+                                <input type="text" id="aeronefType" class="form-input" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">Immatriculation *</label>
+                                <input type="text" id="immatriculation" class="form-input" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">Motif *</label>
+                                <input type="text" id="motif" class="form-input" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">Référence</label>
+                                <input type="text" id="reference" class="form-input">
+                            </div>
+                            
+                            <div class="form-group full">
+                                <label class="form-label">Route / Itinéraire *</label>
+                                <input type="text" id="route" class="form-input" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">Date début validité *</label>
+                                <input type="date" id="dateDebutValidite" class="form-input" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">Date fin validité *</label>
+                                <input type="date" id="dateFinValidite" class="form-input" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">Visa SRT</label>
+                                <input type="text" id="visaSRT" class="form-input" value="A">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">Extension validité</label>
+                                <input type="text" id="validiteExtension" class="form-input" placeholder="ex: +72H">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">Signataire</label>
+                                <input type="text" id="signataire" class="form-input" value="AHMED BABA AHMED">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">Titre signataire</label>
+                                <input type="text" id="titreSignataire" class="form-input" value="Directeur Général">
+                            </div>
+                        </div>
+                        
+                        <div class="btn-row">
+                            <button type="button" class="btn btn-secondary" id="btnPreview">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                                Aperçu
+                            </button>
+                            <button type="submit" class="btn btn-primary" style="width:auto; padding:12px 28px;">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                Générer et télécharger
+                            </button>
+                            <button type="button" class="btn btn-success" id="btnGenAndSave" style="width:auto; padding:12px 28px;">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                                Générer + Archiver
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                
+                <!-- Aperçu PDF -->
+                <div class="section-card" id="previewSection" style="display:none;">
+                    <div class="section-title">Aperçu du document</div>
+                    <iframe id="pdfPreview" style="width:100%; height:700px; border:1px solid var(--border); border-radius:8px;"></iframe>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script type="module">
+        import { checkAuth, injectSidebar } from '../assets/js/layout.js';
+        import { showToast, fromISODate } from '../assets/js/helpers.js';
+        import { generateAuthorizationPDF, downloadGeneratedPDF, getPDFDataURI, getPDFBlob } from '../assets/js/pdf-generator.js';
+        import { createAuthorization } from '../assets/js/database.js';
+
+        injectSidebar('generator');
+        checkAuth();
+
+        // mappe le code court vers le label complet (utilisé sur le PDF)
+        const TYPE_LABELS = {
+            SAT: 'Survol et Atterrissage',
+            SUR: 'Survol',
+            ATT: 'Atterrissage',
+            AUTRE: 'Autre'
+        };
+
+        function getFormData() {
+            const code = document.getElementById('typeCode').value;
+            return {
+                numero:             document.getElementById('numero').value.trim(),
+                typeCode:           code,
+                type:               TYPE_LABELS[code] || '',
+                dateEmission:       fromISODate(document.getElementById('dateEmission').value),
+                dateReception:      fromISODate(document.getElementById('dateReception').value),
+                operateur:          document.getElementById('operateur').value.trim(),
+                destinataire:       document.getElementById('destinataire').value.trim(),
+                aeronefType:        document.getElementById('aeronefType').value.trim(),
+                immatriculation:    document.getElementById('immatriculation').value.trim(),
+                motif:              document.getElementById('motif').value.trim(),
+                route:              document.getElementById('route').value.trim(),
+                dateDebutValidite:  fromISODate(document.getElementById('dateDebutValidite').value),
+                dateFinValidite:    fromISODate(document.getElementById('dateFinValidite').value),
+                visaSRT:            document.getElementById('visaSRT').value.trim(),
+                validiteExtension:  document.getElementById('validiteExtension').value.trim(),
+                reference:          document.getElementById('reference').value.trim(),
+                signataire:         document.getElementById('signataire').value.trim(),
+                titreSignataire:    document.getElementById('titreSignataire').value.trim()
+            };
+        }
+
+        function validateForm() {
+            const required = ['numero','typeCode','dateEmission','operateur','destinataire',
+                              'aeronefType','immatriculation','motif','route',
+                              'dateDebutValidite','dateFinValidite'];
+            for (const id of required) {
+                const el = document.getElementById(id);
+                if (!el.value.trim()) {
+                    el.focus();
+                    showToast('Veuillez remplir tous les champs obligatoires', 'warning');
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        // Aperçu : génère le PDF et l'affiche dans une iframe
+        document.getElementById('btnPreview').addEventListener('click', () => {
+            if (!validateForm()) return;
+            const data = getFormData();
+            document.getElementById('pdfPreview').src = getPDFDataURI(data);
+            document.getElementById('previewSection').style.display = 'block';
+            document.getElementById('previewSection').scrollIntoView({ behavior: 'smooth' });
+        });
+
+        // Téléchargement simple (sans archivage)
+        document.getElementById('genForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            if (!validateForm()) return;
+            try {
+                downloadGeneratedPDF(getFormData());
+                showToast('PDF généré et téléchargé', 'success');
+            } catch (err) {
+                showToast('Erreur: ' + err.message, 'error');
+            }
+        });
+
+        // Génération + archivage : on génère UNE SEULE FOIS le doc puis
+        // on l'utilise pour blob + download (sinon ca regénère 2x, gaspillage)
+        document.getElementById('btnGenAndSave').addEventListener('click', async () => {
+            if (!validateForm()) return;
+            const data = getFormData();
+
+            try {
+                // un seul jsPDF doc, réutilisé
+                const pdfDoc = generateAuthorizationPDF(data);
+                const blob = getPDFBlob(data, pdfDoc);
+                const file = new File([blob], `${data.numero}.pdf`, { type: 'application/pdf' });
+
+                // télécharge en local pour l'utilisateur
+                downloadGeneratedPDF(data, pdfDoc);
+
+                // archive sur Firebase
+                await createAuthorization(data, file);
+                showToast(`Autorisation ${data.numero} générée et archivée`, 'success');
+
+                // reset du formulaire (on garde les valeurs par défaut)
+                document.getElementById('genForm').reset();
+                document.getElementById('signataire').value = 'AHMED BABA AHMED';
+                document.getElementById('titreSignataire').value = 'Directeur Général';
+                document.getElementById('visaSRT').value = 'A';
+                document.getElementById('previewSection').style.display = 'none';
+
+            } catch (err) {
+                showToast('Erreur: ' + err.message, 'error');
+            }
+        });
+    </script>
+</body>
+</html>

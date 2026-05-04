@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Import Excel - ANAC Archives DTA</title>
+    <link rel="stylesheet" href="../assets/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <main class="main-content">
+            <div class="topbar">
+                <div>
+                    <div class="page-title">Import Excel en masse</div>
+                    <div class="page-subtitle">Importez plusieurs autorisations à partir d'un fichier Excel ou CSV</div>
+                </div>
+            </div>
+            
+            <div class="content-wrapper" style="max-width: 900px;">
+                
+                <div class="section-card">
+                    <div class="section-title">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                        Format attendu du fichier
+                    </div>
+                    <div class="section-subtitle">Le fichier Excel ou CSV doit contenir ces colonnes (l'ordre n'a pas d'importance) :</div>
+                    
+                    <div style="background:var(--bg); border-radius:8px; padding:16px; font-family:monospace; font-size:12px; color:var(--text);">
+                        <div><strong>Colonnes obligatoires:</strong> numero, type, dateEmission, operateur, dateDebutValidite, dateFinValidite</div>
+                        <div style="margin-top:8px;"><strong>Colonnes optionnelles:</strong> destinataire, aeronefType, immatriculation, motif, route, dateReception, visaSRT, validiteExtension, reference, signataire, titreSignataire</div>
+                    </div>
+                    
+                    <p style="margin-top:14px; font-size:13px; color:var(--text-light);">
+                        <strong>Note:</strong> Les dates doivent être au format JJ/MM/AAAA (ex: 28/04/2026). 
+                        Le type peut être : SAT, SUR, ATT ou AUTRE.
+                    </p>
+                    
+                    <button class="btn btn-secondary btn-sm" id="btnDownloadTemplate" style="margin-top:14px; width:auto; padding:8px 16px;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        Télécharger le modèle Excel
+                    </button>
+                </div>
+                
+                <div class="section-card">
+                    <div class="section-title">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                        Sélectionnez votre fichier
+                    </div>
+                    
+                    <div id="dropzone" class="dropzone">
+                        <div class="dropzone-icon">
+                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>
+                        </div>
+                        <h3>Glissez votre fichier Excel ou CSV ici</h3>
+                        <p>ou <span class="btn-browse">parcourir vos fichiers</span></p>
+                        <p style="font-size:11px; color:var(--text-muted);">Format : .xlsx, .xls, .csv</p>
+                        <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" style="display:none">
+                    </div>
+                </div>
+                
+                <!-- Aperçu données -->
+                <div class="section-card" id="previewSection" style="display:none;">
+                    <div class="section-title">Aperçu des données — <span id="rowCount">0</span> lignes détectées</div>
+                    
+                    <div style="overflow-x:auto; max-height:400px; border:1px solid var(--border); border-radius:8px;">
+                        <table style="width:100%; border-collapse:collapse; font-size:12px;">
+                            <thead style="background:var(--bg); position:sticky; top:0;">
+                                <tr id="previewHeader"></tr>
+                            </thead>
+                            <tbody id="previewBody"></tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="btn-row">
+                        <button type="button" class="btn btn-secondary" id="btnCancel">Annuler</button>
+                        <button type="button" class="btn btn-primary" id="btnImport" style="width:auto; padding:12px 28px;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                            Importer toutes les lignes
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Progression -->
+                <div class="section-card" id="progressSection" style="display:none;">
+                    <div class="section-title">Import en cours...</div>
+                    <div class="progress-container">
+                        <div class="progress-bar" id="progressBar"></div>
+                    </div>
+                    <p style="font-size:14px; color:var(--text-light); text-align:center;" id="progressText">0 / 0</p>
+                </div>
+                
+                <!-- Résultats -->
+                <div class="section-card" id="resultSection" style="display:none;">
+                    <div class="section-title">Résultats de l'import</div>
+                    <div class="import-stats">
+                        <div class="import-stat success">
+                            <div class="import-stat-value" id="resultSuccess">0</div>
+                            <div class="import-stat-label">Réussies</div>
+                        </div>
+                        <div class="import-stat error">
+                            <div class="import-stat-value" id="resultErrors">0</div>
+                            <div class="import-stat-label">Erreurs</div>
+                        </div>
+                        <div class="import-stat">
+                            <div class="import-stat-value" id="resultTotal">0</div>
+                            <div class="import-stat-label">Total</div>
+                        </div>
+                    </div>
+                    
+                    <div id="errorList" style="margin-top:16px;"></div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script type="module">
+        import { checkAuth, injectSidebar } from '../assets/js/layout.js';
+        import { showToast } from '../assets/js/helpers.js';
+        import { bulkCreateAuthorizations } from '../assets/js/database.js';
+        
+        injectSidebar('import');
+        
+        let currentUser = null;
+        checkAuth((user, userData) => {
+            currentUser = userData;
+            if (userData.role !== 'admin') {
+                showToast('Cette page est réservée aux administrateurs', 'warning');
+                setTimeout(() => window.location.href = 'dashboard.html', 2000);
+            }
+        });
+        
+        let parsedData = [];
+        
+        // ─── DROPZONE ──────────────────────────────────────────
+        const dropzone = document.getElementById('dropzone');
+        const fileInput = document.getElementById('fileInput');
+        
+        dropzone.addEventListener('click', () => fileInput.click());
+        dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('dragover'); });
+        dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+        dropzone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropzone.classList.remove('dragover');
+            if (e.dataTransfer.files.length > 0) handleFile(e.dataTransfer.files[0]);
+        });
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) handleFile(e.target.files[0]);
+        });
+        
+        function handleFile(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const json = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+                    
+                    if (json.length === 0) {
+                        showToast('Fichier vide ou format non reconnu', 'error');
+                        return;
+                    }
+                    
+                    parsedData = json.map(row => normalizeRow(row));
+                    showPreview(parsedData);
+                } catch (err) {
+                    showToast('Erreur lecture fichier: ' + err.message, 'error');
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+        
+        function normalizeRow(row) {
+            // on normalise les noms de colonnes (insensitive a la casse, accents, espaces)
+            const norm = {};
+            Object.keys(row).forEach(key => {
+                const k = key.toLowerCase().replace(/\s/g,'').replace(/[éè]/g,'e');
+                norm[k] = row[key];
+            });
+
+            const typeMap = { SAT: 'Survol et Atterrissage', SUR: 'Survol', ATT: 'Atterrissage', AUTRE: 'Autre' };
+
+            // détection du typeCode :
+            // 1) on essaye d'abord depuis le numero (SAT-xxx / SUR-xxx / ATT-xxx) parce que c'est fiable
+            // 2) sinon depuis la colonne typeCode (déjà au bon format)
+            // 3) sinon depuis la colonne type (label long, ambigu - "Survol et Atterrissage" commence par "Sur" donc ne pas matcher betement)
+            const numero = (norm.numero || norm.numeroautorisation || '').toString();
+            const numUpper = numero.toUpperCase();
+
+            let typeCode;
+            if (numUpper.startsWith('SAT'))      typeCode = 'SAT';
+            else if (numUpper.startsWith('SUR')) typeCode = 'SUR';
+            else if (numUpper.startsWith('ATT')) typeCode = 'ATT';
+            else {
+                // pas trouvable depuis le numero, on regarde la colonne typecode
+                const tc = (norm.typecode || '').toString().toUpperCase().trim();
+                if (tc === 'SAT' || tc === 'SUR' || tc === 'ATT') {
+                    typeCode = tc;
+                } else {
+                    // dernier recours : la colonne "type" (label) - on fait gaffe a SAT vs SUR
+                    const t = (norm.type || '').toString().toLowerCase();
+                    if (t.includes('atterrissage') && t.includes('survol')) typeCode = 'SAT';
+                    else if (t.includes('survol')) typeCode = 'SUR';
+                    else if (t.includes('atterrissage')) typeCode = 'ATT';
+                    else typeCode = 'AUTRE';
+                }
+            }
+
+            return {
+                numero,
+                typeCode,
+                type: typeMap[typeCode] || norm.type || 'Autre',
+                dateEmission: formatDateValue(norm.dateemission || norm.date),
+                dateReception: formatDateValue(norm.datereception),
+                operateur: (norm.operateur || '').toString(),
+                destinataire: (norm.destinataire || norm.ato || '').toString(),
+                aeronefType: (norm.aeroneftype || norm.aeronef || norm.avion || '').toString(),
+                immatriculation: (norm.immatriculation || norm.immat || '').toString(),
+                motif: (norm.motif || '').toString(),
+                route: (norm.route || norm.itineraire || '').toString(),
+                dateDebutValidite: formatDateValue(norm.datedebutvalidite || norm.datedebut),
+                dateFinValidite: formatDateValue(norm.datefinvalidite || norm.datefin),
+                visaSRT: (norm.visasrt || '').toString(),
+                validiteExtension: (norm.validiteextension || norm.extension || '').toString(),
+                reference: (norm.reference || '').toString(),
+                signataire: (norm.signataire || 'AHMED BABA AHMED').toString(),
+                titreSignataire: (norm.titresignataire || 'Directeur Général').toString()
+            };
+        }
+
+        function formatDateValue(val) {
+            if (!val) return '';
+            // si Excel envoie un numéro de série (typique des cellules formatées en date)
+            if (typeof val === 'number') {
+                if (val <= 0) return '';
+                try {
+                    const d = XLSX.SSF.parse_date_code(val);
+                    if (!d || !d.y) return '';
+                    return `${String(d.d).padStart(2,'0')}/${String(d.m).padStart(2,'0')}/${d.y}`;
+                } catch (e) {
+                    return '';
+                }
+            }
+            if (typeof val === 'string') {
+                // déjà au bon format JJ/MM/AAAA
+                if (/^\d{2}\/\d{2}\/\d{4}$/.test(val)) return val;
+                // ISO AAAA-MM-JJ → on retourne en JJ/MM/AAAA
+                if (/^\d{4}-\d{2}-\d{2}$/.test(val)) {
+                    const [y, m, d] = val.split('-');
+                    return `${d}/${m}/${y}`;
+                }
+                return val;
+            }
+            return '';
+        }
+        
+        function showPreview(data) {
+            document.getElementById('rowCount').textContent = data.length;
+            
+            const cols = ['numero', 'typeCode', 'dateEmission', 'operateur', 'aeronefType', 'immatriculation', 'dateDebutValidite', 'dateFinValidite'];
+            document.getElementById('previewHeader').innerHTML = cols.map(c => `<th style="padding:10px; text-align:left; font-weight:600; font-size:11px; text-transform:uppercase; color:var(--text-light);">${c}</th>`).join('');
+            
+            const showRows = data.slice(0, 10);
+            document.getElementById('previewBody').innerHTML = showRows.map(row => 
+                '<tr>' + cols.map(c => `<td style="padding:8px; border-top:1px solid var(--border-light);">${row[c] || '—'}</td>`).join('') + '</tr>'
+            ).join('') + (data.length > 10 ? `<tr><td colspan="${cols.length}" style="padding:14px; text-align:center; color:var(--text-light); font-style:italic;">... et ${data.length - 10} autres lignes</td></tr>` : '');
+            
+            document.getElementById('previewSection').style.display = 'block';
+            document.getElementById('previewSection').scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        // ─── IMPORT ────────────────────────────────────────────
+        document.getElementById('btnImport').addEventListener('click', async () => {
+            if (!confirm(`Importer ${parsedData.length} autorisations dans la base ?`)) return;
+            
+            document.getElementById('previewSection').style.display = 'none';
+            document.getElementById('progressSection').style.display = 'block';
+            
+            const result = await bulkCreateAuthorizations(parsedData, (current, total) => {
+                const pct = Math.round((current / total) * 100);
+                document.getElementById('progressBar').style.width = pct + '%';
+                document.getElementById('progressText').textContent = `${current} / ${total} (${pct}%)`;
+            });
+            
+            document.getElementById('progressSection').style.display = 'none';
+            document.getElementById('resultSection').style.display = 'block';
+            document.getElementById('resultSuccess').textContent = result.success;
+            document.getElementById('resultErrors').textContent = result.errors;
+            document.getElementById('resultTotal').textContent = result.success + result.errors;
+            
+            if (result.errorDetails.length > 0) {
+                document.getElementById('errorList').innerHTML = '<h4 style="margin-bottom:8px;">Détails des erreurs :</h4><ul style="font-size:13px; color:var(--text-light); padding-left:20px;">' +
+                    result.errorDetails.slice(0, 20).map(e => `<li>${e.numero}: ${e.error}</li>`).join('') + '</ul>';
+            }
+            
+            showToast(`Import terminé: ${result.success} succès, ${result.errors} erreurs`, result.errors > 0 ? 'warning' : 'success');
+        });
+        
+        document.getElementById('btnCancel').addEventListener('click', () => {
+            document.getElementById('previewSection').style.display = 'none';
+            parsedData = [];
+            fileInput.value = '';
+        });
+        
+        // ─── TEMPLATE ──────────────────────────────────────────
+        document.getElementById('btnDownloadTemplate').addEventListener('click', () => {
+            const headers = ['numero', 'typeCode', 'dateEmission', 'dateReception', 'operateur', 'destinataire', 'aeronefType', 'immatriculation', 'motif', 'route', 'dateDebutValidite', 'dateFinValidite', 'visaSRT', 'validiteExtension', 'reference', 'signataire', 'titreSignataire'];
+            const example = {
+                numero: 'SAT-0303-26',
+                typeCode: 'SAT',
+                dateEmission: '27/04/2026',
+                dateReception: '27/04/2026',
+                operateur: 'MAURITANIA AIRLINES',
+                destinataire: 'MAURITANIA AIRLINES',
+                aeronefType: 'B737-8',
+                immatriculation: '5TCLJ',
+                motif: 'CONVOYAGE TECHNIQUE',
+                route: 'GMMN 18H00 - 20H30 GQNO',
+                dateDebutValidite: '28/04/2026',
+                dateFinValidite: '30/04/2026',
+                visaSRT: 'A',
+                validiteExtension: '',
+                reference: '',
+                signataire: 'AHMED BABA AHMED',
+                titreSignataire: 'Directeur Général'
+            };
+            
+            const ws = XLSX.utils.json_to_sheet([example], { header: headers });
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Modèle');
+            XLSX.writeFile(wb, 'modele_import_anac.xlsx');
+        });
+    </script>
+</body>
+</html>

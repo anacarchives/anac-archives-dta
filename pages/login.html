@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connexion - ANAC Archives DTA</title>
+    <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body class="login-page">
+    <div class="login-card">
+        <div class="login-header">
+            <div class="logo-circle">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                </svg>
+            </div>
+            <h1>ANAC Archives DTA</h1>
+            <p>Direction du Transport Aérien</p>
+        </div>
+        
+        <div class="login-body">
+            <div id="errorMessage" class="error-message"></div>
+            
+            <form id="loginForm">
+                <div class="form-group">
+                    <label class="form-label" for="email">Email</label>
+                    <input type="email" id="email" class="form-input" required autocomplete="email" placeholder="exemple@anac.mr">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="password">Mot de passe</label>
+                    <input type="password" id="password" class="form-input" required autocomplete="current-password" placeholder="••••••••">
+                </div>
+                
+                <button type="submit" id="loginBtn" class="btn btn-primary">
+                    <span id="btnText">Se connecter</span>
+                </button>
+            </form>
+            
+            <p style="text-align:center; margin-top:24px; font-size:12px; color:var(--text-muted);">
+                Accès réservé au personnel autorisé de l'ANAC
+            </p>
+        </div>
+    </div>
+
+    <script type="module">
+        import { auth } from '../assets/js/firebase-config.js';
+        import { signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+        // si on est déjà connecté on saute la page de login
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                window.location.href = 'dashboard.html';
+            }
+        });
+
+        const form = document.getElementById('loginForm');
+        const errorMsg = document.getElementById('errorMessage');
+        const loginBtn = document.getElementById('loginBtn');
+        const btnText = document.getElementById('btnText');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            errorMsg.classList.remove('show');
+
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            loginBtn.disabled = true;
+            btnText.textContent = 'Connexion...';
+
+            try {
+                await signInWithEmailAndPassword(auth, email, password);
+                window.location.href = 'dashboard.html';
+            } catch (err) {
+                // on traduit les codes d'erreur Firebase en français
+                let msg = 'Erreur de connexion';
+                switch (err.code) {
+                    case 'auth/invalid-credential':
+                    case 'auth/wrong-password':
+                    case 'auth/user-not-found':
+                        msg = 'Email ou mot de passe incorrect';
+                        break;
+                    case 'auth/invalid-email':
+                        msg = 'Email invalide';
+                        break;
+                    case 'auth/too-many-requests':
+                        msg = 'Trop de tentatives. Réessayez plus tard.';
+                        break;
+                    case 'auth/network-request-failed':
+                        msg = 'Problème de connexion internet';
+                        break;
+                }
+                errorMsg.textContent = msg;
+                errorMsg.classList.add('show');
+                loginBtn.disabled = false;
+                btnText.textContent = 'Se connecter';
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Archive - ANAC Archives DTA</title>
+    <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+    <div class="app-container">
+        <main class="main-content">
+            <div class="topbar">
+                <div>
+                    <div class="page-title">Archive des autorisations</div>
+                    <div class="page-subtitle">Recherche et consultation</div>
+                </div>
+                <a href="add.html" class="btn btn-primary" style="width:auto; padding-left:20px; padding-right:20px;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    Nouvelle autorisation
+                </a>
+            </div>
+            
+            <div class="content-wrapper">
+                <!-- Barre de filtres -->
+                <div class="filter-bar">
+                    <div class="filter-grid">
+                        <div class="form-group search-box" style="margin:0;">
+                            <label class="form-label">Recherche</label>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                            <input type="text" id="searchInput" class="form-input" placeholder="Numéro, opérateur, immatriculation...">
+                        </div>
+                        
+                        <div class="form-group" style="margin:0;">
+                            <label class="form-label">Type</label>
+                            <select id="filterType" class="form-select">
+                                <option value="">Tous</option>
+                                <option value="SAT">SAT</option>
+                                <option value="SUR">SUR</option>
+                                <option value="ATT">ATT</option>
+                                <option value="AUTRE">Autre</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group" style="margin:0;">
+                            <label class="form-label">Année</label>
+                            <select id="filterYear" class="form-select">
+                                <option value="">Toutes</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group" style="margin:0;">
+                            <label class="form-label">Statut</label>
+                            <select id="filterStatus" class="form-select">
+                                <option value="">Tous</option>
+                                <option value="active">Actives</option>
+                                <option value="soon">Expirent bientôt</option>
+                                <option value="expired">Expirées</option>
+                                <option value="future">À venir</option>
+                            </select>
+                        </div>
+                        
+                        <button class="btn btn-secondary" id="btnReset" style="width:auto; padding:11px 16px;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                            Réinitialiser
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="results-info">
+                    <div><span class="results-count" id="resultsCount">0</span> autorisation(s) trouvée(s)</div>
+                </div>
+                
+                <!-- Tableau résultats -->
+                <div class="archive-table">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>N° Autorisation</th>
+                                <th>Type</th>
+                                <th>Opérateur</th>
+                                <th>Aéronef</th>
+                                <th>Immat.</th>
+                                <th>Validité</th>
+                                <th>Statut</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="resultsBody">
+                            <tr><td colspan="8" style="text-align:center; padding:40px; color:var(--text-muted);">Chargement...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="pagination" id="pagination"></div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal détail -->
+    <div class="modal-overlay" id="detailModal">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title" id="modalTitle">Détails de l'autorisation</div>
+                <button class="modal-close" id="modalClose">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+            <div class="modal-body" id="modalBody"></div>
+            <div class="modal-footer" id="modalFooter"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { checkAuth, injectSidebar } from '../assets/js/layout.js';
+        import { showToast, formatDate, getStatus, getTypeBadgeClass } from '../assets/js/helpers.js';
+        import { getAllAuthorizations, getAuthorization, deleteAuthorization, filterAuthorizations } from '../assets/js/database.js';
+
+        injectSidebar('archive');
+
+        // cache local pour éviter de re-fetch a chaque frappe dans la recherche
+        let allRecords = [];
+        let currentUser = null;
+        let currentPage = 1;
+        const PER_PAGE = 20;
+
+        checkAuth(async (user, userData) => {
+            currentUser = userData;
+            await loadData();
+        });
+
+        async function loadData() {
+            try {
+                allRecords = await getAllAuthorizations({ limit: 1000 });
+                populateYearFilter();
+                applyFilters();
+            } catch (e) {
+                console.error(e);
+                document.getElementById('resultsBody').innerHTML =
+                    '<tr><td colspan="8" style="text-align:center; padding:40px; color:var(--danger);">Erreur de chargement: ' + e.message + '</td></tr>';
+            }
+        }
+
+        function populateYearFilter() {
+            // années distinctes triées du plus récent au plus ancien
+            const years = [...new Set(allRecords.map(a => a.year).filter(Boolean))].sort((a,b) => b-a);
+            const select = document.getElementById('filterYear');
+            // on garde l'option "toutes" déjà dans le HTML
+            years.forEach(y => {
+                const opt = document.createElement('option');
+                opt.value = y;
+                opt.textContent = y;
+                select.appendChild(opt);
+            });
+        }
+
+        function applyFilters() {
+            const filters = {
+                search:   document.getElementById('searchInput').value.trim(),
+                typeCode: document.getElementById('filterType').value,
+                year:     document.getElementById('filterYear').value,
+                statut:   document.getElementById('filterStatus').value
+            };
+            // filtre en mémoire (rapide, pas de Firestore call)
+            const results = filterAuthorizations(allRecords, filters);
+            displayResults(results);
+        }
+        
+        function displayResults(results) {
+            document.getElementById('resultsCount').textContent = results.length;
+            
+            if (results.length === 0) {
+                document.getElementById('resultsBody').innerHTML = `
+                    <tr><td colspan="8">
+                        <div class="empty-state">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                            <h3>Aucune autorisation trouvée</h3>
+                            <p>Modifiez les filtres ou ajoutez une nouvelle autorisation</p>
+                        </div>
+                    </td></tr>
+                `;
+                document.getElementById('pagination').innerHTML = '';
+                return;
+            }
+            
+            // Pagination
+            const totalPages = Math.ceil(results.length / PER_PAGE);
+            if (currentPage > totalPages) currentPage = 1;
+            
+            const start = (currentPage - 1) * PER_PAGE;
+            const pageResults = results.slice(start, start + PER_PAGE);
+            
+            const html = pageResults.map(a => {
+                const status = getStatus(a.dateDebutValidite, a.dateFinValidite);
+                const typeBadge = getTypeBadgeClass(a.typeCode);
+                return `
+                    <tr data-id="${a.id}">
+                        <td><strong>${a.numero || '—'}</strong></td>
+                        <td><span class="badge ${typeBadge}">${a.typeCode || 'AUTRE'}</span></td>
+                        <td>${a.operateur || '—'}</td>
+                        <td>${a.aeronefType || '—'}</td>
+                        <td>${a.immatriculation || '—'}</td>
+                        <td>${formatDate(a.dateDebutValidite)} → ${formatDate(a.dateFinValidite)}</td>
+                        <td><span class="badge ${status.class}">${status.label}</span></td>
+                        <td>
+                            <button class="btn btn-secondary btn-sm" data-action="view" data-id="${a.id}">Voir</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+            
+            document.getElementById('resultsBody').innerHTML = html;
+            
+            // Pagination buttons
+            renderPagination(totalPages);
+            
+            // Attach click handlers
+            document.querySelectorAll('[data-action="view"]').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    showDetail(btn.dataset.id);
+                });
+            });
+            document.querySelectorAll('#resultsBody tr[data-id]').forEach(tr => {
+                tr.addEventListener('click', () => showDetail(tr.dataset.id));
+            });
+        }
+        
+        function renderPagination(totalPages) {
+            if (totalPages <= 1) {
+                document.getElementById('pagination').innerHTML = '';
+                return;
+            }
+            
+            let html = `<button ${currentPage===1?'disabled':''} data-page="${currentPage-1}">‹</button>`;
+            
+            for (let i = 1; i <= totalPages; i++) {
+                if (i === 1 || i === totalPages || (i >= currentPage-2 && i <= currentPage+2)) {
+                    html += `<button class="${i===currentPage?'active':''}" data-page="${i}">${i}</button>`;
+                } else if (i === currentPage-3 || i === currentPage+3) {
+                    html += `<button disabled>…</button>`;
+                }
+            }
+            
+            html += `<button ${currentPage===totalPages?'disabled':''} data-page="${currentPage+1}">›</button>`;
+            
+            document.getElementById('pagination').innerHTML = html;
+            document.querySelectorAll('#pagination button[data-page]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    currentPage = parseInt(btn.dataset.page);
+                    applyFilters();
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                });
+            });
+        }
+        
+        // ─── DETAIL MODAL ──────────────────────────────────────
+        async function showDetail(id) {
+            try {
+                const rec = await getAuthorization(id);
+                if (!rec) {
+                    showToast('Autorisation introuvable', 'error');
+                    return;
+                }
+
+                const status = getStatus(rec.dateDebutValidite, rec.dateFinValidite);
+
+                document.getElementById('modalTitle').textContent = rec.numero || 'Autorisation';
+                document.getElementById('modalBody').innerHTML = `
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <div class="detail-label">N° Autorisation</div>
+                            <div class="detail-value">${rec.numero || '—'}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Type</div>
+                            <div class="detail-value"><span class="badge ${getTypeBadgeClass(rec.typeCode)}">${rec.typeCode || 'AUTRE'}</span> ${rec.type || ''}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Date d'émission</div>
+                            <div class="detail-value">${formatDate(rec.dateEmission)}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Date de réception</div>
+                            <div class="detail-value">${formatDate(rec.dateReception)}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Opérateur</div>
+                            <div class="detail-value">${rec.operateur || '—'}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Destinataire</div>
+                            <div class="detail-value">${rec.destinataire || '—'}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Aéronef</div>
+                            <div class="detail-value">${rec.aeronefType || '—'}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Immatriculation</div>
+                            <div class="detail-value">${rec.immatriculation || '—'}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Motif</div>
+                            <div class="detail-value">${rec.motif || '—'}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Statut</div>
+                            <div class="detail-value"><span class="badge ${status.class}">${status.label}</span></div>
+                        </div>
+                        <div class="detail-item full">
+                            <div class="detail-label">Route / Itinéraire</div>
+                            <div class="detail-value">${rec.route || '—'}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Date début validité</div>
+                            <div class="detail-value">${formatDate(rec.dateDebutValidite)}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Date fin validité</div>
+                            <div class="detail-value">${formatDate(rec.dateFinValidite)} ${rec.validiteExtension ? '<span class="badge badge-future" style="margin-left:6px">'+rec.validiteExtension+'</span>' : ''}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Visa SRT</div>
+                            <div class="detail-value">${rec.visaSRT || '—'}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Référence</div>
+                            <div class="detail-value">${rec.reference || '—'}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Signataire</div>
+                            <div class="detail-value">${rec.signataire || '—'}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Titre</div>
+                            <div class="detail-value">${rec.titreSignataire || '—'}</div>
+                        </div>
+                        ${rec.createdBy ? `
+                        <div class="detail-item full" style="border-top:1px solid var(--border-light); padding-top:16px; margin-top:8px;">
+                            <div class="detail-label">Créé par</div>
+                            <div class="detail-value" style="font-size:13px; color:var(--text-light);">${rec.createdBy}</div>
+                        </div>` : ''}
+                    </div>
+                `;
+
+                let footerHtml = '';
+                if (rec.pdfUrl) {
+                    footerHtml += `<a href="${rec.pdfUrl}" target="_blank" class="btn btn-secondary"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Voir le PDF</a>`;
+                }
+                if (currentUser?.role === 'admin') {
+                    footerHtml += `<button class="btn btn-danger" id="btnDelete" data-id="${rec.id}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> Supprimer</button>`;
+                }
+                footerHtml += `<button class="btn btn-primary" id="btnCloseModal" style="width:auto; padding:10px 20px;">Fermer</button>`;
+
+                document.getElementById('modalFooter').innerHTML = footerHtml;
+                document.getElementById('detailModal').classList.add('show');
+
+                document.getElementById('btnCloseModal').addEventListener('click', closeModal);
+
+                const btnDelete = document.getElementById('btnDelete');
+                if (btnDelete) {
+                    btnDelete.addEventListener('click', async () => {
+                        if (!confirm(`Supprimer définitivement l'autorisation ${rec.numero} ?`)) return;
+                        try {
+                            await deleteAuthorization(rec.id);
+                            showToast('Autorisation supprimée', 'success');
+                            closeModal();
+                            currentPage = 1; // au cas ou on était sur une page qui n'existe plus
+                            await loadData();
+                        } catch (e) {
+                            showToast('Erreur: ' + e.message, 'error');
+                        }
+                    });
+                }
+            } catch (e) {
+                showToast('Erreur: ' + e.message, 'error');
+            }
+        }
+        
+        function closeModal() {
+            document.getElementById('detailModal').classList.remove('show');
+        }
+        
+        document.getElementById('modalClose').addEventListener('click', closeModal);
+        document.getElementById('detailModal').addEventListener('click', (e) => {
+            if (e.target.id === 'detailModal') closeModal();
+        });
+        
+        // ─── FILTRES ───────────────────────────────────────────
+        let searchTimeout;
+        document.getElementById('searchInput').addEventListener('input', () => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => { currentPage = 1; applyFilters(); }, 300);
+        });
+        
+        ['filterType', 'filterYear', 'filterStatus'].forEach(id => {
+            document.getElementById(id).addEventListener('change', () => { currentPage = 1; applyFilters(); });
+        });
+        
+        document.getElementById('btnReset').addEventListener('click', () => {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('filterType').value = '';
+            document.getElementById('filterYear').value = '';
+            document.getElementById('filterStatus').value = '';
+            currentPage = 1;
+            applyFilters();
+        });
+    </script>
+</body>
+</html>

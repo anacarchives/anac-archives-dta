@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tableau de bord - ANAC Archives DTA</title>
+    <link rel="stylesheet" href="../assets/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <main class="main-content">
+            <div class="topbar">
+                <div>
+                    <div class="page-title">Tableau de bord</div>
+                    <div class="page-subtitle" id="todayDate"></div>
+                </div>
+            </div>
+            
+            <div class="content-wrapper">
+                <div class="welcome-banner">
+                    <h2 id="welcomeTitle">Bienvenue</h2>
+                    <p>Système d'archivage des autorisations de vol et de survol — Direction du Transport Aérien</p>
+                </div>
+                
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon blue">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><path d="M10 12h4"/></svg>
+                        </div>
+                        <div class="stat-value" id="statTotal">—</div>
+                        <div class="stat-label">Total des autorisations</div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon green">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                        </div>
+                        <div class="stat-value" id="statActive">—</div>
+                        <div class="stat-label">Actuellement actives</div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon orange">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                        </div>
+                        <div class="stat-value" id="statExpiringSoon">—</div>
+                        <div class="stat-label">Expirent bientôt</div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon red">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                        </div>
+                        <div class="stat-value" id="statExpired">—</div>
+                        <div class="stat-label">Expirées</div>
+                    </div>
+                </div>
+                
+                <div class="chart-row">
+                    <div class="chart-card">
+                        <div class="chart-title">Évolution mensuelle</div>
+                        <canvas id="chartMonthly" height="100"></canvas>
+                    </div>
+                    
+                    <div class="chart-card">
+                        <div class="chart-title">Répartition par type</div>
+                        <canvas id="chartTypes" height="200"></canvas>
+                    </div>
+                </div>
+                
+                <div class="chart-card">
+                    <div class="chart-title">Top 10 des opérateurs</div>
+                    <canvas id="chartOperators" height="80"></canvas>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script type="module">
+        import { checkAuth, injectSidebar } from '../assets/js/layout.js';
+        import { getStats } from '../assets/js/database.js';
+        import { getMonthName } from '../assets/js/helpers.js';
+
+        injectSidebar('dashboard');
+
+        // affiche la date du jour en haut
+        const today = new Date();
+        document.getElementById('todayDate').textContent = today.toLocaleDateString('fr-FR',
+            { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+        // Chart.js est chargé en async via <script>, des fois il met du temps.
+        // On attend qu'il soit dispo avant d'essayer de l'utiliser.
+        function waitForChart() {
+            return new Promise((resolve) => {
+                if (typeof Chart !== 'undefined') return resolve();
+                const interval = setInterval(() => {
+                    if (typeof Chart !== 'undefined') {
+                        clearInterval(interval);
+                        resolve();
+                    }
+                }, 50);
+                // safety net : on abandonne après 5 sec
+                setTimeout(() => { clearInterval(interval); resolve(); }, 5000);
+            });
+        }
+
+        checkAuth(async (user, userData) => {
+            document.getElementById('welcomeTitle').textContent =
+                `Bienvenue, ${userData.name || userData.email.split('@')[0]}`;
+            await loadStats();
+        });
+
+        async function loadStats() {
+            try {
+                const stats = await getStats();
+
+                document.getElementById('statTotal').textContent = stats.total;
+                document.getElementById('statActive').textContent = stats.active;
+                document.getElementById('statExpiringSoon').textContent = stats.expiringSoon;
+                document.getElementById('statExpired').textContent = stats.expired;
+
+                if (stats.total > 0) {
+                    await waitForChart();
+                    if (typeof Chart === 'undefined') {
+                        console.error('Chart.js non chargé, graphiques désactivés');
+                        return;
+                    }
+                    renderTypesChart(stats.byType);
+                    renderMonthlyChart(stats.byMonth);
+                    renderOperatorsChart(stats.byOperator);
+                }
+            } catch (e) {
+                console.error('Erreur stats:', e);
+            }
+        }
+
+        function renderTypesChart(byType) {
+            const ctx = document.getElementById('chartTypes');
+            const labels = Object.keys(byType);
+            const data = Object.values(byType);
+
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels,
+                    datasets: [{
+                        data,
+                        backgroundColor: ['#2E5090', '#C9A961', '#7B1FA2', '#455A64'],
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { padding: 14, font: { size: 13 } } }
+                    }
+                }
+            });
+        }
+        
+        function renderMonthlyChart(byMonth) {
+            const ctx = document.getElementById('chartMonthly');
+            const sorted = Object.keys(byMonth).sort();
+            const labels = sorted.map(k => {
+                const [y, m] = k.split('-');
+                return `${getMonthName(parseInt(m)-1).substring(0,3)} ${y}`;
+            });
+            const data = sorted.map(k => byMonth[k]);
+            
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels,
+                    datasets: [{
+                        label: 'Autorisations',
+                        data,
+                        borderColor: '#2E5090',
+                        backgroundColor: 'rgba(46,80,144,0.1)',
+                        fill: true,
+                        tension: 0.3,
+                        borderWidth: 2,
+                        pointBackgroundColor: '#1F3864',
+                        pointRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+                }
+            });
+        }
+        
+        function renderOperatorsChart(byOperator) {
+            const ctx = document.getElementById('chartOperators');
+            const sorted = Object.entries(byOperator)
+                .sort((a,b) => b[1]-a[1])
+                .slice(0, 10);
+            
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: sorted.map(e => e[0]),
+                    datasets: [{
+                        label: 'Autorisations',
+                        data: sorted.map(e => e[1]),
+                        backgroundColor: '#C9A961',
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { x: { beginAtZero: true, ticks: { precision: 0 } } }
+                }
+            });
+        }
+    </script>
+</body>
+</html>

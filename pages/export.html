@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Export - ANAC Archives DTA</title>
+    <link rel="stylesheet" href="../assets/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <main class="main-content">
+            <div class="topbar">
+                <div>
+                    <div class="page-title">Export et téléchargement</div>
+                    <div class="page-subtitle">Exportez la liste en Excel ou téléchargez les PDF en masse</div>
+                </div>
+            </div>
+            
+            <div class="content-wrapper" style="max-width: 900px;">
+                
+                <!-- Filtres -->
+                <div class="section-card">
+                    <div class="section-title">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+                        Filtres d'export
+                    </div>
+                    <div class="section-subtitle">Choisissez les autorisations à exporter</div>
+                    
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label">Type</label>
+                            <select id="filterType" class="form-select">
+                                <option value="">Tous les types</option>
+                                <option value="SAT">SAT</option>
+                                <option value="SUR">SUR</option>
+                                <option value="ATT">ATT</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Année</label>
+                            <select id="filterYear" class="form-select">
+                                <option value="">Toutes les années</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Date début</label>
+                            <input type="date" id="filterDateStart" class="form-input">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Date fin</label>
+                            <input type="date" id="filterDateEnd" class="form-input">
+                        </div>
+                    </div>
+                    
+                    <div style="margin-top:16px; padding:14px; background:var(--bg); border-radius:8px;">
+                        <strong id="resultCount">0</strong> autorisation(s) correspondent aux filtres
+                        <button class="btn btn-secondary btn-sm" id="btnRefresh" style="float:right; width:auto; padding:6px 12px;">Actualiser</button>
+                    </div>
+                </div>
+                
+                <!-- Options d'export -->
+                <div class="section-card">
+                    <div class="section-title">Options d'export</div>
+                    
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:16px;">
+                        <div style="border:1px solid var(--border); border-radius:8px; padding:20px; text-align:center;">
+                            <div style="font-size:36px; margin-bottom:10px;">📊</div>
+                            <h3 style="margin-bottom:8px;">Export Excel</h3>
+                            <p style="font-size:13px; color:var(--text-light); margin-bottom:14px;">Tableau avec toutes les données filtrées</p>
+                            <button class="btn btn-primary" id="btnExportExcel" style="width:100%;">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/></svg>
+                                Télécharger XLSX
+                            </button>
+                        </div>
+                        
+                        <div style="border:1px solid var(--border); border-radius:8px; padding:20px; text-align:center;">
+                            <div style="font-size:36px; margin-bottom:10px;">📦</div>
+                            <h3 style="margin-bottom:8px;">PDFs en ZIP</h3>
+                            <p style="font-size:13px; color:var(--text-light); margin-bottom:14px;">Tous les PDF dans un fichier compressé</p>
+                            <button class="btn btn-primary" id="btnExportZip" style="width:100%;">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/></svg>
+                                Télécharger ZIP
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Progression -->
+                <div class="section-card" id="progressSection" style="display:none;">
+                    <div class="section-title">Préparation en cours...</div>
+                    <div class="progress-container">
+                        <div class="progress-bar" id="progressBar"></div>
+                    </div>
+                    <p style="font-size:14px; color:var(--text-light); text-align:center;" id="progressText">—</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script type="module">
+        import { checkAuth, injectSidebar } from '../assets/js/layout.js';
+        import { showToast, parseDate, formatDate } from '../assets/js/helpers.js';
+        import { getAllAuthorizations } from '../assets/js/database.js';
+
+        injectSidebar('export');
+
+        let allData = [];
+        let filteredData = [];
+
+        // on attend que l'auth soit OK avant de fetch (sinon Firestore refuse)
+        checkAuth(async () => {
+            await loadData();
+        });
+
+        async function loadData() {
+            try {
+                allData = await getAllAuthorizations({ limit: 1000 });
+
+                // remplit le filtre années avec ce qu'on a en base
+                const years = [...new Set(allData.map(a => a.year).filter(Boolean))].sort((a,b) => b-a);
+                const yearSel = document.getElementById('filterYear');
+                yearSel.innerHTML = '<option value="">Toutes les années</option>';
+                years.forEach(y => {
+                    yearSel.innerHTML += `<option value="${y}">${y}</option>`;
+                });
+
+                applyFilters();
+            } catch (e) {
+                showToast('Erreur de chargement: ' + e.message, 'error');
+            }
+        }
+
+        function applyFilters() {
+            const type = document.getElementById('filterType').value;
+            const year = document.getElementById('filterYear').value;
+            const dStart = document.getElementById('filterDateStart').value;
+            const dEnd = document.getElementById('filterDateEnd').value;
+
+            filteredData = allData.filter(a => {
+                if (type && a.typeCode !== type) return false;
+                if (year && a.year != year) return false;
+                if (dStart || dEnd) {
+                    const dEm = parseDate(a.dateEmission);
+                    if (!dEm) return false;
+                    if (dStart && dEm < new Date(dStart)) return false;
+                    if (dEnd && dEm > new Date(dEnd)) return false;
+                }
+                return true;
+            });
+
+            document.getElementById('resultCount').textContent = filteredData.length;
+        }
+
+        ['filterType', 'filterYear', 'filterDateStart', 'filterDateEnd'].forEach(id => {
+            document.getElementById(id).addEventListener('change', applyFilters);
+        });
+
+        document.getElementById('btnRefresh').addEventListener('click', loadData);
+        
+        // ─── EXPORT EXCEL ──────────────────────────────────────
+        document.getElementById('btnExportExcel').addEventListener('click', () => {
+            if (filteredData.length === 0) {
+                showToast('Aucune autorisation à exporter', 'warning');
+                return;
+            }
+            
+            const rows = filteredData.map(a => ({
+                'N° Autorisation': a.numero,
+                'Type': a.typeCode,
+                'Date émission': formatDate(a.dateEmission),
+                'Date réception': formatDate(a.dateReception),
+                'Opérateur': a.operateur,
+                'Destinataire': a.destinataire,
+                'Aéronef': a.aeronefType,
+                'Immatriculation': a.immatriculation,
+                'Motif': a.motif,
+                'Route': a.route,
+                'Date début validité': formatDate(a.dateDebutValidite),
+                'Date fin validité': formatDate(a.dateFinValidite),
+                'Extension': a.validiteExtension,
+                'Visa SRT': a.visaSRT,
+                'Référence': a.reference,
+                'Signataire': a.signataire,
+                'Créé par': a.createdBy
+            }));
+            
+            const ws = XLSX.utils.json_to_sheet(rows);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Autorisations');
+            
+            const today = new Date();
+            const dateStr = `${String(today.getDate()).padStart(2,'0')}-${String(today.getMonth()+1).padStart(2,'0')}-${today.getFullYear()}`;
+            XLSX.writeFile(wb, `ANAC_export_${dateStr}.xlsx`);
+            
+            showToast(`${rows.length} autorisations exportées`, 'success');
+        });
+        
+        // ─── EXPORT ZIP ────────────────────────────────────────
+        document.getElementById('btnExportZip').addEventListener('click', async () => {
+            const withPdf = filteredData.filter(a => a.pdfUrl);
+            
+            if (withPdf.length === 0) {
+                showToast('Aucun PDF à télécharger dans la sélection', 'warning');
+                return;
+            }
+            
+            if (!confirm(`Télécharger ${withPdf.length} PDF dans un fichier ZIP ?\n(Cela peut prendre quelques minutes selon le volume)`)) return;
+            
+            document.getElementById('progressSection').style.display = 'block';
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
+            
+            const zip = new JSZip();
+            let completed = 0;
+            let errors = 0;
+            
+            for (let i = 0; i < withPdf.length; i++) {
+                const a = withPdf[i];
+                try {
+                    const response = await fetch(a.pdfUrl);
+                    const blob = await response.blob();
+                    
+                    const year = a.year || 'Inconnu';
+                    const month = String(a.month || '00').padStart(2,'0');
+                    const type = a.typeCode || 'AUTRE';
+                    const filename = `${a.numero || 'autorisation_' + i}.pdf`.replace(/[^a-zA-Z0-9._-]/g,'_');
+                    
+                    zip.folder(`${year}/${month}/${type}`).file(filename, blob);
+                    completed++;
+                } catch (e) {
+                    console.error('Erreur:', a.numero, e);
+                    errors++;
+                }
+                
+                const pct = Math.round(((i+1) / withPdf.length) * 100);
+                progressBar.style.width = pct + '%';
+                progressText.textContent = `${i+1} / ${withPdf.length} (${pct}%)`;
+            }
+            
+            progressText.textContent = 'Compression du fichier ZIP...';
+            
+            const zipBlob = await zip.generateAsync({ type: 'blob' }, (meta) => {
+                progressBar.style.width = meta.percent + '%';
+            });
+            
+            const url = URL.createObjectURL(zipBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            const today = new Date();
+            const dateStr = `${String(today.getDate()).padStart(2,'0')}-${String(today.getMonth()+1).padStart(2,'0')}-${today.getFullYear()}`;
+            link.download = `ANAC_archives_${dateStr}.zip`;
+            link.click();
+            URL.revokeObjectURL(url);
+            
+            document.getElementById('progressSection').style.display = 'none';
+            showToast(`ZIP téléchargé: ${completed} PDF inclus${errors > 0 ? `, ${errors} erreurs` : ''}`, 'success');
+        });
+    </script>
+</body>
+</html>
