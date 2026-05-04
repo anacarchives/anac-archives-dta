@@ -5,6 +5,31 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Générateur - ANAC Archives DTA</title>
     <link rel="stylesheet" href="../assets/css/style.css">
+    <style>
+        .field-combo {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .field-combo select,
+        .field-combo input {
+            width: 100%;
+        }
+        .field-combo input.manual {
+            display: none;
+        }
+        .field-combo input.manual.show {
+            display: block;
+        }
+        .manual-toggle {
+            font-size: 11px;
+            color: var(--primary);
+            cursor: pointer;
+            text-decoration: underline;
+            display: block;
+            text-align: right;
+        }
+    </style>
 </head>
 <body>
     <div class="app-container">
@@ -12,25 +37,20 @@
             <div class="topbar">
                 <div>
                     <div class="page-title">Générateur de documents</div>
-                    <div class="page-subtitle">Remplissez les champs et générez un PDF officiel prêt à imprimer</div>
+                    <div class="page-subtitle">Remplissez les champs et générez un PDF officiel</div>
                 </div>
             </div>
-            
+
             <div class="content-wrapper" style="max-width: 900px;">
                 <div class="section-card">
-                    <div class="section-title">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                        Informations de l'autorisation
-                    </div>
-                    <div class="section-subtitle">Le PDF généré laisse un espace en haut pour l'entête ANAC qui sera ajouté à l'impression</div>
-                    
                     <form id="genForm">
                         <div class="form-grid">
+
                             <div class="form-group">
                                 <label class="form-label">N° Autorisation *</label>
                                 <input type="text" id="numero" class="form-input" required placeholder="ex: SAT-0303-26">
                             </div>
-                            
+
                             <div class="form-group">
                                 <label class="form-label">Type *</label>
                                 <select id="typeCode" class="form-select" required>
@@ -40,103 +60,155 @@
                                     <option value="ATT">ATT - Atterrissage uniquement</option>
                                 </select>
                             </div>
-                            
+
                             <div class="form-group">
                                 <label class="form-label">Date d'émission *</label>
                                 <input type="date" id="dateEmission" class="form-input" required>
                             </div>
-                            
+
                             <div class="form-group">
                                 <label class="form-label">Date de réception</label>
                                 <input type="date" id="dateReception" class="form-input">
                             </div>
-                            
+
+                            <!-- Opérateur -->
                             <div class="form-group">
                                 <label class="form-label">Opérateur *</label>
-                                <input type="text" id="operateur" class="form-input" required>
+                                <div class="field-combo">
+                                    <select id="selOperateur" class="form-select">
+                                        <option value="">— Sélectionner —</option>
+                                    </select>
+                                    <input type="text" id="manOperateur" class="form-input manual" placeholder="Saisir manuellement...">
+                                    <span class="manual-toggle" data-field="operateur">Saisir manuellement</span>
+                                </div>
                             </div>
-                            
+
+                            <!-- Destinataire -->
                             <div class="form-group">
                                 <label class="form-label">Destinataire (A/To) *</label>
-                                <input type="text" id="destinataire" class="form-input" required>
+                                <div class="field-combo">
+                                    <select id="selDestinataire" class="form-select">
+                                        <option value="">— Sélectionner —</option>
+                                    </select>
+                                    <input type="text" id="manDestinataire" class="form-input manual" placeholder="Saisir manuellement...">
+                                    <span class="manual-toggle" data-field="destinataire">Saisir manuellement</span>
+                                </div>
                             </div>
-                            
+
+                            <!-- Aéronef -->
                             <div class="form-group">
                                 <label class="form-label">Type d'aéronef *</label>
-                                <input type="text" id="aeronefType" class="form-input" required>
+                                <div class="field-combo">
+                                    <select id="selAeronef" class="form-select">
+                                        <option value="">— Sélectionner —</option>
+                                    </select>
+                                    <input type="text" id="manAeronef" class="form-input manual" placeholder="Saisir manuellement...">
+                                    <span class="manual-toggle" data-field="aeronef">Saisir manuellement</span>
+                                </div>
                             </div>
-                            
+
+                            <!-- Immatriculation -->
                             <div class="form-group">
                                 <label class="form-label">Immatriculation *</label>
-                                <input type="text" id="immatriculation" class="form-input" required>
+                                <div class="field-combo">
+                                    <select id="selImmatriculation" class="form-select">
+                                        <option value="">— Sélectionner —</option>
+                                    </select>
+                                    <input type="text" id="manImmatriculation" class="form-input manual" placeholder="Saisir manuellement...">
+                                    <span class="manual-toggle" data-field="immatriculation">Saisir manuellement</span>
+                                </div>
                             </div>
-                            
+
+                            <!-- Motif -->
                             <div class="form-group">
                                 <label class="form-label">Motif *</label>
-                                <input type="text" id="motif" class="form-input" required>
+                                <div class="field-combo">
+                                    <select id="selMotif" class="form-select">
+                                        <option value="">— Sélectionner —</option>
+                                    </select>
+                                    <input type="text" id="manMotif" class="form-input manual" placeholder="Saisir manuellement...">
+                                    <span class="manual-toggle" data-field="motif">Saisir manuellement</span>
+                                </div>
                             </div>
-                            
+
+                            <!-- Référence -->
                             <div class="form-group">
                                 <label class="form-label">Référence</label>
-                                <input type="text" id="reference" class="form-input">
+                                <div class="field-combo">
+                                    <select id="selReference" class="form-select">
+                                        <option value="">— Aucune —</option>
+                                    </select>
+                                    <input type="text" id="manReference" class="form-input manual" placeholder="Saisir manuellement...">
+                                    <span class="manual-toggle" data-field="reference">Saisir manuellement</span>
+                                </div>
                             </div>
-                            
+
+                            <!-- Route -->
                             <div class="form-group full">
                                 <label class="form-label">Route / Itinéraire *</label>
-                                <input type="text" id="route" class="form-input" required>
+                                <div class="field-combo">
+                                    <select id="selRoute" class="form-select">
+                                        <option value="">— Sélectionner —</option>
+                                    </select>
+                                    <input type="text" id="manRoute" class="form-input manual" placeholder="Saisir manuellement...">
+                                    <span class="manual-toggle" data-field="route">Saisir manuellement</span>
+                                </div>
                             </div>
-                            
+
                             <div class="form-group">
                                 <label class="form-label">Date début validité *</label>
                                 <input type="date" id="dateDebutValidite" class="form-input" required>
                             </div>
-                            
+
                             <div class="form-group">
                                 <label class="form-label">Date fin validité *</label>
                                 <input type="date" id="dateFinValidite" class="form-input" required>
                             </div>
-                            
+
+                            <!-- Visa SRT -->
                             <div class="form-group">
                                 <label class="form-label">Visa SRT</label>
-                                <input type="text" id="visaSRT" class="form-input" value="A">
+                                <input type="text" id="visaSRT" class="form-input">
                             </div>
-                            
+
                             <div class="form-group">
                                 <label class="form-label">Extension validité</label>
                                 <input type="text" id="validiteExtension" class="form-input" placeholder="ex: +72H">
                             </div>
-                            
+
+                            <!-- Signataire -->
                             <div class="form-group">
                                 <label class="form-label">Signataire</label>
-                                <input type="text" id="signataire" class="form-input" value="AHMED BABA AHMED">
+                                <input type="text" id="signataire" class="form-input">
                             </div>
-                            
+
                             <div class="form-group">
                                 <label class="form-label">Titre signataire</label>
-                                <input type="text" id="titreSignataire" class="form-input" value="Directeur Général">
+                                <input type="text" id="titreSignataire" class="form-input">
                             </div>
+
                         </div>
-                        
+
                         <div class="btn-row">
                             <button type="button" class="btn btn-secondary" id="btnPreview">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                                 Aperçu
                             </button>
-                            <button type="submit" class="btn btn-primary" style="width:auto; padding:12px 28px;">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                                Générer et télécharger
+                            <button type="submit" class="btn btn-secondary" style="width:auto; padding:12px 24px;">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/></svg>
+                                Télécharger
                             </button>
-                            <button type="button" class="btn btn-success" id="btnGenAndSave" style="width:auto; padding:12px 28px;">
+                            <button type="button" class="btn btn-primary" id="btnGenAndSave" style="width:auto; padding:12px 24px;">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
                                 Générer + Archiver
                             </button>
                         </div>
                     </form>
                 </div>
-                
+
                 <!-- Aperçu PDF -->
                 <div class="section-card" id="previewSection" style="display:none;">
-                    <div class="section-title">Aperçu du document</div>
+                    <div class="section-title">Aperçu</div>
                     <iframe id="pdfPreview" style="width:100%; height:700px; border:1px solid var(--border); border-radius:8px;"></iframe>
                 </div>
             </div>
@@ -148,11 +220,10 @@
         import { showToast, fromISODate } from '../assets/js/helpers.js';
         import { generateAuthorizationPDF, downloadGeneratedPDF, getPDFDataURI, getPDFBlob } from '../assets/js/pdf-generator.js';
         import { createAuthorization } from '../assets/js/database.js';
+        import { loadParams } from '../assets/js/params.js';
 
         injectSidebar('generator');
-        checkAuth();
 
-        // mappe le code court vers le label complet (utilisé sur le PDF)
         const TYPE_LABELS = {
             SAT: 'Survol et Atterrissage',
             SUR: 'Survol',
@@ -160,95 +231,184 @@
             AUTRE: 'Autre'
         };
 
+        // config des champs combo (select + manual)
+        const COMBOS = [
+            { key: 'operateurs',       selId: 'selOperateur',       manId: 'manOperateur',       field: 'operateur' },
+            { key: 'destinataires',    selId: 'selDestinataire',    manId: 'manDestinataire',    field: 'destinataire' },
+            { key: 'aeronefs',         selId: 'selAeronef',         manId: 'manAeronef',         field: 'aeronef' },
+            { key: 'immatriculations', selId: 'selImmatriculation', manId: 'manImmatriculation', field: 'immatriculation' },
+            { key: 'motifs',           selId: 'selMotif',           manId: 'manMotif',           field: 'motif' },
+            { key: 'routes',           selId: 'selRoute',           manId: 'manRoute',           field: 'route' },
+            { key: 'references',       selId: 'selReference',       manId: 'manReference',       field: 'reference' },
+        ];
+
+        // charge les params et remplit les selects
+        async function initParams() {
+            const params = await loadParams();
+
+            // remplir chaque select
+            COMBOS.forEach(({ key, selId }) => {
+                const sel = document.getElementById(selId);
+                const list = params[key] || [];
+                list.forEach(val => {
+                    const opt = document.createElement('option');
+                    opt.value = val;
+                    opt.textContent = val;
+                    sel.appendChild(opt);
+                });
+                // ajouter option "Saisir manuellement" à la fin
+                const manOpt = document.createElement('option');
+                manOpt.value = '__manual__';
+                manOpt.textContent = '— Saisir manuellement —';
+                sel.appendChild(manOpt);
+            });
+
+            // valeurs par défaut
+            document.getElementById('visaSRT').value = params.visaSRT || 'A';
+            document.getElementById('signataire').value = params.signataire || 'AHMED BABA AHMED';
+            document.getElementById('titreSignataire').value = params.titreSignataire || 'Directeur Général';
+        }
+
+        // gestion des toggles "Saisir manuellement"
+        document.querySelectorAll('.manual-toggle').forEach(toggle => {
+            toggle.addEventListener('click', () => {
+                const field = toggle.dataset.field;
+                const combo = COMBOS.find(c => c.field === field);
+                if (!combo) return;
+
+                const sel = document.getElementById(combo.selId);
+                const man = document.getElementById(combo.manId);
+                const isManual = man.classList.contains('show');
+
+                if (isManual) {
+                    // retour au select
+                    man.classList.remove('show');
+                    sel.style.display = '';
+                    toggle.textContent = 'Saisir manuellement';
+                } else {
+                    // passer en manuel
+                    man.classList.add('show');
+                    sel.style.display = 'none';
+                    man.focus();
+                    toggle.textContent = 'Choisir dans la liste';
+                }
+            });
+        });
+
+        // quand on choisit "__manual__" dans le select, bascule automatiquement
+        COMBOS.forEach(({ selId, manId, field }) => {
+            const sel = document.getElementById(selId);
+            const man = document.getElementById(manId);
+            const toggle = document.querySelector(`.manual-toggle[data-field="${field}"]`);
+
+            sel.addEventListener('change', () => {
+                if (sel.value === '__manual__') {
+                    man.classList.add('show');
+                    sel.style.display = 'none';
+                    if (toggle) toggle.textContent = 'Choisir dans la liste';
+                    man.focus();
+                }
+            });
+        });
+
+        // récupère la valeur d'un champ combo
+        function getComboValue(combo) {
+            const sel = document.getElementById(combo.selId);
+            const man = document.getElementById(combo.manId);
+            if (man.classList.contains('show')) {
+                return man.value.trim();
+            }
+            return sel.value === '__manual__' ? '' : sel.value;
+        }
+
         function getFormData() {
             const code = document.getElementById('typeCode').value;
             return {
-                numero:             document.getElementById('numero').value.trim(),
-                typeCode:           code,
-                type:               TYPE_LABELS[code] || '',
-                dateEmission:       fromISODate(document.getElementById('dateEmission').value),
-                dateReception:      fromISODate(document.getElementById('dateReception').value),
-                operateur:          document.getElementById('operateur').value.trim(),
-                destinataire:       document.getElementById('destinataire').value.trim(),
-                aeronefType:        document.getElementById('aeronefType').value.trim(),
-                immatriculation:    document.getElementById('immatriculation').value.trim(),
-                motif:              document.getElementById('motif').value.trim(),
-                route:              document.getElementById('route').value.trim(),
-                dateDebutValidite:  fromISODate(document.getElementById('dateDebutValidite').value),
-                dateFinValidite:    fromISODate(document.getElementById('dateFinValidite').value),
-                visaSRT:            document.getElementById('visaSRT').value.trim(),
-                validiteExtension:  document.getElementById('validiteExtension').value.trim(),
-                reference:          document.getElementById('reference').value.trim(),
-                signataire:         document.getElementById('signataire').value.trim(),
-                titreSignataire:    document.getElementById('titreSignataire').value.trim()
+                numero:            document.getElementById('numero').value.trim(),
+                typeCode:          code,
+                type:              TYPE_LABELS[code] || '',
+                dateEmission:      fromISODate(document.getElementById('dateEmission').value),
+                dateReception:     fromISODate(document.getElementById('dateReception').value),
+                operateur:         getComboValue(COMBOS[0]),
+                destinataire:      getComboValue(COMBOS[1]),
+                aeronefType:       getComboValue(COMBOS[2]),
+                immatriculation:   getComboValue(COMBOS[3]),
+                motif:             getComboValue(COMBOS[4]),
+                route:             getComboValue(COMBOS[5]),
+                reference:         getComboValue(COMBOS[6]),
+                dateDebutValidite: fromISODate(document.getElementById('dateDebutValidite').value),
+                dateFinValidite:   fromISODate(document.getElementById('dateFinValidite').value),
+                visaSRT:           document.getElementById('visaSRT').value.trim(),
+                validiteExtension: document.getElementById('validiteExtension').value.trim(),
+                signataire:        document.getElementById('signataire').value.trim(),
+                titreSignataire:   document.getElementById('titreSignataire').value.trim()
             };
         }
 
         function validateForm() {
-            const required = ['numero','typeCode','dateEmission','operateur','destinataire',
-                              'aeronefType','immatriculation','motif','route',
-                              'dateDebutValidite','dateFinValidite'];
-            for (const id of required) {
-                const el = document.getElementById(id);
-                if (!el.value.trim()) {
-                    el.focus();
-                    showToast('Veuillez remplir tous les champs obligatoires', 'warning');
-                    return false;
+            const data = getFormData();
+            const required = {
+                numero: 'N° Autorisation',
+                typeCode: 'Type',
+                dateEmission: 'Date d\'émission',
+                operateur: 'Opérateur',
+                destinataire: 'Destinataire',
+                aeronefType: 'Type d\'aéronef',
+                immatriculation: 'Immatriculation',
+                motif: 'Motif',
+                route: 'Route',
+                dateDebutValidite: 'Date début validité',
+                dateFinValidite: 'Date fin validité'
+            };
+            for (const [field, label] of Object.entries(required)) {
+                if (!data[field]) {
+                    showToast(`Champ requis : ${label}`, 'warning');
+                    return null;
                 }
             }
-            return true;
+            return data;
         }
 
-        // Aperçu : génère le PDF et l'affiche dans une iframe
         document.getElementById('btnPreview').addEventListener('click', () => {
-            if (!validateForm()) return;
-            const data = getFormData();
+            const data = validateForm();
+            if (!data) return;
             document.getElementById('pdfPreview').src = getPDFDataURI(data);
             document.getElementById('previewSection').style.display = 'block';
             document.getElementById('previewSection').scrollIntoView({ behavior: 'smooth' });
         });
 
-        // Téléchargement simple (sans archivage)
         document.getElementById('genForm').addEventListener('submit', (e) => {
             e.preventDefault();
-            if (!validateForm()) return;
+            const data = validateForm();
+            if (!data) return;
             try {
-                downloadGeneratedPDF(getFormData());
-                showToast('PDF généré et téléchargé', 'success');
+                downloadGeneratedPDF(data);
+                showToast('PDF téléchargé', 'success');
             } catch (err) {
                 showToast('Erreur: ' + err.message, 'error');
             }
         });
 
-        // Génération + archivage : on génère UNE SEULE FOIS le doc puis
-        // on l'utilise pour blob + download (sinon ca regénère 2x, gaspillage)
         document.getElementById('btnGenAndSave').addEventListener('click', async () => {
-            if (!validateForm()) return;
-            const data = getFormData();
-
+            const data = validateForm();
+            if (!data) return;
             try {
-                // un seul jsPDF doc, réutilisé
                 const pdfDoc = generateAuthorizationPDF(data);
                 const blob = getPDFBlob(data, pdfDoc);
                 const file = new File([blob], `${data.numero}.pdf`, { type: 'application/pdf' });
-
-                // télécharge en local pour l'utilisateur
                 downloadGeneratedPDF(data, pdfDoc);
-
-                // archive sur Firebase
                 await createAuthorization(data, file);
-                showToast(`Autorisation ${data.numero} générée et archivée`, 'success');
-
-                // reset du formulaire (on garde les valeurs par défaut)
+                showToast(`${data.numero} généré et archivé`, 'success');
                 document.getElementById('genForm').reset();
-                document.getElementById('signataire').value = 'AHMED BABA AHMED';
-                document.getElementById('titreSignataire').value = 'Directeur Général';
-                document.getElementById('visaSRT').value = 'A';
                 document.getElementById('previewSection').style.display = 'none';
-
+                await initParams(); // recharger les selects
             } catch (err) {
                 showToast('Erreur: ' + err.message, 'error');
             }
+        });
+
+        checkAuth(async () => {
+            await initParams();
         });
     </script>
 </body>
