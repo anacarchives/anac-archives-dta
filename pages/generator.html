@@ -6,28 +6,17 @@
     <title>Générateur - ANAC Archives DTA</title>
     <link rel="stylesheet" href="../assets/css/style.css">
     <style>
-        .field-combo {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }
-        .field-combo select,
-        .field-combo input {
-            width: 100%;
-        }
-        .field-combo input.manual {
-            display: none;
-        }
-        .field-combo input.manual.show {
-            display: block;
-        }
-        .manual-toggle {
+        .field-combo { display: flex; flex-direction: column; gap: 5px; }
+        .field-combo select, .field-combo input { width: 100%; }
+        .manual-input { display: none; }
+        .manual-input.show { display: block; }
+        .toggle-link {
             font-size: 11px;
             color: var(--primary);
             cursor: pointer;
             text-decoration: underline;
-            display: block;
             text-align: right;
+            display: block;
         }
     </style>
 </head>
@@ -46,11 +35,7 @@
                     <form id="genForm">
                         <div class="form-grid">
 
-                            <div class="form-group">
-                                <label class="form-label">N° Autorisation *</label>
-                                <input type="text" id="numero" class="form-input" required placeholder="ex: SAT-0303-26">
-                            </div>
-
+                            <!-- 1. Type (en premier pour générer le bon préfixe du numéro) -->
                             <div class="form-group">
                                 <label class="form-label">Type *</label>
                                 <select id="typeCode" class="form-select" required>
@@ -61,127 +46,104 @@
                                 </select>
                             </div>
 
+                            <!-- 2. N° Autorisation -->
+                            <div class="form-group">
+                                <label class="form-label">N° Autorisation *</label>
+                                <input type="text" id="numero" class="form-input" required>
+                            </div>
+
+                            <!-- 3. Date émission -->
                             <div class="form-group">
                                 <label class="form-label">Date d'émission *</label>
                                 <input type="date" id="dateEmission" class="form-input" required>
                             </div>
 
+                            <!-- 4. Date réception -->
                             <div class="form-group">
                                 <label class="form-label">Date de réception</label>
                                 <input type="date" id="dateReception" class="form-input">
                             </div>
 
-                            <!-- Opérateur -->
-                            <div class="form-group">
-                                <label class="form-label">Opérateur *</label>
-                                <div class="field-combo">
-                                    <select id="selOperateur" class="form-select">
-                                        <option value="">— Sélectionner —</option>
-                                    </select>
-                                    <input type="text" id="manOperateur" class="form-input manual" placeholder="Saisir manuellement...">
-                                    <span class="manual-toggle" data-field="operateur">Saisir manuellement</span>
-                                </div>
-                            </div>
-
-                            <!-- Destinataire -->
+                            <!-- 5. Destinataire (A/To) -->
                             <div class="form-group">
                                 <label class="form-label">Destinataire (A/To) *</label>
                                 <div class="field-combo">
-                                    <select id="selDestinataire" class="form-select">
-                                        <option value="">— Sélectionner —</option>
-                                    </select>
-                                    <input type="text" id="manDestinataire" class="form-input manual" placeholder="Saisir manuellement...">
-                                    <span class="manual-toggle" data-field="destinataire">Saisir manuellement</span>
+                                    <select id="selDestinataire" class="form-select"></select>
+                                    <input type="text" id="manDestinataire" class="form-input manual-input">
+                                    <span class="toggle-link" data-sel="selDestinataire" data-man="manDestinataire">Saisir manuellement</span>
                                 </div>
                             </div>
 
-                            <!-- Aéronef -->
+                            <!-- 6. Aéronef -->
                             <div class="form-group">
                                 <label class="form-label">Type d'aéronef *</label>
                                 <div class="field-combo">
-                                    <select id="selAeronef" class="form-select">
-                                        <option value="">— Sélectionner —</option>
-                                    </select>
-                                    <input type="text" id="manAeronef" class="form-input manual" placeholder="Saisir manuellement...">
-                                    <span class="manual-toggle" data-field="aeronef">Saisir manuellement</span>
+                                    <select id="selAeronef" class="form-select"></select>
+                                    <input type="text" id="manAeronef" class="form-input manual-input">
+                                    <span class="toggle-link" data-sel="selAeronef" data-man="manAeronef">Saisir manuellement</span>
                                 </div>
                             </div>
 
-                            <!-- Immatriculation -->
+                            <!-- 7. Immatriculation -->
                             <div class="form-group">
                                 <label class="form-label">Immatriculation *</label>
                                 <div class="field-combo">
-                                    <select id="selImmatriculation" class="form-select">
-                                        <option value="">— Sélectionner —</option>
-                                    </select>
-                                    <input type="text" id="manImmatriculation" class="form-input manual" placeholder="Saisir manuellement...">
-                                    <span class="manual-toggle" data-field="immatriculation">Saisir manuellement</span>
+                                    <select id="selImmatriculation" class="form-select"></select>
+                                    <input type="text" id="manImmatriculation" class="form-input manual-input">
+                                    <span class="toggle-link" data-sel="selImmatriculation" data-man="manImmatriculation">Saisir manuellement</span>
                                 </div>
                             </div>
 
-                            <!-- Motif -->
+                            <!-- 8. Motif -->
                             <div class="form-group">
                                 <label class="form-label">Motif *</label>
                                 <div class="field-combo">
-                                    <select id="selMotif" class="form-select">
-                                        <option value="">— Sélectionner —</option>
-                                    </select>
-                                    <input type="text" id="manMotif" class="form-input manual" placeholder="Saisir manuellement...">
-                                    <span class="manual-toggle" data-field="motif">Saisir manuellement</span>
+                                    <select id="selMotif" class="form-select"></select>
+                                    <input type="text" id="manMotif" class="form-input manual-input">
+                                    <span class="toggle-link" data-sel="selMotif" data-man="manMotif">Saisir manuellement</span>
                                 </div>
                             </div>
 
-                            <!-- Référence -->
+                            <!-- 9. Opérateur -->
                             <div class="form-group">
-                                <label class="form-label">Référence</label>
+                                <label class="form-label">Opérateur *</label>
                                 <div class="field-combo">
-                                    <select id="selReference" class="form-select">
-                                        <option value="">— Aucune —</option>
-                                    </select>
-                                    <input type="text" id="manReference" class="form-input manual" placeholder="Saisir manuellement...">
-                                    <span class="manual-toggle" data-field="reference">Saisir manuellement</span>
+                                    <select id="selOperateur" class="form-select"></select>
+                                    <input type="text" id="manOperateur" class="form-input manual-input">
+                                    <span class="toggle-link" data-sel="selOperateur" data-man="manOperateur">Saisir manuellement</span>
                                 </div>
                             </div>
 
-                            <!-- Route -->
+                            <!-- 10. Route -->
                             <div class="form-group full">
                                 <label class="form-label">Route / Itinéraire *</label>
                                 <div class="field-combo">
-                                    <select id="selRoute" class="form-select">
-                                        <option value="">— Sélectionner —</option>
-                                    </select>
-                                    <input type="text" id="manRoute" class="form-input manual" placeholder="Saisir manuellement...">
-                                    <span class="manual-toggle" data-field="route">Saisir manuellement</span>
+                                    <select id="selRoute" class="form-select"></select>
+                                    <input type="text" id="manRoute" class="form-input manual-input">
+                                    <span class="toggle-link" data-sel="selRoute" data-man="manRoute">Saisir manuellement</span>
                                 </div>
                             </div>
 
+                            <!-- 11. Date début validité -->
                             <div class="form-group">
                                 <label class="form-label">Date début validité *</label>
                                 <input type="date" id="dateDebutValidite" class="form-input" required>
                             </div>
 
+                            <!-- 12. Date fin validité + durée calculée automatiquement -->
                             <div class="form-group">
                                 <label class="form-label">Date fin validité *</label>
                                 <input type="date" id="dateFinValidite" class="form-input" required>
+                                <div id="dureeDisplay" style="font-size:12px; color:var(--primary); margin-top:4px; font-weight:600;"></div>
                             </div>
 
-                            <!-- Visa SRT -->
-                            <div class="form-group">
-                                <label class="form-label">Visa SRT</label>
-                                <input type="text" id="visaSRT" class="form-input">
-                            </div>
-
-                            <div class="form-group">
-                                <label class="form-label">Extension validité</label>
-                                <input type="text" id="validiteExtension" class="form-input" placeholder="ex: +72H">
-                            </div>
-
-                            <!-- Signataire -->
+                            <!-- 13. Signataire -->
                             <div class="form-group">
                                 <label class="form-label">Signataire</label>
                                 <input type="text" id="signataire" class="form-input">
                             </div>
 
+                            <!-- 14. Titre signataire -->
                             <div class="form-group">
                                 <label class="form-label">Titre signataire</label>
                                 <input type="text" id="titreSignataire" class="form-input">
@@ -206,7 +168,6 @@
                     </form>
                 </div>
 
-                <!-- Aperçu PDF -->
                 <div class="section-card" id="previewSection" style="display:none;">
                     <div class="section-title">Aperçu</div>
                     <iframe id="pdfPreview" style="width:100%; height:700px; border:1px solid var(--border); border-radius:8px;"></iframe>
@@ -227,36 +188,33 @@
         const TYPE_LABELS = {
             SAT: 'Survol et Atterrissage',
             SUR: 'Survol',
-            ATT: 'Atterrissage',
-            AUTRE: 'Autre'
+            ATT: 'Atterrissage'
         };
 
-        // config des champs combo (select + manual)
+        // champs combo : selId → manId
         const COMBOS = [
-            { key: 'operateurs',       selId: 'selOperateur',       manId: 'manOperateur',       field: 'operateur' },
-            { key: 'destinataires',    selId: 'selDestinataire',    manId: 'manDestinataire',    field: 'destinataire' },
-            { key: 'aeronefs',         selId: 'selAeronef',         manId: 'manAeronef',         field: 'aeronef' },
-            { key: 'immatriculations', selId: 'selImmatriculation', manId: 'manImmatriculation', field: 'immatriculation' },
-            { key: 'motifs',           selId: 'selMotif',           manId: 'manMotif',           field: 'motif' },
-            { key: 'routes',           selId: 'selRoute',           manId: 'manRoute',           field: 'route' },
-            { key: 'references',       selId: 'selReference',       manId: 'manReference',       field: 'reference' },
+            { key: 'destinataires',    selId: 'selDestinataire',    manId: 'manDestinataire' },
+            { key: 'aeronefs',         selId: 'selAeronef',         manId: 'manAeronef' },
+            { key: 'immatriculations', selId: 'selImmatriculation', manId: 'manImmatriculation' },
+            { key: 'motifs',           selId: 'selMotif',           manId: 'manMotif' },
+            { key: 'operateurs',       selId: 'selOperateur',       manId: 'manOperateur' },
+            { key: 'routes',           selId: 'selRoute',           manId: 'manRoute' },
         ];
 
-        // charge les params et remplit les selects
         async function initParams() {
             const params = await loadParams();
 
-            // remplir chaque select
+            // remplir les selects
             COMBOS.forEach(({ key, selId }) => {
                 const sel = document.getElementById(selId);
-                const list = params[key] || [];
-                list.forEach(val => {
+                sel.innerHTML = '<option value="">— Sélectionner —</option>';
+                (params[key] || []).forEach(val => {
                     const opt = document.createElement('option');
                     opt.value = val;
                     opt.textContent = val;
                     sel.appendChild(opt);
                 });
-                // ajouter option "Saisir manuellement" à la fin
+                // option manuelle en bas
                 const manOpt = document.createElement('option');
                 manOpt.value = '__manual__';
                 manOpt.textContent = '— Saisir manuellement —';
@@ -269,147 +227,138 @@
             document.getElementById('titreSignataire').value = params.titreSignataire || 'Directeur Général';
         }
 
-        // gestion des toggles "Saisir manuellement"
-        document.querySelectorAll('.manual-toggle').forEach(toggle => {
-            toggle.addEventListener('click', () => {
-                const field = toggle.dataset.field;
-                const combo = COMBOS.find(c => c.field === field);
-                if (!combo) return;
-
-                const sel = document.getElementById(combo.selId);
-                const man = document.getElementById(combo.manId);
+        // toggle manuel/select via le lien "Saisir manuellement"
+        document.querySelectorAll('.toggle-link').forEach(link => {
+            link.addEventListener('click', () => {
+                const sel = document.getElementById(link.dataset.sel);
+                const man = document.getElementById(link.dataset.man);
                 const isManual = man.classList.contains('show');
-
                 if (isManual) {
-                    // retour au select
                     man.classList.remove('show');
                     sel.style.display = '';
-                    toggle.textContent = 'Saisir manuellement';
+                    link.textContent = 'Saisir manuellement';
                 } else {
-                    // passer en manuel
                     man.classList.add('show');
                     sel.style.display = 'none';
+                    link.textContent = 'Choisir dans la liste';
                     man.focus();
-                    toggle.textContent = 'Choisir dans la liste';
                 }
             });
         });
 
-        // quand on choisit "__manual__" dans le select, bascule automatiquement
-        COMBOS.forEach(({ selId, manId, field }) => {
+        // si on choisit "__manual__" dans le select, bascule auto
+        COMBOS.forEach(({ selId, manId }) => {
             const sel = document.getElementById(selId);
             const man = document.getElementById(manId);
-            const toggle = document.querySelector(`.manual-toggle[data-field="${field}"]`);
-
             sel.addEventListener('change', () => {
                 if (sel.value === '__manual__') {
+                    const link = sel.closest('.field-combo').querySelector('.toggle-link');
                     man.classList.add('show');
                     sel.style.display = 'none';
-                    if (toggle) toggle.textContent = 'Choisir dans la liste';
+                    if (link) link.textContent = 'Choisir dans la liste';
                     man.focus();
                 }
             });
         });
 
-        // récupère la valeur d'un champ combo
-        function getComboValue(combo) {
-            const sel = document.getElementById(combo.selId);
-            const man = document.getElementById(combo.manId);
-            if (man.classList.contains('show')) {
-                return man.value.trim();
-            }
+        function getComboVal(selId, manId) {
+            const man = document.getElementById(manId);
+            if (man.classList.contains('show')) return man.value.trim();
+            const sel = document.getElementById(selId);
             return sel.value === '__manual__' ? '' : sel.value;
         }
 
+        // calcule la durée en heures entre deux dates et l'affiche
+        function calcDuree() {
+            const d1 = document.getElementById('dateDebutValidite').value;
+            const d2 = document.getElementById('dateFinValidite').value;
+            const display = document.getElementById('dureeDisplay');
+            if (!d1 || !d2) { display.textContent = ''; return 0; }
+            const diff = (new Date(d2) - new Date(d1)) / (1000 * 60 * 60 * 24);
+            if (diff < 0) { display.textContent = 'Date fin avant date début'; display.style.color = 'var(--danger)'; return 0; }
+            const heures = Math.round(diff * 24);
+            display.textContent = `Durée : +${heures}H`;
+            display.style.color = 'var(--primary)';
+            return heures;
+        }
+
+        document.getElementById('dateDebutValidite').addEventListener('change', calcDuree);
+        document.getElementById('dateFinValidite').addEventListener('change', calcDuree);
+
         function getFormData() {
             const code = document.getElementById('typeCode').value;
+            const heures = calcDuree();
             return {
                 numero:            document.getElementById('numero').value.trim(),
                 typeCode:          code,
                 type:              TYPE_LABELS[code] || '',
                 dateEmission:      fromISODate(document.getElementById('dateEmission').value),
                 dateReception:     fromISODate(document.getElementById('dateReception').value),
-                operateur:         getComboValue(COMBOS[0]),
-                destinataire:      getComboValue(COMBOS[1]),
-                aeronefType:       getComboValue(COMBOS[2]),
-                immatriculation:   getComboValue(COMBOS[3]),
-                motif:             getComboValue(COMBOS[4]),
-                route:             getComboValue(COMBOS[5]),
-                reference:         getComboValue(COMBOS[6]),
+                destinataire:      getComboVal('selDestinataire', 'manDestinataire'),
+                aeronefType:       getComboVal('selAeronef', 'manAeronef'),
+                immatriculation:   getComboVal('selImmatriculation', 'manImmatriculation'),
+                motif:             getComboVal('selMotif', 'manMotif'),
+                operateur:         getComboVal('selOperateur', 'manOperateur'),
+                route:             getComboVal('selRoute', 'manRoute'),
                 dateDebutValidite: fromISODate(document.getElementById('dateDebutValidite').value),
                 dateFinValidite:   fromISODate(document.getElementById('dateFinValidite').value),
-                visaSRT:           document.getElementById('visaSRT').value.trim(),
-                validiteExtension: document.getElementById('validiteExtension').value.trim(),
+                validiteExtension: heures > 0 ? `+${heures}H` : '',
+                visaSRT:           'A',
                 signataire:        document.getElementById('signataire').value.trim(),
                 titreSignataire:   document.getElementById('titreSignataire').value.trim()
             };
         }
 
-        function validateForm() {
-            const data = getFormData();
+        function validate() {
+            const d = getFormData();
             const required = {
-                numero: 'N° Autorisation',
-                typeCode: 'Type',
-                dateEmission: 'Date d\'émission',
-                operateur: 'Opérateur',
-                destinataire: 'Destinataire',
-                aeronefType: 'Type d\'aéronef',
-                immatriculation: 'Immatriculation',
-                motif: 'Motif',
-                route: 'Route',
-                dateDebutValidite: 'Date début validité',
-                dateFinValidite: 'Date fin validité'
+                typeCode: 'Type', numero: 'N° Autorisation',
+                dateEmission: 'Date d\'émission', destinataire: 'Destinataire',
+                aeronefType: 'Aéronef', immatriculation: 'Immatriculation',
+                motif: 'Motif', operateur: 'Opérateur', route: 'Route',
+                dateDebutValidite: 'Date début', dateFinValidite: 'Date fin'
             };
-            for (const [field, label] of Object.entries(required)) {
-                if (!data[field]) {
-                    showToast(`Champ requis : ${label}`, 'warning');
-                    return null;
-                }
+            for (const [f, label] of Object.entries(required)) {
+                if (!d[f]) { showToast(`Champ requis : ${label}`, 'warning'); return null; }
             }
-            return data;
+            return d;
         }
 
         document.getElementById('btnPreview').addEventListener('click', () => {
-            const data = validateForm();
-            if (!data) return;
-            document.getElementById('pdfPreview').src = getPDFDataURI(data);
+            const d = validate();
+            if (!d) return;
+            document.getElementById('pdfPreview').src = getPDFDataURI(d);
             document.getElementById('previewSection').style.display = 'block';
             document.getElementById('previewSection').scrollIntoView({ behavior: 'smooth' });
         });
 
         document.getElementById('genForm').addEventListener('submit', (e) => {
             e.preventDefault();
-            const data = validateForm();
-            if (!data) return;
-            try {
-                downloadGeneratedPDF(data);
-                showToast('PDF téléchargé', 'success');
-            } catch (err) {
-                showToast('Erreur: ' + err.message, 'error');
-            }
+            const d = validate();
+            if (!d) return;
+            try { downloadGeneratedPDF(d); showToast('PDF téléchargé', 'success'); }
+            catch (err) { showToast('Erreur: ' + err.message, 'error'); }
         });
 
         document.getElementById('btnGenAndSave').addEventListener('click', async () => {
-            const data = validateForm();
-            if (!data) return;
+            const d = validate();
+            if (!d) return;
             try {
-                const pdfDoc = generateAuthorizationPDF(data);
-                const blob = getPDFBlob(data, pdfDoc);
-                const file = new File([blob], `${data.numero}.pdf`, { type: 'application/pdf' });
-                downloadGeneratedPDF(data, pdfDoc);
-                await createAuthorization(data, file);
-                showToast(`${data.numero} généré et archivé`, 'success');
+                const pdfDoc = generateAuthorizationPDF(d);
+                const blob = getPDFBlob(d, pdfDoc);
+                const file = new File([blob], `${d.numero}.pdf`, { type: 'application/pdf' });
+                downloadGeneratedPDF(d, pdfDoc);
+                await createAuthorization(d, file);
+                showToast(`${d.numero} généré et archivé`, 'success');
                 document.getElementById('genForm').reset();
                 document.getElementById('previewSection').style.display = 'none';
-                await initParams(); // recharger les selects
+                await initParams();
             } catch (err) {
                 showToast('Erreur: ' + err.message, 'error');
             }
         });
 
-        checkAuth(async () => {
-            await initParams();
-        });
+        checkAuth(async () => { await initParams(); });
     </script>
 </body>
 </html>
