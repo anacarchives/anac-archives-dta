@@ -1,192 +1,187 @@
 // pdf-generator.js
-// Génère un PDF identique aux vrais documents d'autorisation ANAC.
-// Basé sur les modèles SAT-0303-26 et SUR-1014-26.
+// Structure du document selon les corrections de M. DADY (04/05/2026) :
 //
-// Structure du document (de haut en bas) :
-//   [42mm] espace vide pour l'entête papier ANAC (logo, armoiries, textes bilingues)
-//   [bordure] tout le reste dans un rectangle
-//   - Titre "Autorisation / Authorization" + case Date à droite
-//   - Numéro (SAT-0303-26 / SUR-1014-26)
-//   - Type (Survol et Atterrissage / Survol)
-//   - Bloc 5 lignes : ANAC à gauche | A/To + dates à droite
-//   - Ligne Visa SRT | Visa DTA
-//   - Texte d'accord (différent SAT vs SUR)
-//   - Tableau Aéronef | Immatriculation
-//   - Motif, Opérateur, Itinéraire/Route
-//   - Dates début/fin + extension
-//   - Conditions (italique)
-//   - "Salutations distinguées Stop..." (SUR uniquement)
-//   - Distribution (liste) | Signature
+// [espace entête papier 42mm]
+// ┌─────────────────────────────────┬──────────┐
+// │ Autorisation / Authorization    │Date/Dated│  ← Rectangle 1
+// │ Aurorisation numéro/number:     │          │
+// └─────────────────────────────────┴──────────┘
+// ┌──────────────────────────────────────────────┐
+// │  SAT-021-26  (aligné à gauche)               │  ← Rectangle 2
+// └──────────────────────────────────────────────┘
+// ┌──────────────────────────────────────────────┐
+// │ Autorisation type / Authorization  [TYPE]    │  ← Rectangle 3
+// └──────────────────────────────────────────────┘
+// ┌──────────────────────────────┬───────────────┐
+// │ Délivrée par: ANAC...        │ A/To: ...     │  ← Rectangle 4
+// │ Delivered by...              │ Tél:          │    (SANS lignes internes)
+// │ Tél: 00 222...               │ Fax:          │
+// │ Fax: 00 222...               │ Date récep:   │
+// │ Référence:                   │               │
+// └──────────────────────────────┴───────────────┘
+// ┌──────────────────────────────┬───────────────┐
+// │ Visa/SRT A                   │ Visa DTA      │  ← Rectangle 5
+// │                              │               │    (SANS lignes internes)
+// │ Texte d'accord...            │               │
+// │                              │               │
+// │ Aéronef type | Immatricul.   │               │
+// └──────────────────────────────┴───────────────┘
+// ... suite (motif, route, dates, conditions, signature)
 
 import { jsPDF } from "https://cdn.jsdelivr.net/npm/jspdf@2.5.1/+esm";
 
-const PAGE_W   = 210;
-const M_L      = 15;
-const M_R      = PAGE_W - 15;
-const CW       = M_R - M_L;       // content width = 180mm
-const MID      = M_L + CW / 2;    // colonne du milieu = 105mm
-const H_TOP    = 42;               // espace entête papier
-const H_BOT    = 282;              // bas de page utile
+const PAGE_W = 210;
+const M_L    = 15;
+const M_R    = PAGE_W - 15;
+const CW     = M_R - M_L;      // 180mm
+const MID    = M_L + CW / 2;   // 105mm
+const H_TOP  = 42;              // espace entête papier
+const H_BOT  = 282;
 
 
 export function generateAuthorizationPDF(data) {
     const doc = new jsPDF({ unit: 'mm', format: 'a4' });
-
-    // bordure extérieure du document
-    doc.setLineWidth(0.5);
-    doc.rect(M_L, H_TOP, CW, H_BOT - H_TOP);
+    doc.setLineWidth(0.4);
 
     let y = H_TOP;
-    doc.setLineWidth(0.3);
 
     // ══════════════════════════════════════════
-    // TITRE + CASE DATE
+    // RECTANGLE 1 — Titre + case Date
     // ══════════════════════════════════════════
-    const TH = 22; // hauteur du bloc titre
+    const R1H = 22;
+    const DW  = 48;
+    const DX  = M_R - DW;
 
-    // case date (en haut à droite)
-    const DW = 48;
-    const DX = M_R - DW;
-    doc.rect(DX, y, DW, TH);
-    doc.setFont('helvetica', 'bold').setFontSize(8);
-    doc.text('Date/ Dated', DX + 3, y + 5);
-    doc.setFont('helvetica', 'normal').setFontSize(11);
-    doc.text(data.dateEmission || '', DX + DW/2, y + 14, { align: 'center' });
+    // bordure extérieure du rectangle 1
+    doc.rect(M_L, y, CW, R1H);
+    // ligne verticale séparant titre et date
+    doc.line(DX, y, DX, y + R1H);
 
-    // titre principal
+    // titre
     doc.setFont('helvetica', 'bold').setFontSize(20);
-    doc.text('Autorisation / Authorization', M_L + 3, y + 10);
+    doc.text('Autorisation / Authorization', M_L + 3, y + 11);
     doc.setFont('helvetica', 'normal').setFontSize(8);
-    doc.text('Aurorisation numéro / authorization number:', M_L + 3, y + 16);
+    doc.text('Aurorisation numéro / authorization number:', M_L + 3, y + 17);
 
-    doc.line(M_L, y + TH, M_R, y + TH);
-    y += TH;
+    // case date
+    doc.setFont('helvetica', 'bold').setFontSize(8);
+    doc.text('Date/ Dated', DX + 3, y + 6);
+    doc.setFont('helvetica', 'normal').setFontSize(11);
+    doc.text(data.dateEmission || '', DX + DW / 2, y + 15, { align: 'center' });
 
-    // ══════════════════════════════════════════
-    // NUMÉRO
-    // ══════════════════════════════════════════
-    const NH = 10;
-    doc.setFont('helvetica', 'bold').setFontSize(16);
-    doc.text(data.numero || '', M_L + CW/2, y + 7.5, { align: 'center' });
-    doc.line(M_L, y + NH, M_R, y + NH);
-    y += NH;
+    y += R1H;
 
     // ══════════════════════════════════════════
-    // TYPE D'AUTORISATION
+    // RECTANGLE 2 — Numéro (aligné à gauche)
     // ══════════════════════════════════════════
-    const TYPH = 9;
+    const R2H = 12;
+    doc.rect(M_L, y, CW, R2H);
+    doc.setFont('helvetica', 'bold').setFontSize(17);
+    // aligné à gauche, avec un petit retrait
+    doc.text(data.numero || '', M_L + 8, y + 8.5);
+    y += R2H;
+
+    // ══════════════════════════════════════════
+    // RECTANGLE 3 — Type d'autorisation
+    // ══════════════════════════════════════════
+    const R3H = 10;
+    doc.rect(M_L, y, CW, R3H);
     doc.setFont('helvetica', 'normal').setFontSize(9);
-    doc.text('Autorisation type / Authorization', M_L + 3, y + 6);
+    doc.text('Autorisation type / Authorization', M_L + 3, y + 6.5);
     doc.setFont('helvetica', 'bold').setFontSize(14);
-    doc.text(data.type || '', M_L + 72, y + 6.5);
-    doc.line(M_L, y + TYPH, M_R, y + TYPH);
-    y += TYPH;
+    doc.text(data.type || '', M_L + 72, y + 7);
+    y += R3H;
 
     // ══════════════════════════════════════════
-    // BLOC INFO : ANAC gauche | A/To droite
+    // RECTANGLE 4 — Bloc info ANAC / destinataire
+    // PAS de lignes horizontales internes
+    // juste la ligne verticale au milieu
     // ══════════════════════════════════════════
-    const RH = 6;   // hauteur d'une ligne
-    const BH = 6 * RH; // 6 lignes
-
-    // séparateur vertical au milieu
-    doc.line(MID, y, MID, y + BH);
-
-    // lignes horizontales (5 séparateurs = 6 zones)
-    for (let i = 1; i <= 5; i++) {
-        doc.line(M_L, y + i * RH, M_R, y + i * RH);
-    }
+    const R4H = 36;
+    doc.rect(M_L, y, CW, R4H);
+    doc.line(MID, y, MID, y + R4H); // séparateur vertical gauche/droite
 
     // colonne gauche (ANAC)
-    doc.setFont('helvetica', 'normal').setFontSize(7.5);
-    const leftLines = [
-        "Délivrée par: Agence Nationale de l'Aviation Civile:",
-        "Delivered by: National Civil Aviation Autority:",
-        "Tél/Tel: 00 222 45 24  40 05",
-        "Télécopie/Fax:00 222 45 25 35 78",
-        "Référence/Reference: " + (data.reference || ''),
-        '',
-    ];
-    leftLines.forEach((txt, i) => {
-        if (txt) doc.text(txt, M_L + 2, y + i * RH + 4.2);
-    });
+    doc.setFont('helvetica', 'normal').setFontSize(8);
+    doc.text("Délivrée par: Agence Nationale de l'Aviation Civile:", M_L + 3, y + 6);
+    doc.text("Delivered by: National Civil Aviation Autority:", M_L + 3, y + 11);
+    doc.text("Tél/Tel: 00 222 45 24  40 05", M_L + 3, y + 16);
+    doc.text("Télécopie/Fax:00 222 45 25 35 78", M_L + 3, y + 21);
+    doc.text("Référence/Reference: " + (data.reference || ''), M_L + 3, y + 26);
 
     // colonne droite (destinataire)
     doc.setFont('helvetica', 'normal').setFontSize(8);
-    doc.text('A/To:', MID + 3, y + 4);
+    doc.text('A/To:', MID + 3, y + 6);
     doc.setFont('helvetica', 'bold').setFontSize(10);
-    // tronquer si trop long
-    const dest = data.destinataire || '';
-    doc.text(dest, MID + 14, y + 4);
+    doc.text(data.destinataire || '', MID + 14, y + 6);
 
-    doc.setFont('helvetica', 'normal').setFontSize(7.5);
-    doc.text('Tél/Tel:', MID + 3, y + RH + 4);
-    doc.text('Télécopie/Fax:', MID + 3, y + 2*RH + 4);
-    doc.text('Date de recéption de la demande/Date of', MID + 3, y + 3*RH + 3);
-    doc.text('receipt of request:', MID + 3, y + 3*RH + 7);
+    doc.setFont('helvetica', 'normal').setFontSize(8);
+    doc.text('Tél/Tel:', MID + 3, y + 13);
+    doc.text('Télécopie/Fax:', MID + 3, y + 19);
+    doc.text('Date de recéption de la demande/Date of', MID + 3, y + 25);
+    doc.text('receipt of request:', MID + 3, y + 30);
     doc.setFont('helvetica', 'bold').setFontSize(9);
-    doc.text(data.dateReception || data.dateEmission || '', MID + 50, y + 3*RH + 5.5);
+    doc.text(data.dateReception || data.dateEmission || '', MID + 46, y + 30);
 
-    y += BH;
+    y += R4H;
 
     // ══════════════════════════════════════════
-    // LIGNE VISA SRT | VISA DTA
+    // RECTANGLE 5 — Visa + texte accord + aéronef
+    // PAS de lignes internes (tout dans un seul grand rectangle)
     // ══════════════════════════════════════════
-    const VH = 8;
-    doc.line(MID, y, MID, y + VH);
-    doc.line(M_L, y + VH, M_R, y + VH);
 
+    // calcul de la hauteur de ce rectangle selon le type
+    const acY  = 46; // espace visa + texte avant le tableau aéronef
+    const R5H  = acY + 26; // 26mm pour le tableau aéronef
+    doc.rect(M_L, y, CW, R5H);
+
+    // --- Visa SRT | Visa DTA (en haut du rectangle, séparés par ligne verticale)
+    doc.line(MID, y, MID, y + 9);
+    doc.line(M_L, y + 9, M_R, y + 9); // ligne horizontale sous visa
     doc.setFont('helvetica', 'bold').setFontSize(10);
-    doc.text('Visa/SRT ' + (data.visaSRT || 'A'), M_L + 3, y + 5.5);
-    doc.text('Visa DTA', MID + 3, y + 5.5);
-    y += VH;
+    doc.text('Visa/SRT ' + (data.visaSRT || 'A'), M_L + 3, y + 6);
+    doc.text('Visa DTA', MID + 3, y + 6);
 
-    // ══════════════════════════════════════════
-    // TEXTE D'ACCORD (différent SAT vs SUR)
-    // ══════════════════════════════════════════
-    y += 3;
+    // --- texte d'accord
+    let ty = y + 14;
     doc.setFont('helvetica', 'normal').setFontSize(8.5);
-
     if (data.typeCode === 'SUR') {
         doc.text(
             "Honneur vous notifier notre accord de survol du territoire mauritanien en faveur de l'avion selon les informations ci-après #",
-            M_L + 3, y
+            M_L + 3, ty
         );
-        y += 6;
+        ty += 7;
     } else {
-        // SAT ou ATT
         doc.text(
             "Honneur vous notifier notre accord de survol du territoire mauritanien et l'atterrissage sur le(s)",
-            M_L + 3, y
+            M_L + 3, ty
         );
-        y += 4.5;
+        ty += 5;
         doc.text(
             "aéroport(s) International de Nouakchott OUM TOUNSY en faveur de(s) avion(s) selon les",
-            M_L + 3, y
+            M_L + 3, ty
         );
-        y += 6;
+        ty += 7;
     }
 
-    // ══════════════════════════════════════════
-    // TABLEAU AÉRONEF | IMMATRICULATION
-    // ══════════════════════════════════════════
-    const ACH = 24;
-    doc.rect(M_L, y, CW, ACH);
-    doc.line(MID, y, MID, y + ACH);
-    doc.line(M_L, y + 7, M_R, y + 7);
+    // --- tableau aéronef | immatriculation (dans le même rectangle, juste une ligne verticale)
+    const acTop = y + acY;
+    doc.line(MID, acTop, MID, acTop + 26);        // ligne verticale
+    doc.line(M_L, acTop + 7, M_R, acTop + 7);    // ligne sous les labels
 
     doc.setFont('helvetica', 'bold').setFontSize(8.5);
-    doc.text('Aéronef type / aircraft type', M_L + 3, y + 5);
-    doc.text('Immatriculation/ Registration', MID + 3, y + 5);
+    doc.text('Aéronef type / aircraft type', M_L + 3, acTop + 5);
+    doc.text('Immatriculation/ Registration', MID + 3, acTop + 5);
 
     doc.setFont('helvetica', 'bold').setFontSize(16);
-    doc.text(data.aeronefType || '', M_L + CW/4, y + 18, { align: 'center' });
-    doc.text(data.immatriculation || '', M_L + 3*CW/4, y + 18, { align: 'center' });
-    y += ACH + 4;
+    doc.text(data.aeronefType || '', M_L + CW / 4, acTop + 19, { align: 'center' });
+    doc.text(data.immatriculation || '', M_L + 3 * CW / 4, acTop + 19, { align: 'center' });
+
+    y += R5H + 4;
 
     // ══════════════════════════════════════════
-    // MOTIF / OPÉRATEUR / ITINÉRAIRE / DATES
+    // MOTIF / OPÉRATEUR / ROUTE / DATES
     // ══════════════════════════════════════════
-    doc.setFont('helvetica', 'bold').setFontSize(9);
     const fields = [
         ['Motif/Motif:', data.motif || ''],
         ['Opérateur/Operator:', data.operateur || ''],
@@ -213,7 +208,7 @@ export function generateAuthorizationPDF(data) {
     doc.text(data.dateFinValidite || '', M_L + 95, y);
     if (data.validiteExtension) {
         doc.setFont('helvetica', 'bold').setFontSize(9);
-        doc.text(data.validiteExtension, M_L + 130, y);
+        doc.text(data.validiteExtension, M_L + 135, y);
     }
     y += 5;
 
@@ -231,33 +226,31 @@ export function generateAuthorizationPDF(data) {
         doc.text(line, M_L + 3, y);
         y += 3.2;
     }
-    y += 1;
 
-    // NB (paiement) — uniquement SAT (visible dans SAT-0303-26, absent dans SUR-1014-26)
     if (data.typeCode !== 'SUR') {
+        y += 0.5;
         doc.text("NB: Le paiement des frais et taxes relatifs à la délivrance de la présente autorisation sont dus dès la signature de celle-ci par l'ANAC.", M_L + 3, y);
         y += 3.2;
         doc.text("NB: The payment of the fees and taxes relating to the issue of this authorization are due as soon as it is signed by the ANAC.", M_L + 3, y);
         y += 3.2;
     }
 
-    // "Salutations distinguées..." — uniquement SUR (visible dans SUR-1014-26)
     if (data.typeCode === 'SUR') {
-        y += 1;
+        y += 2;
         doc.setFont('helvetica', 'italic').setFontSize(7.5);
         doc.text('Salutations distinguées Stop', M_L + 3, y);
         y += 3.5;
         doc.text('Nouakchott Mauritanie Stop et Fin', M_L + 3, y);
-        y += 4;
+        y += 5;
     } else {
-        y += 2;
+        y += 3;
     }
 
     // ══════════════════════════════════════════
     // DISTRIBUTION + SIGNATURE
     // ══════════════════════════════════════════
     const sigY = y;
-    const distItems = [
+    const dist = [
         '•  MDN/MET',
         '•  E.M.A.A',
         '•  Asecna NKC',
@@ -268,11 +261,11 @@ export function generateAuthorizationPDF(data) {
         '•  DTA/DAF/DSV/ANAC',
     ];
     doc.setFont('helvetica', 'normal').setFontSize(8);
-    distItems.forEach((item, i) => {
+    dist.forEach((item, i) => {
         doc.text(item, M_L + 3, sigY + i * 4);
     });
 
-    // signature à droite
+    // signature
     const SX = MID + 5;
     doc.setFont('helvetica', 'normal').setFontSize(8);
     doc.text('Nom du signataire:', SX, sigY);
