@@ -5,6 +5,83 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Paramètres - ANAC Archives DTA</title>
     <link rel="stylesheet" href="../assets/css/style.css">
+    <style>
+        .params-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .param-card {
+            background: white;
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            box-shadow: var(--shadow-sm);
+        }
+        .param-card-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .param-add-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        .param-add-row input {
+            flex: 1;
+        }
+        .param-tag-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            min-height: 32px;
+        }
+        .param-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 4px 12px;
+            font-size: 13px;
+            color: var(--text);
+        }
+        .param-tag button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--text-muted);
+            padding: 0;
+            line-height: 1;
+            font-size: 16px;
+        }
+        .param-tag button:hover { color: var(--danger); }
+        .param-card.full { grid-column: 1 / -1; }
+        .default-field {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .default-field label {
+            font-size: 13px;
+            color: var(--text-light);
+            width: 140px;
+            flex-shrink: 0;
+        }
+        .default-field input {
+            flex: 1;
+        }
+        @media (max-width: 900px) {
+            .params-grid { grid-template-columns: 1fr; }
+            .param-card.full { grid-column: 1; }
+        }
+    </style>
 </head>
 <body>
     <div class="app-container">
@@ -12,111 +89,123 @@
             <div class="topbar">
                 <div>
                     <div class="page-title">Paramètres</div>
-                    <div class="page-subtitle">Configuration et informations système</div>
+                    <div class="page-subtitle">Configuration des valeurs utilisées dans le générateur</div>
                 </div>
+                <button class="btn btn-primary" id="btnSaveAll" style="width:auto; padding:10px 24px;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                    Enregistrer tout
+                </button>
             </div>
-            
-            <div class="content-wrapper" style="max-width: 800px;">
-                
-                <!-- Profil -->
-                <div class="section-card">
-                    <div class="section-title">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                        Mon profil
+
+            <div class="content-wrapper">
+
+                <!-- Valeurs par défaut fixes -->
+                <div class="param-card" style="margin-bottom:20px;">
+                    <div class="param-card-title">Valeurs par défaut</div>
+                    <div class="default-field">
+                        <label>Visa SRT</label>
+                        <input type="text" id="defVisaSRT" class="form-input" style="max-width:120px;" placeholder="ex: A">
                     </div>
-                    
-                    <div class="detail-grid">
-                        <div class="detail-item">
-                            <div class="detail-label">Nom</div>
-                            <div class="detail-value" id="profileName">—</div>
-                        </div>
-                        <div class="detail-item">
-                            <div class="detail-label">Email</div>
-                            <div class="detail-value" id="profileEmail">—</div>
-                        </div>
-                        <div class="detail-item">
-                            <div class="detail-label">Rôle</div>
-                            <div class="detail-value" id="profileRole">—</div>
-                        </div>
-                        <div class="detail-item">
-                            <div class="detail-label">UID</div>
-                            <div class="detail-value" style="font-family:monospace; font-size:12px;" id="profileUid">—</div>
-                        </div>
+                    <div class="default-field">
+                        <label>Signataire</label>
+                        <input type="text" id="defSignataire" class="form-input" placeholder="ex: AHMED BABA AHMED">
                     </div>
-                    
-                    <div class="btn-row">
-                        <button class="btn btn-secondary" id="btnChangePassword">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                    <div class="default-field">
+                        <label>Titre signataire</label>
+                        <input type="text" id="defTitreSignataire" class="form-input" placeholder="ex: Directeur Général">
+                    </div>
+                </div>
+
+                <!-- Listes configurables -->
+                <div class="params-grid">
+
+                    <div class="param-card">
+                        <div class="param-card-title">Opérateurs</div>
+                        <div class="param-add-row">
+                            <input type="text" class="form-input" id="inputOperateurs" placeholder="Ajouter un opérateur...">
+                            <button class="btn btn-primary btn-sm" onclick="addItem('operateurs', 'inputOperateurs')">+</button>
+                        </div>
+                        <div class="param-tag-list" id="listOperateurs"></div>
+                    </div>
+
+                    <div class="param-card">
+                        <div class="param-card-title">Destinataires (A/To)</div>
+                        <div class="param-add-row">
+                            <input type="text" class="form-input" id="inputDestinataires" placeholder="Ajouter un destinataire...">
+                            <button class="btn btn-primary btn-sm" onclick="addItem('destinataires', 'inputDestinataires')">+</button>
+                        </div>
+                        <div class="param-tag-list" id="listDestinataires"></div>
+                    </div>
+
+                    <div class="param-card">
+                        <div class="param-card-title">Types d'aéronef</div>
+                        <div class="param-add-row">
+                            <input type="text" class="form-input" id="inputAeronefs" placeholder="ex: B737-8">
+                            <button class="btn btn-primary btn-sm" onclick="addItem('aeronefs', 'inputAeronefs')">+</button>
+                        </div>
+                        <div class="param-tag-list" id="listAeronefs"></div>
+                    </div>
+
+                    <div class="param-card">
+                        <div class="param-card-title">Immatriculations</div>
+                        <div class="param-add-row">
+                            <input type="text" class="form-input" id="inputImmatriculations" placeholder="ex: 5TCLJ">
+                            <button class="btn btn-primary btn-sm" onclick="addItem('immatriculations', 'inputImmatriculations')">+</button>
+                        </div>
+                        <div class="param-tag-list" id="listImmatriculations"></div>
+                    </div>
+
+                    <div class="param-card">
+                        <div class="param-card-title">Motifs</div>
+                        <div class="param-add-row">
+                            <input type="text" class="form-input" id="inputMotifs" placeholder="ex: CONVOYAGE TECHNIQUE">
+                            <button class="btn btn-primary btn-sm" onclick="addItem('motifs', 'inputMotifs')">+</button>
+                        </div>
+                        <div class="param-tag-list" id="listMotifs"></div>
+                    </div>
+
+                    <div class="param-card">
+                        <div class="param-card-title">Routes / Itinéraires</div>
+                        <div class="param-add-row">
+                            <input type="text" class="form-input" id="inputRoutes" placeholder="ex: GMMN 18H00 - 20H30 GQNO">
+                            <button class="btn btn-primary btn-sm" onclick="addItem('routes', 'inputRoutes')">+</button>
+                        </div>
+                        <div class="param-tag-list" id="listRoutes"></div>
+                    </div>
+
+                    <div class="param-card full">
+                        <div class="param-card-title">Références</div>
+                        <div class="param-add-row">
+                            <input type="text" class="form-input" id="inputReferences" placeholder="Ajouter une référence...">
+                            <button class="btn btn-primary btn-sm" onclick="addItem('references', 'inputReferences')">+</button>
+                        </div>
+                        <div class="param-tag-list" id="listReferences"></div>
+                    </div>
+
+                </div>
+
+                <!-- Profil utilisateur -->
+                <div class="param-card" style="margin-top:20px;">
+                    <div class="param-card-title">Mon compte</div>
+                    <div class="default-field">
+                        <label>Nom</label>
+                        <div class="form-input" style="background:var(--bg);" id="profileName">—</div>
+                    </div>
+                    <div class="default-field">
+                        <label>Email</label>
+                        <div class="form-input" style="background:var(--bg);" id="profileEmail">—</div>
+                    </div>
+                    <div class="default-field">
+                        <label>Rôle</label>
+                        <div class="form-input" style="background:var(--bg);" id="profileRole">—</div>
+                    </div>
+                    <div style="margin-top:12px;">
+                        <button class="btn btn-secondary" id="btnChangePassword" style="width:auto; padding:8px 16px;">
                             Changer mon mot de passe
                         </button>
                     </div>
                 </div>
-                
-                <!-- Informations système -->
-                <div class="section-card">
-                    <div class="section-title">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-                        À propos du système
-                    </div>
-                    
-                    <div class="detail-grid">
-                        <div class="detail-item">
-                            <div class="detail-label">Application</div>
-                            <div class="detail-value">ANAC Archives DTA</div>
-                        </div>
-                        <div class="detail-item">
-                            <div class="detail-label">Version</div>
-                            <div class="detail-value">1.0.0</div>
-                        </div>
-                        <div class="detail-item">
-                            <div class="detail-label">Service</div>
-                            <div class="detail-value">Direction du Transport Aérien</div>
-                        </div>
-                        <div class="detail-item">
-                            <div class="detail-label">Organisation</div>
-                            <div class="detail-value">ANAC Mauritanie</div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Configuration (admin) -->
-                <div class="section-card" id="adminSection" style="display:none;">
-                    <div class="section-title">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-                        Configuration (Administrateur)
-                    </div>
-                    
-                    <div style="background:var(--bg); border-radius:8px; padding:14px; font-size:13px; color:var(--text-light); line-height:1.6;">
-                        <strong style="color:var(--text);">Configuration Firebase</strong> — Les paramètres techniques (clés API, projet Firebase, etc.) se trouvent dans le fichier <code style="background:white; padding:2px 6px; border-radius:4px;">assets/js/firebase-config.js</code>.
-                        
-                        <p style="margin-top:10px;"><strong style="color:var(--text);">Console Firebase :</strong> 
-                        <a href="https://console.firebase.google.com" target="_blank" style="color:var(--primary);">console.firebase.google.com</a></p>
-                        
-                        <p style="margin-top:10px;"><strong style="color:var(--text);">Statistiques d'utilisation :</strong></p>
-                        <ul style="margin-top:6px; padding-left:20px;">
-                            <li>Total documents archivés : <span id="totalDocs">—</span></li>
-                            <li>Plan Firebase actuel : Gratuit (Spark)</li>
-                            <li>Limite documents Firestore : 50 000 lectures/jour</li>
-                            <li>Limite stockage : 1 Go gratuit</li>
-                        </ul>
-                    </div>
-                </div>
-                
-                <!-- Aide -->
-                <div class="section-card">
-                    <div class="section-title">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                        Aide rapide
-                    </div>
-                    
-                    <div style="font-size:14px; line-height:1.8; color:var(--text);">
-                        <p style="margin-bottom:10px;"><strong>📥 Pour archiver une autorisation :</strong> Allez dans "Nouvelle saisie", glissez le PDF scanné, l'IA remplit les champs automatiquement, vérifiez et enregistrez.</p>
-                        <p style="margin-bottom:10px;"><strong>🔍 Pour rechercher :</strong> Utilisez la page "Archive" avec les filtres (numéro, opérateur, immatriculation, date, type).</p>
-                        <p style="margin-bottom:10px;"><strong>📄 Pour générer un nouveau document :</strong> Page "Générateur" — remplissez le formulaire et téléchargez le PDF prêt à imprimer (pensez à utiliser le papier à entête ANAC).</p>
-                        <p style="margin-bottom:10px;"><strong>📦 Pour exporter en masse :</strong> Page "Export" — choisissez les filtres, téléchargez en Excel ou en ZIP de PDF.</p>
-                        <p><strong>⚠️ Problème ?</strong> Contactez l'administrateur du système.</p>
-                    </div>
-                </div>
+
             </div>
         </main>
     </div>
@@ -124,35 +213,123 @@
     <script type="module">
         import { checkAuth, injectSidebar } from '../assets/js/layout.js';
         import { showToast } from '../assets/js/helpers.js';
+        import { loadParams, saveParams } from '../assets/js/params.js';
         import { auth } from '../assets/js/firebase-config.js';
         import { sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getStats } from '../assets/js/database.js';
-        
+
         injectSidebar('settings');
-        
+
+        let currentParams = {};
+
+        // les listes configurables et leurs IDs
+        const LISTS = [
+            { key: 'operateurs',       inputId: 'inputOperateurs',       listId: 'listOperateurs' },
+            { key: 'destinataires',    inputId: 'inputDestinataires',     listId: 'listDestinataires' },
+            { key: 'aeronefs',         inputId: 'inputAeronefs',          listId: 'listAeronefs' },
+            { key: 'immatriculations', inputId: 'inputImmatriculations',  listId: 'listImmatriculations' },
+            { key: 'motifs',           inputId: 'inputMotifs',            listId: 'listMotifs' },
+            { key: 'routes',           inputId: 'inputRoutes',            listId: 'listRoutes' },
+            { key: 'references',       inputId: 'inputReferences',        listId: 'listReferences' },
+        ];
+
         checkAuth(async (user, userData) => {
+            // profil
             document.getElementById('profileName').textContent = userData.name || '—';
             document.getElementById('profileEmail').textContent = userData.email || user.email;
-            document.getElementById('profileRole').innerHTML = userData.role === 'admin' ? 
-                '<span class="role-badge admin">Administrateur</span>' : 
-                '<span class="role-badge agent">Agent</span>';
-            document.getElementById('profileUid').textContent = user.uid;
-            
-            if (userData.role === 'admin') {
-                document.getElementById('adminSection').style.display = 'block';
-                try {
-                    const stats = await getStats();
-                    document.getElementById('totalDocs').textContent = stats.total;
-                } catch (e) {
-                    console.error(e);
-                }
+            document.getElementById('profileRole').textContent = userData.role === 'admin' ? 'Administrateur' : 'Agent';
+
+            // charger les params
+            currentParams = await loadParams();
+            renderAll();
+        });
+
+        function renderAll() {
+            // valeurs par défaut
+            document.getElementById('defVisaSRT').value = currentParams.visaSRT || 'A';
+            document.getElementById('defSignataire').value = currentParams.signataire || '';
+            document.getElementById('defTitreSignataire').value = currentParams.titreSignataire || '';
+
+            // listes
+            LISTS.forEach(({ key, listId }) => {
+                renderList(key, listId);
+            });
+        }
+
+        function renderList(key, listId) {
+            const list = currentParams[key] || [];
+            const container = document.getElementById(listId);
+            if (!container) return;
+
+            if (list.length === 0) {
+                container.innerHTML = '<span style="font-size:12px; color:var(--text-muted);">Aucune valeur</span>';
+                return;
+            }
+
+            container.innerHTML = list.map((val, i) => `
+                <div class="param-tag">
+                    <span>${val}</span>
+                    <button data-key="${key}" data-index="${i}" title="Supprimer">×</button>
+                </div>
+            `).join('');
+
+            // attach delete handlers
+            container.querySelectorAll('button[data-key]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const k = btn.dataset.key;
+                    const idx = parseInt(btn.dataset.index);
+                    currentParams[k].splice(idx, 1);
+                    renderList(k, listId);
+                });
+            });
+        }
+
+        // exposé globalement pour les boutons onclick dans le HTML
+        window.addItem = function(key, inputId) {
+            const input = document.getElementById(inputId);
+            const val = input.value.trim();
+            if (!val) return;
+
+            if (!currentParams[key]) currentParams[key] = [];
+            if (currentParams[key].includes(val)) {
+                showToast('Cette valeur existe déjà', 'warning');
+                return;
+            }
+
+            currentParams[key].push(val);
+            input.value = '';
+
+            const listConfig = LISTS.find(l => l.key === key);
+            if (listConfig) renderList(key, listConfig.listId);
+        };
+
+        // Enter dans les inputs = ajouter
+        LISTS.forEach(({ key, inputId }) => {
+            const input = document.getElementById(inputId);
+            if (input) {
+                input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') window.addItem(key, inputId);
+                });
             }
         });
-        
+
+        // enregistrer tout
+        document.getElementById('btnSaveAll').addEventListener('click', async () => {
+            currentParams.visaSRT = document.getElementById('defVisaSRT').value.trim();
+            currentParams.signataire = document.getElementById('defSignataire').value.trim();
+            currentParams.titreSignataire = document.getElementById('defTitreSignataire').value.trim();
+
+            try {
+                await saveParams(currentParams);
+                showToast('Paramètres enregistrés', 'success');
+            } catch (e) {
+                showToast('Erreur: ' + e.message, 'error');
+            }
+        });
+
+        // changement de mot de passe
         document.getElementById('btnChangePassword').addEventListener('click', async () => {
             if (!auth.currentUser) return;
-            if (!confirm(`Un email de réinitialisation va être envoyé à ${auth.currentUser.email}.\nContinuer ?`)) return;
-            
+            if (!confirm(`Un email de réinitialisation va être envoyé à ${auth.currentUser.email}. Continuer ?`)) return;
             try {
                 await sendPasswordResetEmail(auth, auth.currentUser.email);
                 showToast('Email de réinitialisation envoyé', 'success');
