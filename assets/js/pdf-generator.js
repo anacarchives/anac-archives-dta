@@ -1,220 +1,300 @@
 // pdf-generator.js
-// Génère un PDF d'autorisation au format ANAC avec jsPDF.
+// Génère un PDF identique aux vrais documents d'autorisation ANAC.
+// Basé sur les modèles SAT-0303-26 et SUR-1014-26.
 //
-// IMPORTANT : on laisse 42mm vide en haut pour l'entête imprimé physiquement
-// (papier a en-tête ANAC). C'est ce qu'on a convenu avec M. AHMED, sinon
-// les couleurs et le logo ne sortent pas correctement à l'impression.
+// Structure du document (de haut en bas) :
+//   [42mm] espace vide pour l'entête papier ANAC (logo, armoiries, textes bilingues)
+//   [bordure] tout le reste dans un rectangle
+//   - Titre "Autorisation / Authorization" + case Date à droite
+//   - Numéro (SAT-0303-26 / SUR-1014-26)
+//   - Type (Survol et Atterrissage / Survol)
+//   - Bloc 5 lignes : ANAC à gauche | A/To + dates à droite
+//   - Ligne Visa SRT | Visa DTA
+//   - Texte d'accord (différent SAT vs SUR)
+//   - Tableau Aéronef | Immatriculation
+//   - Motif, Opérateur, Itinéraire/Route
+//   - Dates début/fin + extension
+//   - Conditions (italique)
+//   - "Salutations distinguées Stop..." (SUR uniquement)
+//   - Distribution (liste) | Signature
 
 import { jsPDF } from "https://cdn.jsdelivr.net/npm/jspdf@2.5.1/+esm";
 
-// dimensions en mm (A4)
-const PAGE_W = 210;
-const M_LEFT = 15;
-const M_RIGHT = PAGE_W - 15;
-const CONTENT_W = M_RIGHT - M_LEFT;
-const HEADER_SPACE = 42;  // espace réservé entête papier
-const BOTTOM = 282;
+const PAGE_W   = 210;
+const M_L      = 15;
+const M_R      = PAGE_W - 15;
+const CW       = M_R - M_L;       // content width = 180mm
+const MID      = M_L + CW / 2;    // colonne du milieu = 105mm
+const H_TOP    = 42;               // espace entête papier
+const H_BOT    = 282;              // bas de page utile
 
 
 export function generateAuthorizationPDF(data) {
     const doc = new jsPDF({ unit: 'mm', format: 'a4' });
 
-    // bordure exterieure
+    // bordure extérieure du document
     doc.setLineWidth(0.5);
-    doc.rect(M_LEFT, HEADER_SPACE, CONTENT_W, BOTTOM - HEADER_SPACE);
+    doc.rect(M_L, H_TOP, CW, H_BOT - H_TOP);
 
-    let y = HEADER_SPACE;
+    let y = H_TOP;
+    doc.setLineWidth(0.3);
 
-    // --- titre + case date a droite ---
-    const titleH = 20;
-    doc.setLineWidth(0.4);
-    doc.line(M_LEFT, y + titleH, M_RIGHT, y + titleH);
+    // ══════════════════════════════════════════
+    // TITRE + CASE DATE
+    // ══════════════════════════════════════════
+    const TH = 22; // hauteur du bloc titre
 
-    doc.setFont('helvetica', 'bold').setFontSize(18);
-    doc.text('Autorisation / Authorization', M_LEFT + 4, y + 11);
-
-    doc.setFont('helvetica', 'normal').setFontSize(8);
-    doc.text('Autorisation numéro / authorization number:', M_LEFT + 4, y + 16);
-
-    // case date
-    const dateW = 45;
-    const dateX = M_RIGHT - dateW;
-    doc.rect(dateX, y, dateW, titleH);
+    // case date (en haut à droite)
+    const DW = 48;
+    const DX = M_R - DW;
+    doc.rect(DX, y, DW, TH);
     doc.setFont('helvetica', 'bold').setFontSize(8);
-    doc.text('Date/Date', dateX + 2, y + 5);
-    doc.setFontSize(12);
-    doc.text(data.dateEmission || '', dateX + dateW/2, y + 13, { align: 'center' });
+    doc.text('Date/ Dated', DX + 3, y + 5);
+    doc.setFont('helvetica', 'normal').setFontSize(11);
+    doc.text(data.dateEmission || '', DX + DW/2, y + 14, { align: 'center' });
 
-    y += titleH;
+    // titre principal
+    doc.setFont('helvetica', 'bold').setFontSize(20);
+    doc.text('Autorisation / Authorization', M_L + 3, y + 10);
+    doc.setFont('helvetica', 'normal').setFontSize(8);
+    doc.text('Aurorisation numéro / authorization number:', M_L + 3, y + 16);
 
-    // --- numero d'autorisation ---
-    const numH = 11;
-    doc.line(M_LEFT, y + numH, M_RIGHT, y + numH);
-    doc.setFont('helvetica', 'bold').setFontSize(15);
-    doc.text(data.numero || '', M_LEFT + 35, y + 8);
-    y += numH;
+    doc.line(M_L, y + TH, M_R, y + TH);
+    y += TH;
 
-    // --- type d'autorisation ---
-    const typeH = 8;
-    doc.line(M_LEFT, y + typeH, M_RIGHT, y + typeH);
+    // ══════════════════════════════════════════
+    // NUMÉRO
+    // ══════════════════════════════════════════
+    const NH = 10;
+    doc.setFont('helvetica', 'bold').setFontSize(16);
+    doc.text(data.numero || '', M_L + CW/2, y + 7.5, { align: 'center' });
+    doc.line(M_L, y + NH, M_R, y + NH);
+    y += NH;
+
+    // ══════════════════════════════════════════
+    // TYPE D'AUTORISATION
+    // ══════════════════════════════════════════
+    const TYPH = 9;
     doc.setFont('helvetica', 'normal').setFontSize(9);
-    doc.text('Autorisation type / Authorization', M_LEFT + 4, y + 5);
-    doc.setFont('helvetica', 'bold').setFontSize(13);
-    doc.text(data.type || '', M_LEFT + 65, y + 5.5);
-    y += typeH;
+    doc.text('Autorisation type / Authorization', M_L + 3, y + 6);
+    doc.setFont('helvetica', 'bold').setFontSize(14);
+    doc.text(data.type || '', M_L + 72, y + 6.5);
+    doc.line(M_L, y + TYPH, M_R, y + TYPH);
+    y += TYPH;
 
-    // --- bloc info: ANAC à gauche, destinataire a droite ---
-    const rowH = 6.5;
-    const blockH = 5 * rowH;
-    const midX = M_LEFT + CONTENT_W / 2;
+    // ══════════════════════════════════════════
+    // BLOC INFO : ANAC gauche | A/To droite
+    // ══════════════════════════════════════════
+    const RH = 6;   // hauteur d'une ligne
+    const BH = 6 * RH; // 6 lignes
 
-    // lignes horizontales internes
-    for (let i = 1; i < 5; i++) {
-        doc.line(M_LEFT, y + i * rowH, M_RIGHT, y + i * rowH);
+    // séparateur vertical au milieu
+    doc.line(MID, y, MID, y + BH);
+
+    // lignes horizontales (5 séparateurs = 6 zones)
+    for (let i = 1; i <= 5; i++) {
+        doc.line(M_L, y + i * RH, M_R, y + i * RH);
     }
-    doc.line(M_LEFT, y + blockH, M_RIGHT, y + blockH);
-    doc.line(midX, y, midX, y + blockH);
 
     // colonne gauche (ANAC)
-    const leftRows = [
+    doc.setFont('helvetica', 'normal').setFontSize(7.5);
+    const leftLines = [
         "Délivrée par: Agence Nationale de l'Aviation Civile:",
         "Delivered by: National Civil Aviation Autority:",
-        "Tél/Tel: 00 222 45 24 40 05",
-        "Télécopie/Fax: 00 222 45 25 35 78",
+        "Tél/Tel: 00 222 45 24  40 05",
+        "Télécopie/Fax:00 222 45 25 35 78",
         "Référence/Reference: " + (data.reference || ''),
+        '',
     ];
-    doc.setFont('helvetica', 'normal').setFontSize(8);
-    leftRows.forEach((txt, i) => {
-        doc.text(txt, M_LEFT + 3, y + (i + 0.65) * rowH);
+    leftLines.forEach((txt, i) => {
+        if (txt) doc.text(txt, M_L + 2, y + i * RH + 4.2);
     });
 
     // colonne droite (destinataire)
-    doc.text('A/To:', midX + 3, y + 0.65 * rowH);
-    doc.setFont('helvetica', 'bold').setFontSize(10);
-    doc.text(data.destinataire || '', midX + 16, y + 0.65 * rowH);
-
     doc.setFont('helvetica', 'normal').setFontSize(8);
-    doc.text('Tél/Tel:', midX + 3, y + 1.65 * rowH);
-    doc.text('Télécopie/Fax:', midX + 3, y + 2.65 * rowH);
-    doc.text('Date de réception de la', midX + 3, y + 3.5 * rowH);
-    doc.text('demande/Date of receipt of request:', midX + 3, y + 3.95 * rowH);
+    doc.text('A/To:', MID + 3, y + 4);
+    doc.setFont('helvetica', 'bold').setFontSize(10);
+    // tronquer si trop long
+    const dest = data.destinataire || '';
+    doc.text(dest, MID + 14, y + 4);
+
+    doc.setFont('helvetica', 'normal').setFontSize(7.5);
+    doc.text('Tél/Tel:', MID + 3, y + RH + 4);
+    doc.text('Télécopie/Fax:', MID + 3, y + 2*RH + 4);
+    doc.text('Date de recéption de la demande/Date of', MID + 3, y + 3*RH + 3);
+    doc.text('receipt of request:', MID + 3, y + 3*RH + 7);
     doc.setFont('helvetica', 'bold').setFontSize(9);
-    doc.text(data.dateReception || data.dateEmission || '', midX + 55, y + 3.7 * rowH);
+    doc.text(data.dateReception || data.dateEmission || '', MID + 50, y + 3*RH + 5.5);
 
-    y += blockH;
+    y += BH;
 
-    // --- ligne visa ---
-    const visaH = 7;
-    doc.line(M_LEFT, y + visaH, M_RIGHT, y + visaH);
-    doc.line(midX, y, midX, y + visaH);
-    doc.setFont('helvetica', 'bold').setFontSize(9);
-    doc.text('Visa/SRT ' + (data.visaSRT || ''), M_LEFT + 3, y + 4.5);
-    doc.text('Visa DTA', midX + 3, y + 4.5);
-    y += visaH + 4;
+    // ══════════════════════════════════════════
+    // LIGNE VISA SRT | VISA DTA
+    // ══════════════════════════════════════════
+    const VH = 8;
+    doc.line(MID, y, MID, y + VH);
+    doc.line(M_L, y + VH, M_R, y + VH);
 
-    // --- texte d'accord ---
+    doc.setFont('helvetica', 'bold').setFontSize(10);
+    doc.text('Visa/SRT ' + (data.visaSRT || 'A'), M_L + 3, y + 5.5);
+    doc.text('Visa DTA', MID + 3, y + 5.5);
+    y += VH;
+
+    // ══════════════════════════════════════════
+    // TEXTE D'ACCORD (différent SAT vs SUR)
+    // ══════════════════════════════════════════
+    y += 3;
     doc.setFont('helvetica', 'normal').setFontSize(8.5);
+
     if (data.typeCode === 'SUR') {
-        doc.text("Honneur vous notifier notre accord de survol du territoire mauritanien en faveur de l'avion selon les informations ci-après #", M_LEFT + 3, y);
+        doc.text(
+            "Honneur vous notifier notre accord de survol du territoire mauritanien en faveur de l'avion selon les informations ci-après #",
+            M_L + 3, y
+        );
+        y += 6;
     } else {
-        // SAT et ATT - on mentionne l'atterrissage
-        doc.text("Honneur vous notifier notre accord de survol du territoire mauritanien et l'atterrissage sur le(s)", M_LEFT + 3, y);
-        doc.text("aéroport(s) International de Nouakchott OUM TOUNSY en faveur de(s) avion(s) selon les", M_LEFT + 3, y + 4);
-        y += 4;
+        // SAT ou ATT
+        doc.text(
+            "Honneur vous notifier notre accord de survol du territoire mauritanien et l'atterrissage sur le(s)",
+            M_L + 3, y
+        );
+        y += 4.5;
+        doc.text(
+            "aéroport(s) International de Nouakchott OUM TOUNSY en faveur de(s) avion(s) selon les",
+            M_L + 3, y
+        );
+        y += 6;
     }
-    y += 6;
 
-    // --- tableau aéronef + immatriculation ---
-    const acH = 22;
-    const acMid = M_LEFT + CONTENT_W / 2;
-    doc.rect(M_LEFT, y, CONTENT_W, acH);
-    doc.line(acMid, y, acMid, y + acH);
-    doc.line(M_LEFT, y + 6, M_RIGHT, y + 6);
+    // ══════════════════════════════════════════
+    // TABLEAU AÉRONEF | IMMATRICULATION
+    // ══════════════════════════════════════════
+    const ACH = 24;
+    doc.rect(M_L, y, CW, ACH);
+    doc.line(MID, y, MID, y + ACH);
+    doc.line(M_L, y + 7, M_R, y + 7);
 
+    doc.setFont('helvetica', 'bold').setFontSize(8.5);
+    doc.text('Aéronef type / aircraft type', M_L + 3, y + 5);
+    doc.text('Immatriculation/ Registration', MID + 3, y + 5);
+
+    doc.setFont('helvetica', 'bold').setFontSize(16);
+    doc.text(data.aeronefType || '', M_L + CW/4, y + 18, { align: 'center' });
+    doc.text(data.immatriculation || '', M_L + 3*CW/4, y + 18, { align: 'center' });
+    y += ACH + 4;
+
+    // ══════════════════════════════════════════
+    // MOTIF / OPÉRATEUR / ITINÉRAIRE / DATES
+    // ══════════════════════════════════════════
     doc.setFont('helvetica', 'bold').setFontSize(9);
-    doc.text('Aéronef type / aircraft', M_LEFT + 3, y + 4);
-    doc.text('Immatriculation/', acMid + 3, y + 4);
-    doc.setFontSize(15);
-    doc.text(data.aeronefType || '', M_LEFT + CONTENT_W/4, y + 16, { align: 'center' });
-    doc.text(data.immatriculation || '', M_LEFT + 3*CONTENT_W/4, y + 16, { align: 'center' });
-    y += acH + 6;
-
-    // --- détails (motif, opérateur, route) ---
-    const details = [
-        ['Motif/Motif:',     data.motif     || ''],
-        ['Opérateur/Oper',   data.operateur || ''],
-        ['Route/Route:',     data.route     || ''],
+    const fields = [
+        ['Motif/Motif:', data.motif || ''],
+        ['Opérateur/Operator:', data.operateur || ''],
+        [data.typeCode === 'SUR' ? 'itinéraire/Itinerary' : 'Route/Route:', data.route || ''],
     ];
-    doc.setFont('helvetica', 'bold').setFontSize(9);
-    for (const [label, val] of details) {
-        doc.text(label, M_LEFT + 3, y);
-        doc.text(val, M_LEFT + 45, y);
+    for (const [label, val] of fields) {
+        doc.setFont('helvetica', 'bold').setFontSize(8.5);
+        doc.text(label, M_L + 3, y);
+        doc.setFont('helvetica', 'normal').setFontSize(8.5);
+        doc.text(val, M_L + 52, y);
         y += 6;
     }
 
     y += 1;
-    doc.text('Date début de validité/Validity', M_LEFT + 3, y);
-    doc.text(data.dateDebutValidite || '', M_LEFT + 80, y);
+    doc.setFont('helvetica', 'bold').setFontSize(8.5);
+    doc.text('Date début de validité/Validity Start Date :', M_L + 3, y);
+    doc.setFont('helvetica', 'normal').setFontSize(9);
+    doc.text(data.dateDebutValidite || '', M_L + 95, y);
     y += 6;
-    doc.text('Date fin validité/Validity End', M_LEFT + 3, y);
-    doc.text(data.dateFinValidite || '', M_LEFT + 80, y);
+
+    doc.setFont('helvetica', 'bold').setFontSize(8.5);
+    doc.text('Date fin vlidité/Validity End Date', M_L + 3, y);
+    doc.setFont('helvetica', 'normal').setFontSize(9);
+    doc.text(data.dateFinValidite || '', M_L + 95, y);
     if (data.validiteExtension) {
-        doc.text(data.validiteExtension, M_LEFT + 110, y);
+        doc.setFont('helvetica', 'bold').setFontSize(9);
+        doc.text(data.validiteExtension, M_L + 130, y);
     }
-    y += 6;
+    y += 5;
 
-    // --- conditions (italique petit) ---
-    doc.setFont('helvetica', 'italic').setFontSize(7.5);
-    const conditions = [
+    // ══════════════════════════════════════════
+    // CONDITIONS
+    // ══════════════════════════════════════════
+    doc.setFont('helvetica', 'italic').setFontSize(7);
+    const conds = [
         "Cette autorisation est délivrée sous réserve que/ This permit is issued subject to :",
-        "1) Tous les documents de bord de l'aéronef soient en cours de validité pendant l'opération de vol ci-dessus autorisé/ All",
-        "aircraft's onboard documents be valid for the operation of authorized above flight;",
-        "2) La réglementation aérienne mauritanienne soit scrupuleusement respectée/Mauritanian Aviation Regulation is scrupulously respected.",
-        "",
-        "NB: Le paiement des frais et taxes relatifs à la délivrance de la présente autorisation sont dus dès la signature de celle-ci par l'ANAC.",
-        "NB: The payment of the fees and taxes relating to the issue of this authorization are due as soon as it is signed by the ANAC.",
+        "1) Tous les docuemnts de bord de l'aéronef soient en cours de validité pendant l'opération du vol ci-dessus autorisé/ All aircraft 's onboard docuemnts be",
+        "valid for the operation of authorized above flight;",
+        "2) La réglementation aérienne mauritanienne soit scrupuleusement respectée/ Mauritanian Aviation Regulation is scrupulously respected ;",
     ];
-    for (const line of conditions) {
-        doc.text(line, M_LEFT + 3, y);
-        y += 3.5;
+    for (const line of conds) {
+        doc.text(line, M_L + 3, y);
+        y += 3.2;
     }
-    y += 4;
+    y += 1;
 
-    // --- distribution + signature ---
+    // NB (paiement) — uniquement SAT (visible dans SAT-0303-26, absent dans SUR-1014-26)
+    if (data.typeCode !== 'SUR') {
+        doc.text("NB: Le paiement des frais et taxes relatifs à la délivrance de la présente autorisation sont dus dès la signature de celle-ci par l'ANAC.", M_L + 3, y);
+        y += 3.2;
+        doc.text("NB: The payment of the fees and taxes relating to the issue of this authorization are due as soon as it is signed by the ANAC.", M_L + 3, y);
+        y += 3.2;
+    }
+
+    // "Salutations distinguées..." — uniquement SUR (visible dans SUR-1014-26)
+    if (data.typeCode === 'SUR') {
+        y += 1;
+        doc.setFont('helvetica', 'italic').setFontSize(7.5);
+        doc.text('Salutations distinguées Stop', M_L + 3, y);
+        y += 3.5;
+        doc.text('Nouakchott Mauritanie Stop et Fin', M_L + 3, y);
+        y += 4;
+    } else {
+        y += 2;
+    }
+
+    // ══════════════════════════════════════════
+    // DISTRIBUTION + SIGNATURE
+    // ══════════════════════════════════════════
     const sigY = y;
     const distItems = [
-        '• MDN/MET', '• E.M.A.A', '• Asecna NKC',
-        '• Bureau piste aéroport NKC', '• CDT Aéroport NKC',
-        '• GEND-RIM, Police, Douane / Aéroport NKC',
-        '• DNAM /AP /C3I', '• DTA/DAF/DSV/ANAC'
+        '•  MDN/MET',
+        '•  E.M.A.A',
+        '•  Asecna NKC',
+        '•  Bureau piste aéroport NKC',
+        '•  CDT Aéroport NKC',
+        '•  GEND-RIM, Police, Douane / Aéroport NKC',
+        '•  DNAM /AP /C3I',
+        '•  DTA/DAF/DSV/ANAC',
     ];
     doc.setFont('helvetica', 'normal').setFontSize(8);
     distItems.forEach((item, i) => {
-        doc.text(item, M_LEFT + 3, sigY + i * 3.8);
+        doc.text(item, M_L + 3, sigY + i * 4);
     });
 
-    // bloc signature a droite
-    const sigX = midX + 3;
-    doc.text('Nom du signataire:', sigX, sigY);
-    doc.setFont('helvetica', 'bold').setFontSize(10);
-    doc.text(data.signataire || 'AHMED BABA AHMED', sigX + 35, sigY);
+    // signature à droite
+    const SX = MID + 5;
     doc.setFont('helvetica', 'normal').setFontSize(8);
-    doc.text('Titre:', sigX, sigY + 8);
+    doc.text('Nom du signataire:', SX, sigY);
     doc.setFont('helvetica', 'bold').setFontSize(10);
-    doc.text(data.titreSignataire || 'Directeur Général', sigX + 15, sigY + 8);
+    doc.text(data.signataire || 'AHMED BABA AHMED', SX + 38, sigY);
+
     doc.setFont('helvetica', 'normal').setFontSize(8);
-    doc.text('Signature et cachet:', sigX, sigY + 16);
+    doc.text('Titre:', SX, sigY + 8);
+    doc.setFont('helvetica', 'bold').setFontSize(10);
+    doc.text(data.titreSignataire || 'Directeur Général', SX + 12, sigY + 8);
+
+    doc.setFont('helvetica', 'normal').setFontSize(8);
+    doc.text('Signature et cachet:', SX, sigY + 18);
 
     return doc;
 }
 
 
-// nettoie les caracteres bizarres dans le nom de fichier
 function safeName(s) {
     return (s || '').replace(/[^a-zA-Z0-9-]/g, '_');
 }
 
-// télécharge le PDF (= demande au navigateur de le sauvegarder)
 export function downloadGeneratedPDF(data, existingDoc = null) {
     const doc = existingDoc || generateAuthorizationPDF(data);
     const name = `${safeName(data.numero) || 'autorisation'}_${safeName(data.operateur)}.pdf`;
