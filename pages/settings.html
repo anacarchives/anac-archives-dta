@@ -19,26 +19,47 @@
             box-shadow: var(--shadow-sm);
         }
         .param-card-title {
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 700;
             color: var(--primary);
             margin-bottom: 14px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
+        /* ligne d'ajout : input grand, bouton + petit */
         .param-add-row {
             display: flex;
             gap: 8px;
             margin-bottom: 12px;
+            align-items: center;
         }
         .param-add-row input {
             flex: 1;
+            min-width: 0;
         }
+        .btn-plus {
+            width: 34px;
+            height: 34px;
+            min-width: 34px;
+            border-radius: 8px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            font-size: 22px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: background 0.15s;
+        }
+        .btn-plus:hover { background: var(--primary-dark); }
+        /* tags */
         .param-tag-list {
             display: flex;
             flex-wrap: wrap;
             gap: 8px;
-            min-height: 32px;
+            min-height: 28px;
         }
         .param-tag {
             display: inline-flex;
@@ -51,32 +72,36 @@
             font-size: 13px;
             color: var(--text);
         }
-        .param-tag button {
+        .param-tag .del {
             background: none;
             border: none;
             cursor: pointer;
             color: var(--text-muted);
             padding: 0;
+            font-size: 17px;
             line-height: 1;
-            font-size: 16px;
         }
-        .param-tag button:hover { color: var(--danger); }
+        .param-tag .del:hover { color: var(--danger); }
+        .param-empty {
+            font-size: 12px;
+            color: var(--text-muted);
+            font-style: italic;
+        }
         .param-card.full { grid-column: 1 / -1; }
-        .default-field {
+        /* valeurs par défaut */
+        .def-row {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
             margin-bottom: 10px;
         }
-        .default-field label {
+        .def-row label {
             font-size: 13px;
             color: var(--text-light);
-            width: 140px;
+            width: 150px;
             flex-shrink: 0;
         }
-        .default-field input {
-            flex: 1;
-        }
+        .def-row input { flex: 1; }
         @media (max-width: 900px) {
             .params-grid { grid-template-columns: 1fr; }
             .param-card.full { grid-column: 1; }
@@ -99,108 +124,108 @@
 
             <div class="content-wrapper">
 
-                <!-- Valeurs par défaut fixes -->
+                <!-- Valeurs par défaut -->
                 <div class="param-card" style="margin-bottom:20px;">
                     <div class="param-card-title">Valeurs par défaut</div>
-                    <div class="default-field">
+                    <div class="def-row">
                         <label>Visa SRT</label>
-                        <input type="text" id="defVisaSRT" class="form-input" style="max-width:120px;" placeholder="ex: A">
+                        <input type="text" id="defVisaSRT" class="form-input" style="max-width:100px;" placeholder="A">
                     </div>
-                    <div class="default-field">
+                    <div class="def-row">
                         <label>Signataire</label>
-                        <input type="text" id="defSignataire" class="form-input" placeholder="ex: AHMED BABA AHMED">
+                        <input type="text" id="defSignataire" class="form-input">
                     </div>
-                    <div class="default-field">
+                    <div class="def-row">
                         <label>Titre signataire</label>
-                        <input type="text" id="defTitreSignataire" class="form-input" placeholder="ex: Directeur Général">
+                        <input type="text" id="defTitreSignataire" class="form-input">
                     </div>
                 </div>
 
-                <!-- Listes configurables -->
+                <!-- Listes -->
                 <div class="params-grid">
 
                     <div class="param-card">
                         <div class="param-card-title">Opérateurs</div>
                         <div class="param-add-row">
-                            <input type="text" class="form-input" id="inputOperateurs" placeholder="Ajouter un opérateur...">
-                            <button class="btn btn-primary btn-sm" onclick="addItem('operateurs', 'inputOperateurs')">+</button>
+                            <input type="text" class="form-input" id="inOperateurs" placeholder="Ajouter...">
+                            <button class="btn-plus" onclick="addItem('operateurs','inOperateurs')">+</button>
                         </div>
-                        <div class="param-tag-list" id="listOperateurs"></div>
+                        <div class="param-tag-list" id="lstOperateurs"></div>
                     </div>
 
                     <div class="param-card">
                         <div class="param-card-title">Destinataires (A/To)</div>
                         <div class="param-add-row">
-                            <input type="text" class="form-input" id="inputDestinataires" placeholder="Ajouter un destinataire...">
-                            <button class="btn btn-primary btn-sm" onclick="addItem('destinataires', 'inputDestinataires')">+</button>
+                            <input type="text" class="form-input" id="inDestinataires" placeholder="Ajouter...">
+                            <button class="btn-plus" onclick="addItem('destinataires','inDestinataires')">+</button>
                         </div>
-                        <div class="param-tag-list" id="listDestinataires"></div>
+                        <div class="param-tag-list" id="lstDestinataires"></div>
                     </div>
 
                     <div class="param-card">
                         <div class="param-card-title">Types d'aéronef</div>
                         <div class="param-add-row">
-                            <input type="text" class="form-input" id="inputAeronefs" placeholder="ex: B737-8">
-                            <button class="btn btn-primary btn-sm" onclick="addItem('aeronefs', 'inputAeronefs')">+</button>
+                            <input type="text" class="form-input" id="inAeronefs" placeholder="ex: B737-8">
+                            <button class="btn-plus" onclick="addItem('aeronefs','inAeronefs')">+</button>
                         </div>
-                        <div class="param-tag-list" id="listAeronefs"></div>
+                        <div class="param-tag-list" id="lstAeronefs"></div>
                     </div>
 
                     <div class="param-card">
                         <div class="param-card-title">Immatriculations</div>
                         <div class="param-add-row">
-                            <input type="text" class="form-input" id="inputImmatriculations" placeholder="ex: 5TCLJ">
-                            <button class="btn btn-primary btn-sm" onclick="addItem('immatriculations', 'inputImmatriculations')">+</button>
+                            <input type="text" class="form-input" id="inImmatriculations" placeholder="ex: 5TCLJ">
+                            <button class="btn-plus" onclick="addItem('immatriculations','inImmatriculations')">+</button>
                         </div>
-                        <div class="param-tag-list" id="listImmatriculations"></div>
+                        <div class="param-tag-list" id="lstImmatriculations"></div>
                     </div>
 
                     <div class="param-card">
                         <div class="param-card-title">Motifs</div>
                         <div class="param-add-row">
-                            <input type="text" class="form-input" id="inputMotifs" placeholder="ex: CONVOYAGE TECHNIQUE">
-                            <button class="btn btn-primary btn-sm" onclick="addItem('motifs', 'inputMotifs')">+</button>
+                            <input type="text" class="form-input" id="inMotifs" placeholder="ex: CONVOYAGE TECHNIQUE">
+                            <button class="btn-plus" onclick="addItem('motifs','inMotifs')">+</button>
                         </div>
-                        <div class="param-tag-list" id="listMotifs"></div>
+                        <div class="param-tag-list" id="lstMotifs"></div>
                     </div>
 
                     <div class="param-card">
                         <div class="param-card-title">Routes / Itinéraires</div>
                         <div class="param-add-row">
-                            <input type="text" class="form-input" id="inputRoutes" placeholder="ex: GMMN 18H00 - 20H30 GQNO">
-                            <button class="btn btn-primary btn-sm" onclick="addItem('routes', 'inputRoutes')">+</button>
+                            <input type="text" class="form-input" id="inRoutes" placeholder="ex: GMMN 18H00 - 20H30 GQNO">
+                            <button class="btn-plus" onclick="addItem('routes','inRoutes')">+</button>
                         </div>
-                        <div class="param-tag-list" id="listRoutes"></div>
+                        <div class="param-tag-list" id="lstRoutes"></div>
                     </div>
 
                     <div class="param-card full">
                         <div class="param-card-title">Références</div>
                         <div class="param-add-row">
-                            <input type="text" class="form-input" id="inputReferences" placeholder="Ajouter une référence...">
-                            <button class="btn btn-primary btn-sm" onclick="addItem('references', 'inputReferences')">+</button>
+                            <input type="text" class="form-input" id="inReferences" placeholder="Ajouter...">
+                            <button class="btn-plus" onclick="addItem('references','inReferences')">+</button>
                         </div>
-                        <div class="param-tag-list" id="listReferences"></div>
+                        <div class="param-tag-list" id="lstReferences"></div>
                     </div>
 
                 </div>
 
-                <!-- Profil utilisateur -->
+                <!-- Compte -->
                 <div class="param-card" style="margin-top:20px;">
                     <div class="param-card-title">Mon compte</div>
-                    <div class="default-field">
+                    <div class="def-row">
                         <label>Nom</label>
-                        <div class="form-input" style="background:var(--bg);" id="profileName">—</div>
+                        <div id="profileName" style="font-size:14px; color:var(--text);">—</div>
                     </div>
-                    <div class="default-field">
+                    <div class="def-row">
                         <label>Email</label>
-                        <div class="form-input" style="background:var(--bg);" id="profileEmail">—</div>
+                        <div id="profileEmail" style="font-size:14px; color:var(--text);">—</div>
                     </div>
-                    <div class="default-field">
+                    <div class="def-row">
                         <label>Rôle</label>
-                        <div class="form-input" style="background:var(--bg);" id="profileRole">—</div>
+                        <div id="profileRole" style="font-size:14px; color:var(--text);">—</div>
                     </div>
-                    <div style="margin-top:12px;">
-                        <button class="btn btn-secondary" id="btnChangePassword" style="width:auto; padding:8px 16px;">
+                    <div style="margin-top:14px;">
+                        <button class="btn btn-secondary" id="btnChangePwd" style="width:auto; padding:8px 18px;">
                             Changer mon mot de passe
                         </button>
                     </div>
@@ -219,120 +244,101 @@
 
         injectSidebar('settings');
 
-        let currentParams = {};
+        let params = {};
 
-        // les listes configurables et leurs IDs
         const LISTS = [
-            { key: 'operateurs',       inputId: 'inputOperateurs',       listId: 'listOperateurs' },
-            { key: 'destinataires',    inputId: 'inputDestinataires',     listId: 'listDestinataires' },
-            { key: 'aeronefs',         inputId: 'inputAeronefs',          listId: 'listAeronefs' },
-            { key: 'immatriculations', inputId: 'inputImmatriculations',  listId: 'listImmatriculations' },
-            { key: 'motifs',           inputId: 'inputMotifs',            listId: 'listMotifs' },
-            { key: 'routes',           inputId: 'inputRoutes',            listId: 'listRoutes' },
-            { key: 'references',       inputId: 'inputReferences',        listId: 'listReferences' },
+            { key: 'operateurs',       inId: 'inOperateurs',       lstId: 'lstOperateurs' },
+            { key: 'destinataires',    inId: 'inDestinataires',    lstId: 'lstDestinataires' },
+            { key: 'aeronefs',         inId: 'inAeronefs',         lstId: 'lstAeronefs' },
+            { key: 'immatriculations', inId: 'inImmatriculations', lstId: 'lstImmatriculations' },
+            { key: 'motifs',           inId: 'inMotifs',           lstId: 'lstMotifs' },
+            { key: 'routes',           inId: 'inRoutes',           lstId: 'lstRoutes' },
+            { key: 'references',       inId: 'inReferences',       lstId: 'lstReferences' },
         ];
 
         checkAuth(async (user, userData) => {
-            // profil
             document.getElementById('profileName').textContent = userData.name || '—';
             document.getElementById('profileEmail').textContent = userData.email || user.email;
             document.getElementById('profileRole').textContent = userData.role === 'admin' ? 'Administrateur' : 'Agent';
 
-            // charger les params
-            currentParams = await loadParams();
+            params = await loadParams();
             renderAll();
         });
 
         function renderAll() {
-            // valeurs par défaut
-            document.getElementById('defVisaSRT').value = currentParams.visaSRT || 'A';
-            document.getElementById('defSignataire').value = currentParams.signataire || '';
-            document.getElementById('defTitreSignataire').value = currentParams.titreSignataire || '';
-
-            // listes
-            LISTS.forEach(({ key, listId }) => {
-                renderList(key, listId);
-            });
+            document.getElementById('defVisaSRT').value = params.visaSRT || 'A';
+            document.getElementById('defSignataire').value = params.signataire || '';
+            document.getElementById('defTitreSignataire').value = params.titreSignataire || '';
+            LISTS.forEach(({ key, lstId }) => renderList(key, lstId));
         }
 
-        function renderList(key, listId) {
-            const list = currentParams[key] || [];
-            const container = document.getElementById(listId);
-            if (!container) return;
+        function renderList(key, lstId) {
+            const list = params[key] || [];
+            const el = document.getElementById(lstId);
+            if (!el) return;
 
             if (list.length === 0) {
-                container.innerHTML = '<span style="font-size:12px; color:var(--text-muted);">Aucune valeur</span>';
+                el.innerHTML = '<span class="param-empty">Aucune valeur</span>';
                 return;
             }
 
-            container.innerHTML = list.map((val, i) => `
+            el.innerHTML = list.map((v, i) => `
                 <div class="param-tag">
-                    <span>${val}</span>
-                    <button data-key="${key}" data-index="${i}" title="Supprimer">×</button>
+                    <span>${v}</span>
+                    <button class="del" data-key="${key}" data-i="${i}">×</button>
                 </div>
             `).join('');
 
-            // attach delete handlers
-            container.querySelectorAll('button[data-key]').forEach(btn => {
+            el.querySelectorAll('.del').forEach(btn => {
                 btn.addEventListener('click', () => {
-                    const k = btn.dataset.key;
-                    const idx = parseInt(btn.dataset.index);
-                    currentParams[k].splice(idx, 1);
-                    renderList(k, listId);
+                    params[btn.dataset.key].splice(parseInt(btn.dataset.i), 1);
+                    renderList(btn.dataset.key, lstId);
                 });
             });
         }
 
-        // exposé globalement pour les boutons onclick dans le HTML
-        window.addItem = function(key, inputId) {
-            const input = document.getElementById(inputId);
+        // accessible depuis les onclick="" dans le HTML
+        window.addItem = function(key, inId) {
+            const input = document.getElementById(inId);
             const val = input.value.trim();
             if (!val) return;
-
-            if (!currentParams[key]) currentParams[key] = [];
-            if (currentParams[key].includes(val)) {
-                showToast('Cette valeur existe déjà', 'warning');
+            if (!params[key]) params[key] = [];
+            if (params[key].includes(val)) {
+                showToast('Valeur déjà présente', 'warning');
                 return;
             }
-
-            currentParams[key].push(val);
+            params[key].push(val);
             input.value = '';
-
-            const listConfig = LISTS.find(l => l.key === key);
-            if (listConfig) renderList(key, listConfig.listId);
+            const cfg = LISTS.find(l => l.key === key);
+            if (cfg) renderList(key, cfg.lstId);
         };
 
-        // Enter dans les inputs = ajouter
-        LISTS.forEach(({ key, inputId }) => {
-            const input = document.getElementById(inputId);
-            if (input) {
-                input.addEventListener('keydown', (e) => {
-                    if (e.key === 'Enter') window.addItem(key, inputId);
-                });
-            }
+        // touche Entrée pour ajouter
+        LISTS.forEach(({ key, inId }) => {
+            const el = document.getElementById(inId);
+            if (el) el.addEventListener('keydown', e => {
+                if (e.key === 'Enter') { e.preventDefault(); window.addItem(key, inId); }
+            });
         });
 
-        // enregistrer tout
         document.getElementById('btnSaveAll').addEventListener('click', async () => {
-            currentParams.visaSRT = document.getElementById('defVisaSRT').value.trim();
-            currentParams.signataire = document.getElementById('defSignataire').value.trim();
-            currentParams.titreSignataire = document.getElementById('defTitreSignataire').value.trim();
-
+            params.visaSRT         = document.getElementById('defVisaSRT').value.trim();
+            params.signataire      = document.getElementById('defSignataire').value.trim();
+            params.titreSignataire = document.getElementById('defTitreSignataire').value.trim();
             try {
-                await saveParams(currentParams);
+                await saveParams(params);
                 showToast('Paramètres enregistrés', 'success');
             } catch (e) {
                 showToast('Erreur: ' + e.message, 'error');
             }
         });
 
-        // changement de mot de passe
-        document.getElementById('btnChangePassword').addEventListener('click', async () => {
+        document.getElementById('btnChangePwd').addEventListener('click', async () => {
             if (!auth.currentUser) return;
-            if (!confirm(`Un email de réinitialisation va être envoyé à ${auth.currentUser.email}. Continuer ?`)) return;
+            if (!confirm(`Envoyer un email de réinitialisation à ${auth.currentUser.email} ?`)) return;
             try {
                 await sendPasswordResetEmail(auth, auth.currentUser.email);
-                showToast('Email de réinitialisation envoyé', 'success');
+                showToast('Email envoyé', 'success');
             } catch (e) {
                 showToast('Erreur: ' + e.message, 'error');
             }
