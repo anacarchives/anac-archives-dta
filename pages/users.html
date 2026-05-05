@@ -109,7 +109,7 @@
             collection, getDocs, doc, setDoc, deleteDoc, serverTimestamp
         } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         import {
-            createUserWithEmailAndPassword, fetchSignInMethodsForEmail
+            createUserWithEmailAndPassword, signInWithEmailAndPassword
         } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
         injectSidebar('users');
@@ -236,7 +236,13 @@
             if (!email || !password) throw new Error('Email et mot de passe requis');
             if (password.length < 6) throw new Error('Mot de passe trop court (min 6 caractères)');
 
-            // créer le compte Firebase Auth
+            // sauvegarder les infos de l'admin avant création
+            const adminUser = auth.currentUser;
+            const adminEmail = adminUser.email;
+            const adminPassword = prompt('Confirmez votre mot de passe admin pour continuer :');
+            if (!adminPassword) throw new Error('Opération annulée');
+
+            // créer le compte agent
             const cred = await createUserWithEmailAndPassword(auth, email, password);
             const uid = cred.user.uid;
 
@@ -246,9 +252,10 @@
                 createdAt: serverTimestamp()
             });
 
-            // re-signer avec l'admin (createUserWithEmailAndPassword déconnecte l'admin)
-            // on recharge juste la page
-            window.location.reload();
+            // re-connecter l'admin immédiatement
+            await signInWithEmailAndPassword(auth, adminEmail, adminPassword);
+            showToast('Agent créé avec succès', 'success');
+            await loadUsers();
         }
 
         async function createDirecteur(name) {
@@ -260,23 +267,30 @@
             if (!password || password.length < 6) throw new Error('Mot de passe trop court (min 6 caractères)');
             if (!notifEmail) throw new Error('Email de notification requis');
 
-            // on crée un email Firebase interne (jamais utilisé pour se connecter directement)
-            // format: identifiant@directeur.anac-dta.internal
-            const firebaseEmail = `${identifiant.toLowerCase()}@directeur.anacarchives.dta`;
+            const adminUser = auth.currentUser;
+            const adminEmail = adminUser.email;
+            const adminPassword = prompt('Confirmez votre mot de passe admin pour continuer :');
+            if (!adminPassword) throw new Error('Opération annulée');
+
+            // email Firebase interne basé sur l'identifiant
+            const firebaseEmail = `${identifiant.toLowerCase()}@dta.anacarchives.internal`;
 
             const cred = await createUserWithEmailAndPassword(auth, firebaseEmail, password);
             const uid = cred.user.uid;
 
             await setDoc(doc(db, 'users', uid), {
                 name,
-                identifiant,       // identifiant de connexion (ex: DIR001)
-                email: notifEmail, // email pour les notifications
-                firebaseEmail,     // email Firebase interne
+                identifiant,
+                email: notifEmail,
+                firebaseEmail,
                 role: 'directeur',
                 createdAt: serverTimestamp()
             });
 
-            window.location.reload();
+            // re-connecter l'admin
+            await signInWithEmailAndPassword(auth, adminEmail, adminPassword);
+            showToast('Directeur créé avec succès', 'success');
+            await loadUsers();
         }
     </script>
 
