@@ -9,12 +9,11 @@ import { jsPDF } from "https://cdn.jsdelivr.net/npm/jspdf@2.5.1/+esm";
 
 const PAGE_W = 210;
 const PAGE_H = 297;
-const M_L    = 4;               // marge gauche 4mm
-const M_R    = PAGE_W - 4;     // marge droite 4mm
-const CW     = M_R - M_L;      // largeur utile ~202mm
+const M_L    = 3;
+const M_R    = PAGE_W - 3;
+const CW     = M_R - M_L;
 const MID    = M_L + CW / 2;
-const R6H    = 42;              // hauteur fixe du rectangle signature en bas
-const R6_Y   = PAGE_H - R6H - 5; // position Y du R6 (collé en bas)
+const R6H    = 42;
 
 // découpe un texte long en lignes qui tiennent dans maxWidth
 function splitText(doc, text, maxWidth, fontSize) {
@@ -27,14 +26,15 @@ export function generateAuthorizationPDF(data) {
     doc.setLineWidth(0.4);
     doc.setFont('helvetica', 'bold');
 
-    let y = 5;
-    const TW = CW - 6; // largeur de texte (avec padding interne 3mm de chaque côté)
+    let y = 3;
+    const TW = CW - 6;
 
     // ══════════════════════════════
-    // R1 — Espace entête papier ANAC (agrandi +20mm)
+    // R1 — Espace entête papier ANAC
+    // 35mm entête + 10mm espace = 45mm
     // ══════════════════════════════
-    doc.rect(M_L, y, CW, 72);
-    y += 72;
+    doc.rect(M_L, y, CW, 45);
+    y += 45;
 
     // ══════════════════════════════
     // R2 — Titre + Numéro + Type
