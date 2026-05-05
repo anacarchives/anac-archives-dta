@@ -194,26 +194,27 @@ export function generateAuthorizationPDF(data) {
     }
 
     // ══════════════════════════════
-    // R6 — Signature (hauteur fixe, collé en bas)
+    // R6 — Signature (connecté directement après R5)
     // Nom/Titre/Signature à DROITE
     // ══════════════════════════════
+    const sigY = y + R5H;
     doc.setFont('helvetica', 'bold');
-    doc.rect(M_L, R6_Y, CW, R6H);
+    doc.rect(M_L, sigY, CW, R6H);
 
-    const SX = MID + 5; // côté droit
+    const SX = MID + 5;
 
     doc.setFontSize(8);
-    doc.text('Nom du signataire:', SX, R6_Y + 8);
+    doc.text('Nom du signataire:', SX, sigY + 8);
     doc.setFontSize(11);
-    doc.text(data.signataire || 'AHMED BABA AHMED', SX + 42, R6_Y + 8);
+    doc.text(data.signataire || 'AHMED BABA AHMED', SX + 42, sigY + 8);
 
     doc.setFontSize(8);
-    doc.text('Titre:', SX, R6_Y + 18);
+    doc.text('Titre:', SX, sigY + 18);
     doc.setFontSize(10);
-    doc.text(data.titreSignataire || 'Directeur Général', SX + 14, R6_Y + 18);
+    doc.text(data.titreSignataire || 'Directeur Général', SX + 14, sigY + 18);
 
     doc.setFontSize(8);
-    doc.text('Signature et cachet:', SX, R6_Y + 30);
+    doc.text('Signature et cachet:', SX, sigY + 30);
 
     return doc;
 }
