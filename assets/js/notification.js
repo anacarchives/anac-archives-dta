@@ -5,7 +5,7 @@
 const EMAILJS_SERVICE_ID  = 'service_hg7l9be';
 const EMAILJS_TEMPLATE_ID = 'template_d2r5wsj';
 const EMAILJS_PUBLIC_KEY  = '3spVV4ft_UYNg9_WF';
-const SITE_URL = 'https://anacarchives.github.io/anac-archives-dta/pages/archive.html';
+const SITE_URL = 'https://anacarchives.github.io/anac-archives-dta/pages/liste.html';
 
 // charge le SDK EmailJS depuis CDN (une seule fois)
 function loadEmailJS() {
