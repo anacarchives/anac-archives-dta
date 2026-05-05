@@ -87,14 +87,15 @@ export function generateAuthorizationPDF(data) {
     doc.setFont('helvetica', 'bold').setFontSize(9.5);
     doc.text('Visa/SRT A', M_L + 3, y + 5);
 
-    // Visa DTA — texte
+    // Visa DTA — texte (l'écriture reste visible)
     doc.text('Visa DTA', MID + 3, y + 5);
 
-    // signature du directeur sur Visa DTA (si approuvée et signature disponible)
+    // signature du directeur sur Visa DTA (signature fine bleue par dessus le texte comme sur les vrais documents)
     if (data.signatureUrl) {
         try {
-            // on place la signature en bleu transparent par dessus "Visa DTA"
-            doc.addImage(data.signatureUrl, 'PNG', MID + 3, y + 1, 55, 12);
+            // signature petite et fine à côté du texte "Visa DTA"
+            // largeur 35mm, hauteur 10mm, juste à droite du texte
+            doc.addImage(data.signatureUrl, 'PNG', MID + 18, y - 2, 35, 10);
         } catch (e) {
             console.warn('Signature non chargée:', e);
         }
