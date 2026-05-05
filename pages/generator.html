@@ -345,28 +345,44 @@
         document.getElementById('btnGenAndSave').addEventListener('click', async () => {
             const d = validate();
             if (!d) return;
+
+            const btn = document.getElementById('btnGenAndSave');
+            btn.disabled = true;
+
             try {
+                // 1. générer le PDF (une seule fois)
                 const pdfDoc = generateAuthorizationPDF(d);
                 const blob = getPDFBlob(d, pdfDoc);
                 const file = new File([blob], `${d.numero}.pdf`, { type: 'application/pdf' });
-                downloadGeneratedPDF(d, pdfDoc);
-                await createAuthorization(d, file);
-                showToast(`${d.numero} généré — en attente d'approbation`, 'success');
 
-                // notifier les directeurs
+                // 2. télécharger le PDF
+                downloadGeneratedPDF(d, pdfDoc);
+
+                // 3. archiver dans Firestore
+                await createAuthorization(d, file);
+                showToast(`${d.numero} archivée — en attente d'approbation`, 'success');
+
+                // 4. notifier les directeurs (pas bloquant)
                 try {
                     const users = await getAllUsers();
                     const directors = users.filter(u => u.role === 'directeur' && u.email);
-                    await notifyDirectors(directors, d, currentUserEmail);
+                    if (directors.length > 0) {
+                        await notifyDirectors(directors, d, currentUserEmail);
+                    }
                 } catch (e) {
-                    console.warn('Notification email échouée (pas bloquant):', e);
+                    console.warn('Notification échouée:', e.message);
                 }
 
+                // 5. reset formulaire
                 document.getElementById('genForm').reset();
                 document.getElementById('previewSection').style.display = 'none';
                 await initParams();
+
             } catch (err) {
+                console.error('Erreur archivage:', err);
                 showToast('Erreur: ' + err.message, 'error');
+            } finally {
+                btn.disabled = false;
             }
         });
 
