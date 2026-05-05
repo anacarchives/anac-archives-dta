@@ -94,12 +94,12 @@ export function generateAuthorizationPDF(data) {
     doc.rect(M_L, y, CW, 43);
 
     doc.setFontSize(9.5);
-    doc.text('Visa/SRT A', M_L + CW * 0.20, y + 5);
-    doc.text('Visa DTA',   M_L + CW * 0.80, y + 5);
+    doc.text('Visa/SRT A', M_L + CW * 0.40, y + 5);
+    doc.text('Visa DTA',   M_L + CW * 0.70, y + 5);
 
     if (data.signatureUrl) {
         try {
-            doc.addImage(data.signatureUrl, 'PNG', M_L + CW * 0.80 + 16, y - 1, 36, 10);
+            doc.addImage(data.signatureUrl, 'PNG', M_L + CW * 0.70 + 16, y - 1, 36, 10);
         } catch (e) { console.warn('Signature:', e); }
     }
 
