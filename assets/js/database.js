@@ -20,23 +20,22 @@ const COL = 'authorizations';
 // --- CRÉATION -------------------------------------------------------
 
 export async function createAuthorization(data, pdfFile = null) {
-    let pdfUrl = null;
-    let pdfPath = null;
+    // Storage non activé sur ce projet — on archive juste les données dans Firestore
+    // Si Storage est activé plus tard, décommenter le bloc ci-dessous
+    const pdfUrl = null;
+    const pdfPath = null;
 
-    // upload du PDF seulement si Storage est disponible
-    if (pdfFile) {
-        try {
-            pdfPath = buildStoragePath(data);
-            const sref = ref(storage, pdfPath);
-            await uploadBytes(sref, pdfFile);
-            pdfUrl = await getDownloadURL(sref);
-        } catch (e) {
-            // Storage pas activé ou autre erreur — on continue sans PDF
-            console.warn('Upload PDF échoué (Storage non activé ?) :', e.message);
-            pdfUrl = null;
-            pdfPath = null;
-        }
-    }
+    // -- Upload Storage (désactivé pour l'instant) --
+    // if (pdfFile) {
+    //     try {
+    //         pdfPath = buildStoragePath(data);
+    //         const sref = ref(storage, pdfPath);
+    //         await uploadBytes(sref, pdfFile);
+    //         pdfUrl = await getDownloadURL(sref);
+    //     } catch (e) {
+    //         console.warn('Upload PDF échoué:', e.message);
+    //     }
+    // }
 
     const payload = {
         ...data,
