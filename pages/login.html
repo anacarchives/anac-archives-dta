@@ -42,7 +42,6 @@
     <script type="module">
         import { auth, db } from '../assets/js/firebase-config.js';
         import { signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { collection, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         // si déjà connecté, on saute la page login
         onAuthStateChanged(auth, (user) => {
@@ -90,26 +89,26 @@
         });
 
         async function loginWithIdentifiant(identifiant, password) {
-            // cherche le directeur par identifiant dans Firestore
-            const q = query(
-                collection(db, 'users'),
-                where('identifiant', '==', identifiant),
-                where('role', '==', 'directeur')
-            );
-            const snap = await getDocs(q);
+            // on construit l'email Firebase directement depuis l'identifiant
+            // sans passer par Firestore (qui nécessite d'être auth)
+            // on essaie les deux formats possibles
+            const formats = [
+                `${identifiant.toLowerCase()}@dta.anacarchives.internal`,
+                `${identifiant.toLowerCase()}@directeur.anacarchives.dta`
+            ];
 
-            if (snap.empty) {
-                throw { message: 'Identifiant ou mot de passe incorrect' };
+            let lastError = null;
+            for (const firebaseEmail of formats) {
+                try {
+                    await signInWithEmailAndPassword(auth, firebaseEmail, password);
+                    window.location.href = 'dashboard.html';
+                    return;
+                } catch (e) {
+                    lastError = e;
+                }
             }
-
-            const userData = snap.docs[0].data();
-
-            if (!userData.firebaseEmail) {
-                throw { message: 'Compte non configuré correctement' };
-            }
-
-            await signInWithEmailAndPassword(auth, userData.firebaseEmail, password);
-            window.location.href = 'dashboard.html';
+            // si les deux ont échoué
+            throw { code: 'auth/invalid-credential', message: 'Identifiant ou mot de passe incorrect' };
         }
 
         function showError(msg) {
