@@ -197,9 +197,10 @@ export function generateAuthorizationPDF(data) {
     // R6 — Signature (connecté directement après R5)
     // Nom/Titre/Signature à DROITE
     // ══════════════════════════════
-    const sigY = y + R5H;
+    const sigY  = y + R5H;
+    const sigH  = PAGE_H - 3 - sigY;
     doc.setFont('helvetica', 'bold');
-    doc.rect(M_L, sigY, CW, R6H);
+    doc.rect(M_L, sigY, CW, sigH);
 
     const SX = MID + 5;
 
