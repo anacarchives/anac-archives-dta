@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modèles - ANAC Archives DTA</title>
+    <link rel="stylesheet" href="../assets/css/style.css">
+    <style>
+        .editor-layout {
+            display: grid;
+            grid-template-columns: 340px 1fr;
+            gap: 20px;
+            align-items: start;
+        }
+
+        /* panneau gauche — liste des champs */
+        .fields-panel {
+            background: white;
+            border: 1px solid var(--border-light);
+            border-radius: 12px;
+            padding: 0;
+            overflow: hidden;
+            box-shadow: var(--shadow-sm);
+            position: sticky;
+            top: 20px;
+        }
+        .fields-panel-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border-light);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .fields-panel-header h3 {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--primary);
+            margin: 0;
+        }
+        .fields-list {
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+        .field-item {
+            padding: 14px 20px;
+            border-bottom: 1px solid #F5F5F5;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .field-item:hover { background: var(--bg); }
+        .field-item.active { background: #EFF3FB; border-left: 3px solid var(--primary); }
+        .field-item-name {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 3px;
+        }
+        .field-item-preview {
+            font-size: 11px;
+            color: var(--text-muted);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 280px;
+        }
+
+        /* panneau droite — éditeur du champ sélectionné */
+        .edit-panel {
+            background: white;
+            border: 1px solid var(--border-light);
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: var(--shadow-sm);
+        }
+        .edit-panel-empty {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-muted);
+        }
+        .edit-panel-empty svg { margin-bottom: 12px; opacity: 0.3; }
+
+        .edit-section { margin-bottom: 20px; }
+        .edit-section-title {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            color: var(--text-light);
+            margin-bottom: 12px;
+        }
+
+        .edit-row {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+        .edit-row .form-group { flex: 1; margin: 0; }
+
+        .font-preview {
+            padding: 12px 16px;
+            background: var(--bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-light);
+            margin-top: 8px;
+            min-height: 40px;
+        }
+
+        .position-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .position-input {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .position-input label {
+            font-size: 12px;
+            color: var(--text-light);
+            width: 20px;
+            font-weight: 600;
+        }
+        .position-input input {
+            flex: 1;
+        }
+
+        /* type selector */
+        .type-tabs {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        .type-tab {
+            padding: 8px 16px;
+            border-radius: 20px;
+            border: 1.5px solid var(--border);
+            background: white;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+            color: var(--text-light);
+        }
+        .type-tab:hover { border-color: var(--primary); color: var(--primary); }
+        .type-tab.active {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+        }
+
+        .save-bar {
+            position: fixed;
+            bottom: 0;
+            left: 240px;
+            right: 0;
+            background: white;
+            border-top: 1px solid var(--border-light);
+            padding: 14px 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 -2px 12px rgba(0,0,0,0.06);
+            z-index: 100;
+        }
+        .save-bar-info {
+            font-size: 13px;
+            color: var(--text-light);
+        }
+        .save-bar-info strong { color: var(--primary); }
+
+        .content-wrapper { padding-bottom: 80px; }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <main class="main-content">
+            <div class="topbar">
+                <div>
+                    <div class="page-title">Modèles de documents</div>
+                    <div class="page-subtitle">Configurez les textes pour chaque type d'autorisation</div>
+                </div>
+            </div>
+
+            <div class="content-wrapper">
+
+                <!-- Sélecteur de type -->
+                <div class="type-tabs" id="typeTabs"></div>
+
+                <div class="editor-layout">
+
+                    <!-- Liste des champs -->
+                    <div class="fields-panel">
+                        <div class="fields-panel-header">
+                            <h3 id="panelTitle">Champs du document</h3>
+                        </div>
+                        <div class="fields-list" id="fieldsList"></div>
+                    </div>
+
+                    <!-- Éditeur -->
+                    <div class="edit-panel" id="editPanel">
+                        <div class="edit-panel-empty">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                            <p>Sélectionnez un champ à gauche pour le modifier</p>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Barre de sauvegarde -->
+    <div class="save-bar">
+        <div class="save-bar-info">Type sélectionné : <strong id="saveBarType">—</strong></div>
+        <button class="btn btn-primary" id="btnSaveAll" style="width:auto; padding:10px 28px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            Enregistrer le modèle
+        </button>
+    </div>
+
+    <script type="module">
+        import { checkAuth, injectSidebar } from '../assets/js/layout.js';
+        import { showToast } from '../assets/js/helpers.js';
+        import { db } from '../assets/js/firebase-config.js';
+        import { doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        injectSidebar('modeles');
+
+        // ─── TYPES ─────────────────────────────────────────────
+        const TYPES = [
+            { code: 'SAT', label: 'Survol et Atterrissage' },
+            { code: 'SUR', label: 'Survol' },
+            { code: 'BLP', label: 'Block Permit' },
+            { code: 'NPM', label: 'Notification Permanente' },
+            { code: 'TDM', label: 'Transport de Dépouille Mortelle' },
+        ];
+
+        // ─── CHAMPS CONFIGURABLES ───────────────────────────────
+        // Chaque champ a : id, nom, texte par défaut, position (x%,y en mm), taille police, police
+        const DEFAULT_FIELDS = (typeCode) => [
+            {
+                id: 'texteAccord',
+                nom: 'Texte d\'accord',
+                texte: typeCode === 'SUR'
+                    ? "Honneur vous notifier notre accord de survol du territoire mauritanien en faveur de l'avion selon les informations ci-après #"
+                    : typeCode === 'SAT'
+                    ? "Honneur vous notifier notre accord de survol du territoire mauritanien et l'atterrissage sur le(s) aéroport(s) International de Nouakchott OUM TOUNSY en faveur de(s) avion(s) selon les"
+                    : '',
+                x: 3, y: 12, fontSize: 8, font: 'bold',
+                description: 'Texte après Visa DTA'
+            },
+            {
+                id: 'condition1',
+                nom: 'Condition 1',
+                texte: "Cette autorisation est délivrée sous réserve que/ This permit is issued subject to :",
+                x: 3, y: 0, fontSize: 6.5, font: 'bolditalic',
+                description: 'Première ligne des conditions'
+            },
+            {
+                id: 'condition2',
+                nom: 'Condition 2',
+                texte: "1) Tous les docuemnts de bord de l'aéronef soient en cours de validité pendant l'opération du vol ci-dessus autorisé/ All aircraft 's onboard docuemnts be valid for the operation of authorized above flight;",
+                x: 3, y: 0, fontSize: 6.5, font: 'bolditalic',
+                description: 'Condition validité documents'
+            },
+            {
+                id: 'condition3',
+                nom: 'Condition 3',
+                texte: "2) La réglementation aérienne mauritanienne soit scrupuleusement respectée/ Mauritanian Aviation Regulation is scrupulously respected ;",
+                x: 3, y: 0, fontSize: 6.5, font: 'bolditalic',
+                description: 'Condition réglementation'
+            },
+            {
+                id: 'nb1',
+                nom: 'NB Paiement (FR)',
+                texte: typeCode === 'SUR' ? '' : "NB: Le paiement des frais et taxes relatifs à la délivrance de la présente autorisation sont dus dès la signature de celle-ci par l'ANAC.",
+                x: 3, y: 0, fontSize: 6.5, font: 'bolditalic',
+                description: 'Note paiement (français)',
+                hidden: typeCode === 'SUR'
+            },
+            {
+                id: 'nb2',
+                nom: 'NB Paiement (EN)',
+                texte: typeCode === 'SUR' ? '' : "NB: The payment of the fees and taxes relating to the issue of this authorization are due as soon as it is signed by the ANAC.",
+                x: 3, y: 0, fontSize: 6.5, font: 'bolditalic',
+                description: 'Note paiement (anglais)',
+                hidden: typeCode === 'SUR'
+            },
+            {
+                id: 'salutations1',
+                nom: 'Salutations ligne 1',
+                texte: typeCode === 'SUR' ? 'Salutations distinguées Stop' : '',
+                x: 3, y: 0, fontSize: 7.5, font: 'bolditalic',
+                description: 'Première ligne de salutations',
+                hidden: typeCode !== 'SUR'
+            },
+            {
+                id: 'salutations2',
+                nom: 'Salutations ligne 2',
+                texte: typeCode === 'SUR' ? 'Nouakchott Mauritanie Stop et Fin' : '',
+                x: 3, y: 0, fontSize: 7.5, font: 'bolditalic',
+                description: 'Deuxième ligne de salutations',
+                hidden: typeCode !== 'SUR'
+            },
+            {
+                id: 'visaSRTPos',
+                nom: 'Position Visa/SRT',
+                texte: 'Visa/SRT A',
+                x: 40, y: 5, fontSize: 9.5, font: 'bold',
+                description: 'Texte et position du Visa SRT (x = % de la largeur)'
+            },
+            {
+                id: 'visaDTAPos',
+                nom: 'Position Visa DTA',
+                texte: 'Visa DTA',
+                x: 70, y: 5, fontSize: 9.5, font: 'bold',
+                description: 'Texte et position du Visa DTA (x = % de la largeur)'
+            },
+        ];
+
+        let currentType = 'SAT';
+        let currentFieldId = null;
+        let allModels = {}; // { SAT: { texteAccord: {...}, ... }, SUR: {...}, ... }
+
+        checkAuth(async (user, userData) => {
+            if (userData.role !== 'admin') {
+                showToast('Accès réservé à l\'administrateur', 'warning');
+                setTimeout(() => window.location.href = 'dashboard.html', 1500);
+                return;
+            }
+            await loadAllModels();
+            renderTypeTabs();
+            selectType('SAT');
+        });
+
+        // ─── FIRESTORE ─────────────────────────────────────────
+        async function loadAllModels() {
+            try {
+                const snap = await getDoc(doc(db, 'params', 'modeles'));
+                if (snap.exists()) {
+                    allModels = snap.data();
+                }
+            } catch (e) {
+                console.warn('Modèles non chargés:', e);
+            }
+            // initialiser les types manquants avec les défauts
+            TYPES.forEach(t => {
+                if (!allModels[t.code]) {
+                    allModels[t.code] = {};
+                    DEFAULT_FIELDS(t.code).forEach(f => {
+                        allModels[t.code][f.id] = { ...f };
+                    });
+                }
+            });
+        }
+
+        async function saveModel() {
+            try {
+                await setDoc(doc(db, 'params', 'modeles'), allModels);
+                showToast('Modèle enregistré', 'success');
+            } catch (e) {
+                showToast('Erreur: ' + e.message, 'error');
+            }
+        }
+
+        // ─── UI ────────────────────────────────────────────────
+        function renderTypeTabs() {
+            document.getElementById('typeTabs').innerHTML = TYPES.map(t => `
+                <button class="type-tab ${t.code === currentType ? 'active' : ''}" data-type="${t.code}">
+                    ${t.code} — ${t.label}
+                </button>
+            `).join('');
+
+            document.querySelectorAll('.type-tab').forEach(btn => {
+                btn.addEventListener('click', () => selectType(btn.dataset.type));
+            });
+        }
+
+        function selectType(code) {
+            currentType = code;
+            currentFieldId = null;
+
+            document.querySelectorAll('.type-tab').forEach(b => {
+                b.classList.toggle('active', b.dataset.type === code);
+            });
+
+            const typeObj = TYPES.find(t => t.code === code);
+            document.getElementById('saveBarType').textContent = `${code} — ${typeObj?.label || ''}`;
+            document.getElementById('panelTitle').textContent = `Champs — ${code}`;
+
+            renderFieldsList();
+            showEmptyEditor();
+        }
+
+        function renderFieldsList() {
+            const fields = Object.values(allModels[currentType] || {});
+            document.getElementById('fieldsList').innerHTML = fields.map(f => `
+                <div class="field-item ${f.id === currentFieldId ? 'active' : ''}" data-id="${f.id}">
+                    <div class="field-item-name">${f.nom}</div>
+                    <div class="field-item-preview">${f.texte || '(vide)'}</div>
+                </div>
+            `).join('');
+
+            document.querySelectorAll('.field-item').forEach(el => {
+                el.addEventListener('click', () => selectField(el.dataset.id));
+            });
+        }
+
+        function selectField(fieldId) {
+            currentFieldId = fieldId;
+            renderFieldsList(); // refresh active state
+
+            const field = allModels[currentType][fieldId];
+            if (!field) return;
+
+            document.getElementById('editPanel').innerHTML = `
+                <div style="margin-bottom:20px;">
+                    <div style="font-size:18px; font-weight:700; color:var(--primary); margin-bottom:4px;">${field.nom}</div>
+                    <div style="font-size:13px; color:var(--text-muted);">${field.description || ''}</div>
+                </div>
+
+                <div class="edit-section">
+                    <div class="edit-section-title">Texte</div>
+                    <textarea id="editTexte" class="form-input" rows="4" style="width:100%; resize:vertical;">${field.texte || ''}</textarea>
+                    <div class="font-preview" id="fontPreview" style="font-size:${field.fontSize}px;">${field.texte || '(vide)'}</div>
+                </div>
+
+                <div class="edit-section">
+                    <div class="edit-section-title">Typographie</div>
+                    <div class="edit-row">
+                        <div class="form-group">
+                            <label class="form-label">Taille (pt)</label>
+                            <input type="number" id="editFontSize" class="form-input" value="${field.fontSize || 8}" min="5" max="30" step="0.5">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Style</label>
+                            <select id="editFont" class="form-select">
+                                <option value="bold" ${field.font === 'bold' ? 'selected' : ''}>Gras</option>
+                                <option value="bolditalic" ${field.font === 'bolditalic' ? 'selected' : ''}>Gras Italique</option>
+                                <option value="normal" ${field.font === 'normal' ? 'selected' : ''}>Normal</option>
+                                <option value="italic" ${field.font === 'italic' ? 'selected' : ''}>Italique</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="edit-section">
+                    <div class="edit-section-title">Position</div>
+                    <div class="position-grid">
+                        <div class="position-input">
+                            <label>X</label>
+                            <input type="number" id="editX" class="form-input" value="${field.x || 0}" step="0.5">
+                            <span style="font-size:11px; color:var(--text-muted);">${fieldId.includes('Pos') ? '%' : 'mm'}</span>
+                        </div>
+                        <div class="position-input">
+                            <label>Y</label>
+                            <input type="number" id="editY" class="form-input" value="${field.y || 0}" step="0.5">
+                            <span style="font-size:11px; color:var(--text-muted);">mm</span>
+                        </div>
+                    </div>
+                    <div style="font-size:11px; color:var(--text-muted); margin-top:8px;">
+                        ${fieldId.includes('Pos') ? 'X = pourcentage de la largeur (0-100). Ex: 40 = 40% de la largeur.' : 'X = mm depuis le bord gauche. Y = mm depuis le haut du rectangle.'}
+                    </div>
+                </div>
+
+                <div style="display:flex; gap:10px; margin-top:24px;">
+                    <button class="btn btn-secondary" id="btnReset" style="width:auto; padding:10px 18px;">Réinitialiser</button>
+                    <button class="btn btn-primary" id="btnApplyField" style="width:auto; padding:10px 24px;">Appliquer</button>
+                </div>
+            `;
+
+            // mise à jour preview en temps réel
+            document.getElementById('editTexte').addEventListener('input', (e) => {
+                document.getElementById('fontPreview').textContent = e.target.value || '(vide)';
+            });
+            document.getElementById('editFontSize').addEventListener('input', (e) => {
+                document.getElementById('fontPreview').style.fontSize = e.target.value + 'px';
+            });
+            document.getElementById('editFont').addEventListener('change', (e) => {
+                const fp = document.getElementById('fontPreview');
+                fp.style.fontWeight = e.target.value.includes('bold') ? 'bold' : 'normal';
+                fp.style.fontStyle = e.target.value.includes('italic') ? 'italic' : 'normal';
+            });
+
+            document.getElementById('btnApplyField').addEventListener('click', applyField);
+            document.getElementById('btnReset').addEventListener('click', () => {
+                const defaults = DEFAULT_FIELDS(currentType);
+                const def = defaults.find(f => f.id === fieldId);
+                if (def) {
+                    allModels[currentType][fieldId] = { ...def };
+                    selectField(fieldId);
+                    renderFieldsList();
+                }
+            });
+        }
+
+        function applyField() {
+            const texte    = document.getElementById('editTexte').value;
+            const fontSize = parseFloat(document.getElementById('editFontSize').value);
+            const font     = document.getElementById('editFont').value;
+            const x        = parseFloat(document.getElementById('editX').value);
+            const y        = parseFloat(document.getElementById('editY').value);
+
+            allModels[currentType][currentFieldId] = {
+                ...allModels[currentType][currentFieldId],
+                texte, fontSize, font, x, y
+            };
+
+            renderFieldsList();
+            showToast('Champ modifié — n\'oubliez pas d\'enregistrer', 'info');
+        }
+
+        function showEmptyEditor() {
+            document.getElementById('editPanel').innerHTML = `
+                <div class="edit-panel-empty">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    <p>Sélectionnez un champ à gauche pour le modifier</p>
+                </div>
+            `;
+        }
+
+        document.getElementById('btnSaveAll').addEventListener('click', saveModel);
+    </script>
+</body>
+</html>
