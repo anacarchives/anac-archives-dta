@@ -1,4 +1,4 @@
-// pdf-generator.js
+// pdf-generator.js - v2 05/05/2026
 // Corrections 05/05/2026 v2 :
 // - Marges réduites à 8mm (document plus large)
 // - R6 hauteur fixe 38mm collé en bas de page
