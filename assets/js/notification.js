@@ -23,7 +23,12 @@ function loadEmailJS() {
 // Notifie tous les directeurs qu'une autorisation est en attente.
 // directors = tableau d'objets { name, email }
 export async function notifyDirectors(directors, authData, createdBy) {
-    if (!directors || directors.length === 0) return;
+    if (!directors || directors.length === 0) {
+        console.warn('Aucun directeur trouvé pour notification');
+        return;
+    }
+
+    console.log(`Envoi notification à ${directors.length} directeur(s):`, directors.map(d => d.email));
 
     try {
         await loadEmailJS();
@@ -33,9 +38,12 @@ export async function notifyDirectors(directors, authData, createdBy) {
     }
 
     for (const dir of directors) {
-        if (!dir.email) continue;
+        if (!dir.email) {
+            console.warn('Directeur sans email:', dir.name);
+            continue;
+        }
         try {
-            await window.emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+            const result = await window.emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
                 to_email:   dir.email,
                 to_name:    dir.name || 'Directeur',
                 numero:     authData.numero || '',
@@ -44,9 +52,9 @@ export async function notifyDirectors(directors, authData, createdBy) {
                 created_by: createdBy || '',
                 name:       'ANAC Archives DTA'
             });
-            console.log(`Email envoyé à ${dir.email}`);
+            console.log(`✓ Email envoyé à ${dir.email}`, result);
         } catch (e) {
-            console.warn(`Erreur envoi email à ${dir.email}:`, e);
+            console.error(`✗ Erreur envoi email à ${dir.email}:`, e);
         }
     }
 }
