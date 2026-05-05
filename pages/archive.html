@@ -81,7 +81,7 @@
                                 <th>Aéronef</th>
                                 <th>Immat.</th>
                                 <th>Validité</th>
-                                <th>Statut</th>
+                                <th>Approbation</th>
                                 <th></th>
                             </tr>
                         </thead>
@@ -192,8 +192,11 @@
             const pageResults = results.slice(start, start + PER_PAGE);
             
             const html = pageResults.map(a => {
-                const status = getStatus(a.dateDebutValidite, a.dateFinValidite);
                 const typeBadge = getTypeBadgeClass(a.typeCode);
+                // statut d'approbation (pas de validité des dates)
+                const approvalStatut = a.statut === 'approuve' ? 'approuve' : 'en_attente';
+                const approvalLabel  = a.statut === 'approuve' ? 'Approuvée' : 'En attente';
+                const approvalClass  = a.statut === 'approuve' ? 'badge-active' : 'badge-soon';
                 return `
                     <tr data-id="${a.id}">
                         <td><strong>${a.numero || '—'}</strong></td>
@@ -202,7 +205,7 @@
                         <td>${a.aeronefType || '—'}</td>
                         <td>${a.immatriculation || '—'}</td>
                         <td>${formatDate(a.dateDebutValidite)} → ${formatDate(a.dateFinValidite)}</td>
-                        <td><span class="badge ${status.class}">${status.label}</span></td>
+                        <td><span class="badge ${approvalClass}">${approvalLabel}</span></td>
                         <td>
                             <button class="btn btn-secondary btn-sm" data-action="view" data-id="${a.id}">Voir</button>
                         </td>
@@ -374,7 +377,12 @@
 
                 document.getElementById('btnPrint').addEventListener('click', () => {
                     try {
-                        downloadGeneratedPDF(rec);
+                        // si approuvé et qu'il y a une signature stockée, on l'inclut dans le PDF
+                        const printData = { ...rec };
+                        if (rec.statut === 'approuve' && rec.signatureUrl) {
+                            printData.signatureUrl = rec.signatureUrl;
+                        }
+                        downloadGeneratedPDF(printData);
                         showToast('PDF généré', 'info');
                     } catch (e) {
                         showToast('Erreur génération PDF: ' + e.message, 'error');
