@@ -5,6 +5,92 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Liste des autorisations - ANAC Archives DTA</title>
     <link rel="stylesheet" href="../assets/css/style.css">
+    <style>
+        /* barre de filtres compacte en haut */
+        .compact-filters {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            background: white;
+            padding: 12px 16px;
+            border-radius: 10px;
+            border: 1px solid var(--border-light);
+            margin-bottom: 18px;
+            box-shadow: var(--shadow-sm);
+        }
+        .compact-filters .search-wrap {
+            position: relative;
+            flex: 1;
+            max-width: 320px;
+        }
+        .compact-filters .search-wrap svg {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            pointer-events: none;
+        }
+        .compact-filters .search-wrap input {
+            padding-left: 36px;
+            height: 38px;
+        }
+        .compact-filters select {
+            height: 38px;
+            padding: 0 12px;
+            min-width: 130px;
+        }
+        .compact-filters .reset-btn {
+            margin-left: auto;
+            font-size: 13px;
+            color: var(--text-light);
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 8px 12px;
+        }
+        .compact-filters .reset-btn:hover { color: var(--primary); }
+
+        /* tableau plus aéré */
+        .liste-table {
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--border-light);
+        }
+        .liste-table table { width: 100%; border-collapse: collapse; }
+        .liste-table thead { background: #FAFBFC; }
+        .liste-table th {
+            padding: 16px 20px;
+            text-align: left;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            color: var(--text-light);
+            border-bottom: 1px solid var(--border-light);
+        }
+        .liste-table td {
+            padding: 18px 20px;
+            font-size: 14px;
+            border-bottom: 1px solid #F0F2F5;
+            vertical-align: middle;
+        }
+        .liste-table tbody tr {
+            transition: background 0.15s;
+        }
+        .liste-table tbody tr:hover { background: #FAFBFC; }
+        .liste-table tbody tr:last-child td { border-bottom: none; }
+
+        .compteur {
+            font-size: 13px;
+            color: var(--text-light);
+            margin-bottom: 14px;
+            margin-left: 4px;
+        }
+        .compteur strong { color: var(--primary); font-size: 15px; }
+    </style>
 </head>
 <body>
     <div class="app-container">
@@ -17,42 +103,30 @@
 
             <div class="content-wrapper">
 
-                <!-- Filtres -->
-                <div class="filters-bar">
-                    <div class="filter-group">
-                        <label class="filter-label">Recherche</label>
-                        <div class="search-input-wrap">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                            <input type="text" id="searchInput" class="form-input search-input" placeholder="Numéro, opérateur, immatriculation...">
-                        </div>
+                <!-- barre filtres compacte -->
+                <div class="compact-filters">
+                    <div class="search-wrap">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                        <input type="text" id="searchInput" class="form-input" placeholder="Rechercher...">
                     </div>
-                    <div class="filter-group">
-                        <label class="filter-label">Type</label>
-                        <select id="filterType" class="form-select">
-                            <option value="">Tous</option>
-                            <option value="SAT">SAT</option>
-                            <option value="SUR">SUR</option>
-                            <option value="ATT">ATT</option>
-                        </select>
-                    </div>
-                    <div class="filter-group">
-                        <label class="filter-label">Année</label>
-                        <select id="filterYear" class="form-select"><option value="">Toutes</option></select>
-                    </div>
-                    <div class="filter-group">
-                        <label class="filter-label">Statut</label>
-                        <select id="filterStatus" class="form-select">
-                            <option value="">Tous</option>
-                            <option value="en_attente">En attente</option>
-                            <option value="approuve">Approuvée</option>
-                        </select>
-                    </div>
-                    <button class="btn btn-secondary" id="btnReset" style="width:auto; padding:10px 16px;">Réinitialiser</button>
+                    <select id="filterType" class="form-select">
+                        <option value="">Tous types</option>
+                        <option value="SAT">SAT</option>
+                        <option value="SUR">SUR</option>
+                        <option value="ATT">ATT</option>
+                    </select>
+                    <select id="filterYear" class="form-select"><option value="">Toutes années</option></select>
+                    <select id="filterStatus" class="form-select">
+                        <option value="">Tous statuts</option>
+                        <option value="en_attente">En attente</option>
+                        <option value="approuve">Approuvées</option>
+                    </select>
+                    <button class="reset-btn" id="btnReset">Réinitialiser</button>
                 </div>
 
-                <div id="resultsCount" class="results-count"></div>
+                <div id="resultsCount" class="compteur"></div>
 
-                <div class="results-table">
+                <div class="liste-table">
                     <table>
                         <thead>
                             <tr>
@@ -67,7 +141,7 @@
                             </tr>
                         </thead>
                         <tbody id="resultsBody">
-                            <tr><td colspan="8" style="text-align:center; padding:40px; color:var(--text-muted);">Chargement...</td></tr>
+                            <tr><td colspan="8" style="text-align:center; padding:60px; color:var(--text-muted);">Chargement...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -94,7 +168,7 @@
     <script type="module">
         import { checkAuth, injectSidebar } from '../assets/js/layout.js';
         import { showToast, formatDate, getStatus, getTypeBadgeClass } from '../assets/js/helpers.js';
-        import { getAllAuthorizations, getAuthorization, deleteAuthorization, approveAuthorization, filterAuthorizations } from '../assets/js/database.js';
+        import { getAllAuthorizations, getAuthorization, deleteAuthorization, approveAuthorization } from '../assets/js/database.js';
         import { downloadGeneratedPDF } from '../assets/js/pdf-generator.js';
 
         injectSidebar('liste');
@@ -114,7 +188,7 @@
         async function loadData() {
             try {
                 allRecords = await getAllAuthorizations({ limit: 1000 });
-                // tri par plus récent en premier
+                // tri par plus récent
                 allRecords.sort((a, b) => {
                     const da = a.createdAt?.seconds || 0;
                     const db = b.createdAt?.seconds || 0;
@@ -123,6 +197,7 @@
                 buildYearFilter();
                 applyFilters();
             } catch (e) {
+                console.error('Erreur load:', e);
                 showToast('Erreur: ' + e.message, 'error');
             }
         }
@@ -130,7 +205,7 @@
         function buildYearFilter() {
             const years = [...new Set(allRecords.map(r => r.year).filter(Boolean))].sort((a, b) => b - a);
             const sel = document.getElementById('filterYear');
-            sel.innerHTML = '<option value="">Toutes</option>' + years.map(y => `<option value="${y}">${y}</option>`).join('');
+            sel.innerHTML = '<option value="">Toutes années</option>' + years.map(y => `<option value="${y}">${y}</option>`).join('');
         }
 
         function applyFilters() {
@@ -139,6 +214,8 @@
             const year = document.getElementById('filterYear').value;
             const status = document.getElementById('filterStatus').value;
 
+            // l'archive prend les approuvées — la liste montre tout par défaut
+            // mais si on filtre sur "approuvées", on les voit ici aussi
             let results = allRecords;
             if (search) results = results.filter(r => (r.searchIndex || '').toLowerCase().includes(search));
             if (type) results = results.filter(r => r.typeCode === type);
@@ -150,10 +227,10 @@
         }
 
         function renderTable(results) {
-            document.getElementById('resultsCount').innerHTML = `<strong>${results.length}</strong> autorisation(s) trouvée(s)`;
+            document.getElementById('resultsCount').innerHTML = `<strong>${results.length}</strong> autorisation(s)`;
 
             if (results.length === 0) {
-                document.getElementById('resultsBody').innerHTML = '<tr><td colspan="8" style="text-align:center; padding:40px; color:var(--text-muted);">Aucune autorisation</td></tr>';
+                document.getElementById('resultsBody').innerHTML = '<tr><td colspan="8" style="text-align:center; padding:60px; color:var(--text-muted);">Aucune autorisation</td></tr>';
                 document.getElementById('pagination').innerHTML = '';
                 return;
             }
@@ -164,16 +241,15 @@
             const pageResults = results.slice(start, start + PER_PAGE);
 
             document.getElementById('resultsBody').innerHTML = pageResults.map(a => {
-                const statut = a.statut === 'approuve' ? 'approuve' : 'en_attente';
-                const label  = a.statut === 'approuve' ? 'Approuvée' : 'En attente';
-                const cls    = a.statut === 'approuve' ? 'badge-active' : 'badge-soon';
+                const label = a.statut === 'approuve' ? 'Approuvée' : 'En attente';
+                const cls   = a.statut === 'approuve' ? 'badge-active' : 'badge-soon';
                 return `<tr data-id="${a.id}">
                     <td><strong>${a.numero || '—'}</strong></td>
                     <td><span class="badge ${getTypeBadgeClass(a.typeCode)}">${a.typeCode || '—'}</span></td>
                     <td>${a.operateur || '—'}</td>
                     <td>${a.aeronefType || '—'}</td>
                     <td>${a.immatriculation || '—'}</td>
-                    <td>${formatDate(a.dateDebutValidite)} → ${formatDate(a.dateFinValidite)}</td>
+                    <td style="font-size:13px; color:var(--text-light);">${formatDate(a.dateDebutValidite)} → ${formatDate(a.dateFinValidite)}</td>
                     <td><span class="badge ${cls}">${label}</span></td>
                     <td><button class="btn btn-secondary btn-sm" data-action="view" data-id="${a.id}">Voir</button></td>
                 </tr>`;
@@ -201,7 +277,7 @@
             }));
         }
 
-        // filtres
+        // events filtres
         document.getElementById('searchInput').addEventListener('input', () => { currentPage = 1; applyFilters(); });
         document.getElementById('filterType').addEventListener('change', () => { currentPage = 1; applyFilters(); });
         document.getElementById('filterYear').addEventListener('change', () => { currentPage = 1; applyFilters(); });
@@ -215,7 +291,7 @@
             applyFilters();
         });
 
-        // ─── MODAL DÉTAIL ─────────────────────────────────────
+        // ─── MODAL ─────────────────────────────────────────────
         async function showDetail(id) {
             const rec = await getAuthorization(id);
             if (!rec) return;
@@ -251,7 +327,6 @@
                 Imprimer
             </button>`;
 
-            // bouton Approuver pour le directeur
             if (currentUser?.role === 'directeur' && rec.statut !== 'approuve') {
                 footer += `<button class="btn btn-success" id="btnApprove" style="width:auto; padding:10px 20px;">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
@@ -259,7 +334,6 @@
                 </button>`;
             }
 
-            // suppression admin
             if (currentUser?.role === 'admin') {
                 footer += `<button class="btn btn-danger" id="btnDelete">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
@@ -276,9 +350,7 @@
 
             document.getElementById('btnPrint').addEventListener('click', () => {
                 try {
-                    // si approuvée + signature stockée, on l'inclut
-                    const printData = { ...rec };
-                    downloadGeneratedPDF(printData);
+                    downloadGeneratedPDF(rec);
                     showToast('PDF généré', 'info');
                 } catch (e) {
                     showToast('Erreur: ' + e.message, 'error');
