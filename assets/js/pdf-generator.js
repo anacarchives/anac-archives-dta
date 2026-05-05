@@ -9,9 +9,9 @@ import { jsPDF } from "https://cdn.jsdelivr.net/npm/jspdf@2.5.1/+esm";
 
 const PAGE_W = 210;
 const PAGE_H = 297;
-const M_L    = 8;               // marge gauche réduite
-const M_R    = PAGE_W - 8;     // marge droite réduite
-const CW     = M_R - M_L;      // largeur utile ~194mm
+const M_L    = 4;               // marge gauche 4mm
+const M_R    = PAGE_W - 4;     // marge droite 4mm
+const CW     = M_R - M_L;      // largeur utile ~202mm
 const MID    = M_L + CW / 2;
 const R6H    = 42;              // hauteur fixe du rectangle signature en bas
 const R6_Y   = PAGE_H - R6H - 5; // position Y du R6 (collé en bas)
@@ -31,10 +31,10 @@ export function generateAuthorizationPDF(data) {
     const TW = CW - 6; // largeur de texte (avec padding interne 3mm de chaque côté)
 
     // ══════════════════════════════
-    // R1 — Espace entête papier ANAC
+    // R1 — Espace entête papier ANAC (agrandi +20mm)
     // ══════════════════════════════
-    doc.rect(M_L, y, CW, 52);
-    y += 52;
+    doc.rect(M_L, y, CW, 72);
+    y += 72;
 
     // ══════════════════════════════
     // R2 — Titre + Numéro + Type
@@ -132,9 +132,9 @@ export function generateAuthorizationPDF(data) {
 
     // ══════════════════════════════
     // R5 — Motif + Dates + Conditions
-    // hauteur calculée pour aller jusqu'à R6
+    // hauteur réduite de 20mm
     // ══════════════════════════════
-    const R5H = R6_Y - y;
+    const R5H = R6_Y - y - 20;
     doc.rect(M_L, y, CW, R5H);
 
     let iy = y + 6;
