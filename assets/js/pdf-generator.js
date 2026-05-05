@@ -121,12 +121,12 @@ export function generateAuthorizationPDF(data) {
     }
 
     doc.setFontSize(8);
-    doc.text('Aéronef type / aircraft type', M_L + 3, y + 24);
-    doc.text('Immatriculation/ Registration', MID + 3, y + 24);
+    doc.text('Aéronef type / aircraft type', M_L + CW * 0.25, y + 24, { align: 'center' });
+    doc.text('Immatriculation/ Registration', M_L + CW * 0.75, y + 24, { align: 'center' });
 
     doc.setFontSize(13);
-    doc.text(data.aeronefType || '', M_L + CW / 4, y + 37, { align: 'center' });
-    doc.text(data.immatriculation || '', M_L + 3 * CW / 4, y + 37, { align: 'center' });
+    doc.text(data.aeronefType || '', M_L + CW * 0.25, y + 37, { align: 'center' });
+    doc.text(data.immatriculation || '', M_L + CW * 0.75, y + 37, { align: 'center' });
 
     y += 43;
 
