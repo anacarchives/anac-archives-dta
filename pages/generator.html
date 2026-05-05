@@ -180,10 +180,13 @@
         import { checkAuth, injectSidebar } from '../assets/js/layout.js';
         import { showToast, fromISODate } from '../assets/js/helpers.js';
         import { generateAuthorizationPDF, downloadGeneratedPDF, getPDFDataURI, getPDFBlob } from '../assets/js/pdf-generator.js';
-        import { createAuthorization } from '../assets/js/database.js';
+        import { createAuthorization, getAllUsers } from '../assets/js/database.js';
         import { loadParams } from '../assets/js/params.js';
+        import { notifyDirectors } from '../assets/js/notification.js';
 
         injectSidebar('generator');
+
+        let currentUserEmail = '';
 
         const TYPE_LABELS = {
             SAT: 'Survol et Atterrissage',
@@ -349,7 +352,17 @@
                 const file = new File([blob], `${d.numero}.pdf`, { type: 'application/pdf' });
                 downloadGeneratedPDF(d, pdfDoc);
                 await createAuthorization(d, file);
-                showToast(`${d.numero} généré et archivé`, 'success');
+                showToast(`${d.numero} généré — en attente d'approbation`, 'success');
+
+                // notifier les directeurs
+                try {
+                    const users = await getAllUsers();
+                    const directors = users.filter(u => u.role === 'directeur' && u.email);
+                    await notifyDirectors(directors, d, currentUserEmail);
+                } catch (e) {
+                    console.warn('Notification email échouée (pas bloquant):', e);
+                }
+
                 document.getElementById('genForm').reset();
                 document.getElementById('previewSection').style.display = 'none';
                 await initParams();
@@ -358,7 +371,10 @@
             }
         });
 
-        checkAuth(async () => { await initParams(); });
+        checkAuth(async (user) => {
+            currentUserEmail = user.email;
+            await initParams();
+        });
     </script>
 </body>
 </html>
