@@ -1,13 +1,9 @@
 // layout.js
-// gere la sidebar (menu de gauche), l'auth, et l'affichage du user en bas
 
 import { auth, db } from './firebase-config.js';
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-
-// vérifie qu'on est connecté, sinon redirige vers login.
-// le callback est appelé avec (user, userData) une fois tout chargé.
 export function checkAuth(callback) {
     onAuthStateChanged(auth, async (user) => {
         if (!user) {
@@ -15,12 +11,10 @@ export function checkAuth(callback) {
             return;
         }
 
-        // on récupère les infos du user depuis Firestore (rôle, nom...)
         let userData;
         try {
             const snap = await getDoc(doc(db, 'users', user.uid));
             userData = snap.exists() ? snap.data() : {
-                // fallback si le doc Firestore n'existe pas (pas trop normal mais bon)
                 role: 'agent',
                 name: user.email.split('@')[0],
                 email: user.email
@@ -35,29 +29,25 @@ export function checkAuth(callback) {
     });
 }
 
-
 function applyUserData(u) {
-    const nameEl = document.getElementById('userName');
-    const roleEl = document.getElementById('userRole');
+    const nameEl   = document.getElementById('userName');
+    const roleEl   = document.getElementById('userRole');
     const avatarEl = document.getElementById('userAvatar');
 
-    if (nameEl) nameEl.textContent = u.name || u.email;
-    if (roleEl) roleEl.textContent = u.role === 'admin' ? 'Administrateur' : u.role === 'directeur' ? 'Directeur' : 'Agent';
-    if (avatarEl) avatarEl.textContent = (u.name || u.email).charAt(0).toUpperCase();
+    if (nameEl)   nameEl.textContent   = u.name || u.email;
+    if (roleEl)   roleEl.textContent   = u.role === 'admin' ? 'Administrateur' : u.role === 'directeur' ? 'Directeur' : 'Agent';
+    if (avatarEl) avatarEl.textContent = (u.name || u.email || 'U').charAt(0).toUpperCase();
 
-    // cache les liens selon le rôle
     if (u.role !== 'admin') {
         document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'none');
     }
     if (u.role !== 'directeur') {
         document.querySelectorAll('.directeur-only').forEach(el => el.style.display = 'none');
     }
-    // le directeur ne voit pas les outils de saisie
     if (u.role === 'directeur') {
         document.querySelectorAll('.no-directeur').forEach(el => el.style.display = 'none');
     }
 }
-
 
 export async function logout() {
     if (!confirm('Voulez-vous vraiment vous déconnecter ?')) return;
@@ -69,18 +59,12 @@ export async function logout() {
     }
 }
 
-
 export function setActiveNav(pageName) {
     document.querySelectorAll('.nav-item').forEach(item => {
-        if (item.dataset.page === pageName) {
-            item.classList.add('active');
-        }
+        if (item.dataset.page === pageName) item.classList.add('active');
     });
 }
 
-
-// HTML de la sidebar - injecté dans toutes les pages.
-// Le mettre ici evite de devoir copier coller dans chaque page.
 const SIDEBAR_HTML = `
 <aside class="sidebar">
     <div class="sidebar-header">
@@ -107,18 +91,14 @@ const SIDEBAR_HTML = `
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><path d="M10 12h4"/></svg>
                 <span>Archive</span>
             </a>
-            <a href="add.html" class="nav-item" data-page="add">
+            <a href="generator.html" class="nav-item no-directeur" data-page="generator">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
                 <span>Nouvelle saisie</span>
             </a>
         </div>
 
-        <div class="nav-section">
+        <div class="nav-section no-directeur">
             <div class="nav-section-title">Outils</div>
-            <a href="generator.html" class="nav-item" data-page="generator">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-                <span>Générateur</span>
-            </a>
             <a href="import.html" class="nav-item admin-only" data-page="import">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                 <span>Import Excel</span>
@@ -162,8 +142,6 @@ const SIDEBAR_HTML = `
 </aside>
 `;
 
-
-// injecte la sidebar au début de .app-container
 export function injectSidebar(activePage) {
     const c = document.querySelector('.app-container');
     if (!c) return;
@@ -172,5 +150,4 @@ export function injectSidebar(activePage) {
     document.getElementById('btnLogout').addEventListener('click', logout);
 }
 
-// gardé pour compat si quelqu'un importe SIDEBAR_HTML directement
 export { SIDEBAR_HTML };
