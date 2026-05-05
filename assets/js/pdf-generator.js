@@ -132,9 +132,9 @@ export function generateAuthorizationPDF(data) {
 
     // ══════════════════════════════
     // R5 — Motif + Dates + Conditions
-    // hauteur réduite de 20mm
     // ══════════════════════════════
-    const R5H = R6_Y - y - 20;
+    const BOTTOM   = PAGE_H - 10; // 287mm — 10mm du bas
+    const R5H      = BOTTOM - y - R6H; // R5 prend tout sauf R6
     doc.rect(M_L, y, CW, R5H);
 
     let iy = y + 6;
