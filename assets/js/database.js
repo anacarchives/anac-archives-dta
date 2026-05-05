@@ -23,18 +23,26 @@ export async function createAuthorization(data, pdfFile = null) {
     let pdfUrl = null;
     let pdfPath = null;
 
+    // upload du PDF seulement si Storage est disponible
     if (pdfFile) {
-        pdfPath = buildStoragePath(data);
-        const sref = ref(storage, pdfPath);
-        await uploadBytes(sref, pdfFile);
-        pdfUrl = await getDownloadURL(sref);
+        try {
+            pdfPath = buildStoragePath(data);
+            const sref = ref(storage, pdfPath);
+            await uploadBytes(sref, pdfFile);
+            pdfUrl = await getDownloadURL(sref);
+        } catch (e) {
+            // Storage pas activé ou autre erreur — on continue sans PDF
+            console.warn('Upload PDF échoué (Storage non activé ?) :', e.message);
+            pdfUrl = null;
+            pdfPath = null;
+        }
     }
 
     const payload = {
         ...data,
         pdfUrl,
         pdfPath,
-        statut: 'en_attente', // toute autorisation créée attend approbation directeur
+        statut: 'en_attente',
         createdAt: serverTimestamp(),
         createdBy: auth.currentUser?.email || 'unknown',
         createdByUid: auth.currentUser?.uid || null,
