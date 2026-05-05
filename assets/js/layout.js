@@ -37,22 +37,24 @@ export function checkAuth(callback) {
 
 
 function applyUserData(u) {
-    // affiche le nom et le role en bas de la sidebar
     const nameEl = document.getElementById('userName');
     const roleEl = document.getElementById('userRole');
     const avatarEl = document.getElementById('userAvatar');
 
     if (nameEl) nameEl.textContent = u.name || u.email;
-    if (roleEl) roleEl.textContent = u.role === 'admin' ? 'Administrateur' : 'Agent';
-    if (avatarEl) {
-        avatarEl.textContent = (u.name || u.email).charAt(0).toUpperCase();
-    }
+    if (roleEl) roleEl.textContent = u.role === 'admin' ? 'Administrateur' : u.role === 'directeur' ? 'Directeur' : 'Agent';
+    if (avatarEl) avatarEl.textContent = (u.name || u.email).charAt(0).toUpperCase();
 
-    // cache les liens admin si user n'est pas admin
+    // cache les liens selon le rôle
     if (u.role !== 'admin') {
-        document.querySelectorAll('.admin-only').forEach(el => {
-            el.style.display = 'none';
-        });
+        document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'none');
+    }
+    if (u.role !== 'directeur') {
+        document.querySelectorAll('.directeur-only').forEach(el => el.style.display = 'none');
+    }
+    // le directeur ne voit pas les outils de saisie
+    if (u.role === 'directeur') {
+        document.querySelectorAll('.no-directeur').forEach(el => el.style.display = 'none');
     }
 }
 
