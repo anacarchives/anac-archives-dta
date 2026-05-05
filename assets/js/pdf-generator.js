@@ -81,40 +81,53 @@ export function generateAuthorizationPDF(data) {
     // ══════════════════════════════
     // R4 — Visa + Accord + Aéronef
     // ══════════════════════════════
-    doc.rect(M_L, y, CW, 55);
+    doc.rect(M_L, y, CW, 45);
 
+    // Visa/SRT — toujours "A" fixe
     doc.setFont('helvetica', 'bold').setFontSize(9.5);
-    doc.text('Visa/SRT ' + (data.visaSRT || 'A'), M_L + 3, y + 6);
-    doc.text('Visa DTA', MID + 3, y + 6);
+    doc.text('Visa/SRT A', M_L + 3, y + 5);
+
+    // Visa DTA — texte
+    doc.text('Visa DTA', MID + 3, y + 5);
+
+    // signature du directeur sur Visa DTA (si approuvée et signature disponible)
+    if (data.signatureUrl) {
+        try {
+            // on place la signature en bleu transparent par dessus "Visa DTA"
+            doc.addImage(data.signatureUrl, 'PNG', MID + 3, y + 1, 55, 12);
+        } catch (e) {
+            console.warn('Signature non chargée:', e);
+        }
+    }
 
     doc.setFont('helvetica', 'normal').setFontSize(8);
     if (data.typeCode === 'SUR') {
         doc.text(
             "Honneur vous notifier notre accord de survol du territoire mauritanien en faveur de l'avion selon les informations ci-après #",
-            M_L + 3, y + 14
+            M_L + 3, y + 12
         );
     } else {
         doc.text(
             "Honneur vous notifier notre accord de survol du territoire mauritanien et l'atterrissage sur le(s)",
-            M_L + 3, y + 14
+            M_L + 3, y + 12
         );
         doc.text(
             "aéroport(s) International de Nouakchott OUM TOUNSY en faveur de(s) avion(s) selon les",
-            M_L + 3, y + 19
+            M_L + 3, y + 17
         );
     }
 
     // aéronef labels
     doc.setFont('helvetica', 'bold').setFontSize(8);
-    doc.text('Aéronef type / aircraft type', M_L + 3, y + 28);
-    doc.text('Immatriculation/ Registration', MID + 3, y + 28);
+    doc.text('Aéronef type / aircraft type', M_L + 3, y + 24);
+    doc.text('Immatriculation/ Registration', MID + 3, y + 24);
 
-    // valeurs aéronef (grandes)
-    doc.setFont('helvetica', 'bold').setFontSize(15);
-    doc.text(data.aeronefType || '', M_L + CW / 4, y + 46, { align: 'center' });
-    doc.text(data.immatriculation || '', M_L + 3 * CW / 4, y + 46, { align: 'center' });
+    // valeurs aéronef
+    doc.setFont('helvetica', 'bold').setFontSize(13);
+    doc.text(data.aeronefType || '', M_L + CW / 4, y + 38, { align: 'center' });
+    doc.text(data.immatriculation || '', M_L + 3 * CW / 4, y + 38, { align: 'center' });
 
-    y += 55;
+    y += 45;
 
     // ══════════════════════════════
     // R5 — Motif + Dates + Conditions
