@@ -11,39 +11,24 @@
         <main class="main-content">
             <div class="topbar">
                 <div>
-                    <div class="page-title">Gestion des utilisateurs</div>
-                    <div class="page-subtitle">Liste des comptes ayant accès au système</div>
+                    <div class="page-title">Utilisateurs</div>
+                    <div class="page-subtitle">Gestion des accès</div>
                 </div>
-                <button class="btn btn-primary" id="btnAddUser" style="width:auto; padding:10px 20px;">
+                <button class="btn btn-primary" id="btnAdd" style="width:auto; padding:10px 20px;">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                     Nouvel utilisateur
                 </button>
             </div>
-            
-            <div class="content-wrapper" style="max-width: 1100px;">
-                
-                <div class="section-card" style="background:#FFF8E1; border-color:#FFE082;">
-                    <div style="display:flex; gap:12px; align-items:flex-start;">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ED6C02" stroke-width="2" style="flex-shrink:0; margin-top:2px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                        <div>
-                            <strong style="color:#ED6C02;">Note importante</strong>
-                            <p style="font-size:13px; color:var(--text); margin-top:4px;">
-                                Pour des raisons de sécurité, la création de comptes Firebase Auth doit se faire depuis la console Firebase 
-                                (<a href="https://console.firebase.google.com" target="_blank" style="color:var(--primary);">console.firebase.google.com</a> → Authentication → Add user). 
-                                Une fois le compte créé là-bas, ajoutez ses informations ici pour lui assigner un rôle.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-                
+
+            <div class="content-wrapper">
                 <div class="users-table">
                     <table>
                         <thead>
                             <tr>
                                 <th>Nom</th>
-                                <th>Email</th>
+                                <th>Email / Identifiant</th>
                                 <th>Rôle</th>
-                                <th>Créé le</th>
+                                <th>Email notifications</th>
                                 <th></th>
                             </tr>
                         </thead>
@@ -56,40 +41,62 @@
         </main>
     </div>
 
-    <!-- Modal ajout/édition -->
+    <!-- Modal création/édition -->
     <div class="modal-overlay" id="userModal">
-        <div class="modal" style="max-width:500px;">
+        <div class="modal" style="max-width:520px;">
             <div class="modal-header">
-                <div class="modal-title" id="userModalTitle">Nouvel utilisateur</div>
-                <button class="modal-close" id="userModalClose">
+                <div class="modal-title" id="modalTitle">Nouvel utilisateur</div>
+                <button class="modal-close" id="modalClose">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 </button>
             </div>
             <div class="modal-body">
-                <div class="form-group">
-                    <label class="form-label">UID Firebase *</label>
-                    <input type="text" id="userUid" class="form-input" placeholder="Récupéré depuis Firebase Console → Authentication">
-                    <small style="font-size:12px; color:var(--text-light); margin-top:4px; display:block;">Console Firebase → Authentication → Users → copier l'UID</small>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Nom complet *</label>
-                    <input type="text" id="userName" class="form-input">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Email *</label>
-                    <input type="email" id="userEmail" class="form-input">
-                </div>
+
                 <div class="form-group">
                     <label class="form-label">Rôle *</label>
-                    <select id="userRole" class="form-select">
+                    <select id="fRole" class="form-select">
                         <option value="agent">Agent</option>
-                        <option value="admin">Administrateur</option>
+                        <option value="directeur">Directeur</option>
                     </select>
                 </div>
+
+                <div class="form-group">
+                    <label class="form-label">Nom complet *</label>
+                    <input type="text" id="fName" class="form-input">
+                </div>
+
+                <!-- Pour agent : email Firebase -->
+                <div id="agentFields">
+                    <div class="form-group">
+                        <label class="form-label">Email *</label>
+                        <input type="email" id="fEmail" class="form-input" placeholder="email@anac.mr">
+                    </div>
+                    <div class="form-group" id="pwdGroup">
+                        <label class="form-label">Mot de passe *</label>
+                        <input type="password" id="fPassword" class="form-input" placeholder="Minimum 6 caractères">
+                    </div>
+                </div>
+
+                <!-- Pour directeur : identifiant + email notifications -->
+                <div id="directeurFields" style="display:none;">
+                    <div class="form-group">
+                        <label class="form-label">Identifiant * <small style="color:var(--text-muted); font-weight:400;">(respecter les majuscules)</small></label>
+                        <input type="text" id="fIdentifiant" class="form-input" placeholder="ex: DIR001">
+                    </div>
+                    <div class="form-group" id="dirPwdGroup">
+                        <label class="form-label">Mot de passe *</label>
+                        <input type="password" id="fDirPassword" class="form-input" placeholder="Minimum 6 caractères">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Email pour notifications *</label>
+                        <input type="email" id="fDirEmail" class="form-input" placeholder="email du directeur pour recevoir les notifications">
+                    </div>
+                </div>
+
             </div>
             <div class="modal-footer">
-                <button class="btn btn-secondary" id="btnCancelUser">Annuler</button>
-                <button class="btn btn-primary" id="btnSaveUser" style="width:auto; padding:10px 24px;">Enregistrer</button>
+                <button class="btn btn-secondary" id="btnCancel">Annuler</button>
+                <button class="btn btn-primary" id="btnSave" style="width:auto; padding:10px 24px;">Enregistrer</button>
             </div>
         </div>
     </div>
@@ -97,21 +104,23 @@
     <script type="module">
         import { checkAuth, injectSidebar } from '../assets/js/layout.js';
         import { showToast } from '../assets/js/helpers.js';
-        import { db } from '../assets/js/firebase-config.js';
-        import { doc, setDoc, getDocs, collection, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-        
+        import { auth, db } from '../assets/js/firebase-config.js';
+        import {
+            collection, getDocs, doc, setDoc, deleteDoc, serverTimestamp
+        } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import {
+            createUserWithEmailAndPassword, fetchSignInMethodsForEmail
+        } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
         injectSidebar('users');
 
-        // on garde l'UID separement parce que userData (Firestore) n'a pas de champ uid
         let currentUserUid = null;
-        let currentUserData = null;
         let editingUid = null;
 
         checkAuth(async (user, userData) => {
             currentUserUid = user.uid;
-            currentUserData = userData;
             if (userData.role !== 'admin') {
-                showToast('Page réservée aux administrateurs', 'warning');
+                showToast('Accès réservé à l\'administrateur', 'warning');
                 setTimeout(() => window.location.href = 'dashboard.html', 2000);
                 return;
             }
@@ -125,62 +134,38 @@
 
                 if (users.length === 0) {
                     document.getElementById('usersBody').innerHTML =
-                        '<tr><td colspan="5" style="text-align:center; padding:40px; color:var(--text-muted);">Aucun utilisateur enregistré</td></tr>';
+                        '<tr><td colspan="5" style="text-align:center; padding:40px; color:var(--text-muted);">Aucun utilisateur</td></tr>';
                     return;
                 }
 
                 document.getElementById('usersBody').innerHTML = users.map(u => {
-                    const date = u.createdAt?.toDate?.() ? u.createdAt.toDate().toLocaleDateString('fr-FR') : '—';
-                    // on cache le bouton supprimer pour soi-même (sinon on se vire)
-                    const isSelf = (u.id === currentUserUid);
-                    return `
-                        <tr>
-                            <td><strong>${u.name || '—'}</strong></td>
-                            <td>${u.email || '—'}</td>
-                            <td><span class="role-badge ${u.role}">${u.role === 'admin' ? 'Administrateur' : 'Agent'}</span></td>
-                            <td>${date}</td>
-                            <td>
-                                <button class="btn btn-secondary btn-sm" data-action="edit" data-uid="${u.id}">Modifier</button>
-                                ${isSelf ? '' : `<button class="btn btn-danger btn-sm" data-action="delete" data-uid="${u.id}" style="margin-left:6px;">Supprimer</button>`}
-                            </td>
-                        </tr>
-                    `;
+                    const isSelf = u.id === currentUserUid;
+                    const roleLabel = u.role === 'admin' ? 'Administrateur' : u.role === 'directeur' ? 'Directeur' : 'Agent';
+                    const roleClass = u.role === 'admin' ? 'admin' : u.role === 'directeur' ? 'directeur' : 'agent';
+                    const loginInfo = u.role === 'directeur' ? (u.identifiant || '—') : (u.email || '—');
+                    const notifEmail = u.role === 'directeur' ? (u.email || '—') : '—';
+
+                    return `<tr>
+                        <td><strong>${u.name || '—'}</strong></td>
+                        <td>${loginInfo}</td>
+                        <td><span class="role-badge ${roleClass}">${roleLabel}</span></td>
+                        <td style="font-size:13px; color:var(--text-light);">${notifEmail}</td>
+                        <td>
+                            ${!isSelf ? `<button class="btn btn-danger btn-sm" data-action="delete" data-uid="${u.id}">Supprimer</button>` : ''}
+                        </td>
+                    </tr>`;
                 }).join('');
 
-                document.querySelectorAll('[data-action="edit"]').forEach(btn => {
-                    btn.addEventListener('click', () => editUser(btn.dataset.uid, users));
-                });
                 document.querySelectorAll('[data-action="delete"]').forEach(btn => {
-                    btn.addEventListener('click', () => removeUser(btn.dataset.uid));
+                    btn.addEventListener('click', () => deleteUser(btn.dataset.uid));
                 });
-
             } catch (e) {
                 showToast('Erreur: ' + e.message, 'error');
             }
         }
-        
-        function openModal(user = null) {
-            editingUid = user ? user.id : null;
-            document.getElementById('userModalTitle').textContent = user ? 'Modifier utilisateur' : 'Nouvel utilisateur';
-            document.getElementById('userUid').value = user ? user.id : '';
-            document.getElementById('userUid').disabled = !!user;
-            document.getElementById('userName').value = user?.name || '';
-            document.getElementById('userEmail').value = user?.email || '';
-            document.getElementById('userRole').value = user?.role || 'agent';
-            document.getElementById('userModal').classList.add('show');
-        }
-        
-        function closeModal() {
-            document.getElementById('userModal').classList.remove('show');
-        }
-        
-        function editUser(uid, users) {
-            const user = users.find(u => u.id === uid);
-            if (user) openModal(user);
-        }
-        
-        async function removeUser(uid) {
-            if (!confirm('Supprimer cet utilisateur ?\n(Le compte Firebase Auth doit être supprimé séparément depuis la console Firebase)')) return;
+
+        async function deleteUser(uid) {
+            if (!confirm('Supprimer cet utilisateur ?')) return;
             try {
                 await deleteDoc(doc(db, 'users', uid));
                 showToast('Utilisateur supprimé', 'success');
@@ -189,34 +174,114 @@
                 showToast('Erreur: ' + e.message, 'error');
             }
         }
-        
-        document.getElementById('btnAddUser').addEventListener('click', () => openModal());
-        document.getElementById('userModalClose').addEventListener('click', closeModal);
-        document.getElementById('btnCancelUser').addEventListener('click', closeModal);
-        
-        document.getElementById('btnSaveUser').addEventListener('click', async () => {
-            const uid = document.getElementById('userUid').value.trim();
-            const name = document.getElementById('userName').value.trim();
-            const email = document.getElementById('userEmail').value.trim();
-            const role = document.getElementById('userRole').value;
-            
-            if (!uid || !name || !email) {
-                showToast('Tous les champs sont requis', 'warning');
-                return;
-            }
-            
+
+        // toggle champs selon rôle
+        document.getElementById('fRole').addEventListener('change', () => {
+            const role = document.getElementById('fRole').value;
+            document.getElementById('agentFields').style.display = role === 'agent' ? 'block' : 'none';
+            document.getElementById('directeurFields').style.display = role === 'directeur' ? 'block' : 'none';
+        });
+
+        function openModal() {
+            editingUid = null;
+            document.getElementById('modalTitle').textContent = 'Nouvel utilisateur';
+            document.getElementById('fRole').value = 'agent';
+            document.getElementById('fName').value = '';
+            document.getElementById('fEmail').value = '';
+            document.getElementById('fPassword').value = '';
+            document.getElementById('fIdentifiant').value = '';
+            document.getElementById('fDirPassword').value = '';
+            document.getElementById('fDirEmail').value = '';
+            document.getElementById('agentFields').style.display = 'block';
+            document.getElementById('directeurFields').style.display = 'none';
+            document.getElementById('userModal').classList.add('show');
+        }
+
+        function closeModal() {
+            document.getElementById('userModal').classList.remove('show');
+        }
+
+        document.getElementById('btnAdd').addEventListener('click', openModal);
+        document.getElementById('modalClose').addEventListener('click', closeModal);
+        document.getElementById('btnCancel').addEventListener('click', closeModal);
+
+        document.getElementById('btnSave').addEventListener('click', async () => {
+            const role = document.getElementById('fRole').value;
+            const name = document.getElementById('fName').value.trim();
+
+            if (!name) { showToast('Nom requis', 'warning'); return; }
+
+            document.getElementById('btnSave').disabled = true;
+
             try {
-                const data = { name, email, role };
-                if (!editingUid) data.createdAt = serverTimestamp();
-                
-                await setDoc(doc(db, 'users', uid), data, { merge: true });
-                showToast('Utilisateur enregistré', 'success');
+                if (role === 'agent') {
+                    await createAgent(name);
+                } else {
+                    await createDirecteur(name);
+                }
+                showToast('Utilisateur créé', 'success');
                 closeModal();
                 await loadUsers();
             } catch (e) {
                 showToast('Erreur: ' + e.message, 'error');
+            } finally {
+                document.getElementById('btnSave').disabled = false;
             }
         });
+
+        async function createAgent(name) {
+            const email    = document.getElementById('fEmail').value.trim();
+            const password = document.getElementById('fPassword').value;
+
+            if (!email || !password) throw new Error('Email et mot de passe requis');
+            if (password.length < 6) throw new Error('Mot de passe trop court (min 6 caractères)');
+
+            // créer le compte Firebase Auth
+            const cred = await createUserWithEmailAndPassword(auth, email, password);
+            const uid = cred.user.uid;
+
+            // créer le doc Firestore
+            await setDoc(doc(db, 'users', uid), {
+                name, email, role: 'agent',
+                createdAt: serverTimestamp()
+            });
+
+            // re-signer avec l'admin (createUserWithEmailAndPassword déconnecte l'admin)
+            // on recharge juste la page
+            window.location.reload();
+        }
+
+        async function createDirecteur(name) {
+            const identifiant = document.getElementById('fIdentifiant').value.trim();
+            const password    = document.getElementById('fDirPassword').value;
+            const notifEmail  = document.getElementById('fDirEmail').value.trim();
+
+            if (!identifiant) throw new Error('Identifiant requis');
+            if (!password || password.length < 6) throw new Error('Mot de passe trop court (min 6 caractères)');
+            if (!notifEmail) throw new Error('Email de notification requis');
+
+            // on crée un email Firebase interne (jamais utilisé pour se connecter directement)
+            // format: identifiant@directeur.anac-dta.internal
+            const firebaseEmail = `${identifiant.toLowerCase()}@directeur.anacarchives.dta`;
+
+            const cred = await createUserWithEmailAndPassword(auth, firebaseEmail, password);
+            const uid = cred.user.uid;
+
+            await setDoc(doc(db, 'users', uid), {
+                name,
+                identifiant,       // identifiant de connexion (ex: DIR001)
+                email: notifEmail, // email pour les notifications
+                firebaseEmail,     // email Firebase interne
+                role: 'directeur',
+                createdAt: serverTimestamp()
+            });
+
+            window.location.reload();
+        }
     </script>
+
+    <style>
+        .role-badge.directeur { background: #E8F5E9; color: #2E7D32; }
+    </style>
 </body>
 </html>
