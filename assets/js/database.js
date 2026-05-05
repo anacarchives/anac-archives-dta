@@ -34,10 +34,10 @@ export async function createAuthorization(data, pdfFile = null) {
         ...data,
         pdfUrl,
         pdfPath,
+        statut: 'en_attente', // toute autorisation créée attend approbation directeur
         createdAt: serverTimestamp(),
         createdBy: auth.currentUser?.email || 'unknown',
         createdByUid: auth.currentUser?.uid || null,
-        // index pour faciliter les requêtes/filtres
         year: extractYear(data.dateEmission),
         month: extractMonth(data.dateEmission),
         searchIndex: buildSearchIndex(data)
@@ -45,6 +45,34 @@ export async function createAuthorization(data, pdfFile = null) {
 
     const docRef = await addDoc(collection(db, COL), payload);
     return { id: docRef.id, ...payload };
+}
+
+// --- APPROBATION DIRECTEUR ------------------------------------------
+
+export async function approveAuthorization(id, directeurUid, directeurEmail, signatureDataUrl) {
+    await updateDoc(doc(db, COL, id), {
+        statut: 'approuve',
+        approvedBy: directeurEmail,
+        approvedByUid: directeurUid,
+        approvedAt: serverTimestamp(),
+        signatureUrl: signatureDataUrl || null
+    });
+}
+
+// met à jour tous les champs (directeur seulement)
+export async function updateAuthorization(id, data) {
+    const updated = {
+        ...data,
+        updatedAt: serverTimestamp(),
+        updatedBy: auth.currentUser?.email || 'unknown',
+        searchIndex: buildSearchIndex(data)
+    };
+    // on ne touche pas aux champs système
+    delete updated.id;
+    delete updated.createdAt;
+    delete updated.createdBy;
+    delete updated.createdByUid;
+    await updateDoc(doc(db, COL, id), updated);
 }
 
 // --- LECTURE --------------------------------------------------------
