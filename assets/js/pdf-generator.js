@@ -13,7 +13,7 @@ const M_L    = 3;
 const M_R    = PAGE_W - 3;
 const CW     = M_R - M_L;
 const MID    = M_L + CW / 2;
-const R6H    = 42;
+const R6H    = 52;
 
 // découpe un texte long en lignes qui tiennent dans maxWidth
 function splitText(doc, text, maxWidth, fontSize) {
@@ -133,8 +133,8 @@ export function generateAuthorizationPDF(data) {
     // ══════════════════════════════
     // R5 — Motif + Dates + Conditions
     // ══════════════════════════════
-    const BOTTOM   = PAGE_H - 10; // 287mm — 10mm du bas
-    const R5H      = BOTTOM - y - R6H; // R5 prend tout sauf R6
+    const BOTTOM = PAGE_H - 10;
+    const R5H    = BOTTOM - y - R6H - 10; // -10mm cédés à R6
     doc.rect(M_L, y, CW, R5H);
 
     let iy = y + 6;
