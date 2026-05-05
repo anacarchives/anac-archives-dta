@@ -3,21 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Générateur - ANAC Archives DTA</title>
+    <title>Nouvelle saisie - ANAC Archives DTA</title>
     <link rel="stylesheet" href="../assets/css/style.css">
     <style>
-        .field-combo { display: flex; flex-direction: column; gap: 5px; }
-        .field-combo select, .field-combo input { width: 100%; }
-        .manual-input { display: none; }
-        .manual-input.show { display: block; }
-        .toggle-link {
-            font-size: 11px;
-            color: var(--primary);
-            cursor: pointer;
-            text-decoration: underline;
-            text-align: right;
-            display: block;
-        }
+        .field-combo { display:flex; flex-direction:column; gap:5px; }
+        .manual-input { display:none; }
+        .manual-input.show { display:block; }
+        .toggle-link { font-size:11px; color:var(--primary); cursor:pointer; text-decoration:underline; text-align:right; display:block; }
     </style>
 </head>
 <body>
@@ -29,41 +21,69 @@
                 </div>
             </div>
 
-            <div class="content-wrapper" style="max-width: 900px;">
+            <div class="content-wrapper" style="max-width:900px;">
+
+                <!-- Upload PDF optionnel -->
+                <div class="section-card" id="uploadSection">
+                    <div class="section-title">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                        Importer un PDF scanné (optionnel)
+                    </div>
+
+                    <div id="filePreview" class="file-preview">
+                        <div class="file-icon">PDF</div>
+                        <div class="file-info">
+                            <div class="file-name" id="fileName"></div>
+                            <div class="file-size" id="fileSize"></div>
+                        </div>
+                        <button class="btn-remove-file" id="btnRemoveFile">×</button>
+                    </div>
+
+                    <div id="dropzone" class="dropzone">
+                        <div class="dropzone-icon">
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                        </div>
+                        <h3>Glissez un PDF ici</h3>
+                        <p>ou <span class="btn-browse" style="color:var(--primary); cursor:pointer; text-decoration:underline;">parcourir</span></p>
+                        <input type="file" id="fileInput" accept="application/pdf" style="display:none">
+                    </div>
+
+                    <div id="extractionStatus" class="extraction-status">
+                        <div class="extraction-spinner"></div>
+                        <div id="extractionMsg">Extraction en cours...</div>
+                    </div>
+                </div>
+
+                <!-- Formulaire -->
                 <div class="section-card">
                     <form id="genForm">
                         <div class="form-grid">
 
-                            <!-- 1. Type (en premier pour générer le bon préfixe du numéro) -->
                             <div class="form-group">
                                 <label class="form-label">Type *</label>
                                 <select id="typeCode" class="form-select" required>
-                                    <option value="">— Sélectionner —</option>
+                                    <option value="">—</option>
                                     <option value="SAT">SAT - Survol et Atterrissage</option>
                                     <option value="SUR">SUR - Survol uniquement</option>
                                     <option value="ATT">ATT - Atterrissage uniquement</option>
                                 </select>
                             </div>
 
-                            <!-- 2. N° Autorisation -->
                             <div class="form-group">
                                 <label class="form-label">N° Autorisation *</label>
                                 <input type="text" id="numero" class="form-input" required>
                             </div>
 
-                            <!-- 3. Date émission -->
                             <div class="form-group">
                                 <label class="form-label">Date d'émission *</label>
                                 <input type="date" id="dateEmission" class="form-input" required>
                             </div>
 
-                            <!-- 4. Date réception -->
                             <div class="form-group">
                                 <label class="form-label">Date de réception</label>
                                 <input type="date" id="dateReception" class="form-input">
                             </div>
 
-                            <!-- 5. Destinataire (A/To) -->
                             <div class="form-group">
                                 <label class="form-label">Destinataire (A/To) *</label>
                                 <div class="field-combo">
@@ -73,7 +93,6 @@
                                 </div>
                             </div>
 
-                            <!-- 6. Aéronef -->
                             <div class="form-group">
                                 <label class="form-label">Type d'aéronef *</label>
                                 <div class="field-combo">
@@ -83,7 +102,6 @@
                                 </div>
                             </div>
 
-                            <!-- 7. Immatriculation -->
                             <div class="form-group">
                                 <label class="form-label">Immatriculation *</label>
                                 <div class="field-combo">
@@ -93,7 +111,6 @@
                                 </div>
                             </div>
 
-                            <!-- 8. Motif -->
                             <div class="form-group">
                                 <label class="form-label">Motif *</label>
                                 <div class="field-combo">
@@ -103,7 +120,6 @@
                                 </div>
                             </div>
 
-                            <!-- 9. Opérateur -->
                             <div class="form-group">
                                 <label class="form-label">Opérateur *</label>
                                 <div class="field-combo">
@@ -113,7 +129,6 @@
                                 </div>
                             </div>
 
-                            <!-- 10. Route -->
                             <div class="form-group full">
                                 <label class="form-label">Route / Itinéraire *</label>
                                 <div class="field-combo">
@@ -123,26 +138,22 @@
                                 </div>
                             </div>
 
-                            <!-- 11. Date début validité -->
                             <div class="form-group">
                                 <label class="form-label">Date début validité *</label>
                                 <input type="date" id="dateDebutValidite" class="form-input" required>
                             </div>
 
-                            <!-- 12. Date fin validité + durée calculée automatiquement -->
                             <div class="form-group">
                                 <label class="form-label">Date fin validité *</label>
                                 <input type="date" id="dateFinValidite" class="form-input" required>
                                 <div id="dureeDisplay" style="font-size:12px; color:var(--primary); margin-top:4px; font-weight:600;"></div>
                             </div>
 
-                            <!-- 13. Signataire -->
                             <div class="form-group">
                                 <label class="form-label">Signataire</label>
                                 <input type="text" id="signataire" class="form-input">
                             </div>
 
-                            <!-- 14. Titre signataire -->
                             <div class="form-group">
                                 <label class="form-label">Titre signataire</label>
                                 <input type="text" id="titreSignataire" class="form-input">
@@ -153,15 +164,11 @@
                         <div class="btn-row">
                             <button type="button" class="btn btn-secondary" id="btnPreview">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                                Aperçu
+                                Aperçu PDF
                             </button>
-                            <button type="submit" class="btn btn-secondary" style="width:auto; padding:12px 24px;">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/></svg>
-                                Télécharger
-                            </button>
-                            <button type="button" class="btn btn-primary" id="btnGenAndSave" style="width:auto; padding:12px 24px;">
+                            <button type="submit" class="btn btn-primary" id="btnSave" style="width:auto; padding:12px 28px;">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-                                Générer + Archiver
+                                <span id="btnSaveText">Enregistrer</span>
                             </button>
                         </div>
                     </form>
@@ -177,23 +184,22 @@
 
     <script type="module">
         import { checkAuth, injectSidebar } from '../assets/js/layout.js';
-        import { showToast, fromISODate } from '../assets/js/helpers.js';
+        import { showToast, formatFileSize, toISODate, fromISODate } from '../assets/js/helpers.js';
         import { generateAuthorizationPDF, downloadGeneratedPDF, getPDFDataURI, getPDFBlob } from '../assets/js/pdf-generator.js';
         import { createAuthorization, getAllUsers } from '../assets/js/database.js';
         import { loadParams } from '../assets/js/params.js';
         import { notifyDirectors } from '../assets/js/notification.js';
+        import { extractAuthorizationData } from '../assets/js/anthropic.js';
+        import { ANTHROPIC_API_KEY } from '../assets/js/firebase-config.js';
 
         injectSidebar('generator');
 
         let currentUserEmail = '';
+        let currentFile = null;
+        let params = {};
 
-        const TYPE_LABELS = {
-            SAT: 'Survol et Atterrissage',
-            SUR: 'Survol',
-            ATT: 'Atterrissage'
-        };
+        const TYPE_LABELS = { SAT: 'Survol et Atterrissage', SUR: 'Survol', ATT: 'Atterrissage' };
 
-        // champs combo : selId → manId
         const COMBOS = [
             { key: 'destinataires',    selId: 'selDestinataire',    manId: 'manDestinataire' },
             { key: 'aeronefs',         selId: 'selAeronef',         manId: 'manAeronef' },
@@ -203,60 +209,53 @@
             { key: 'routes',           selId: 'selRoute',           manId: 'manRoute' },
         ];
 
-        async function initParams() {
-            const params = await loadParams();
+        checkAuth(async (user) => {
+            currentUserEmail = user.email || '';
+            params = await loadParams();
+            initCombos();
+            initDefaults();
+        });
 
-            // remplir les selects
+        function initCombos() {
             COMBOS.forEach(({ key, selId }) => {
                 const sel = document.getElementById(selId);
-                sel.innerHTML = '<option value="">— Sélectionner —</option>';
+                sel.innerHTML = '<option value="">—</option>';
                 (params[key] || []).forEach(val => {
                     const opt = document.createElement('option');
-                    opt.value = val;
-                    opt.textContent = val;
+                    opt.value = val; opt.textContent = val;
                     sel.appendChild(opt);
                 });
-                // option manuelle en bas
                 const manOpt = document.createElement('option');
-                manOpt.value = '__manual__';
-                manOpt.textContent = '— Saisir manuellement —';
+                manOpt.value = '__manual__'; manOpt.textContent = '— Saisir manuellement —';
                 sel.appendChild(manOpt);
             });
+        }
 
-            // valeurs par défaut
-            document.getElementById('visaSRT').value = params.visaSRT || 'A';
+        function initDefaults() {
             document.getElementById('signataire').value = params.signataire || 'AHMED BABA AHMED';
             document.getElementById('titreSignataire').value = params.titreSignataire || 'Directeur Général';
         }
 
-        // toggle manuel/select via le lien "Saisir manuellement"
+        // toggle manuel
         document.querySelectorAll('.toggle-link').forEach(link => {
             link.addEventListener('click', () => {
                 const sel = document.getElementById(link.dataset.sel);
                 const man = document.getElementById(link.dataset.man);
                 const isManual = man.classList.contains('show');
-                if (isManual) {
-                    man.classList.remove('show');
-                    sel.style.display = '';
-                    link.textContent = 'Saisir manuellement';
-                } else {
-                    man.classList.add('show');
-                    sel.style.display = 'none';
-                    link.textContent = 'Choisir dans la liste';
-                    man.focus();
-                }
+                man.classList.toggle('show', !isManual);
+                sel.style.display = isManual ? '' : 'none';
+                link.textContent = isManual ? 'Saisir manuellement' : 'Choisir dans la liste';
+                if (!isManual) man.focus();
             });
         });
 
-        // si on choisit "__manual__" dans le select, bascule auto
         COMBOS.forEach(({ selId, manId }) => {
-            const sel = document.getElementById(selId);
-            const man = document.getElementById(manId);
-            sel.addEventListener('change', () => {
-                if (sel.value === '__manual__') {
-                    const link = sel.closest('.field-combo').querySelector('.toggle-link');
+            document.getElementById(selId).addEventListener('change', (e) => {
+                if (e.target.value === '__manual__') {
+                    const man = document.getElementById(manId);
+                    const link = e.target.closest('.field-combo').querySelector('.toggle-link');
                     man.classList.add('show');
-                    sel.style.display = 'none';
+                    e.target.style.display = 'none';
                     if (link) link.textContent = 'Choisir dans la liste';
                     man.focus();
                 }
@@ -270,26 +269,24 @@
             return sel.value === '__manual__' ? '' : sel.value;
         }
 
-        // calcule la durée en heures entre deux dates et l'affiche
+        // calcul durée automatique
         function calcDuree() {
             const d1 = document.getElementById('dateDebutValidite').value;
             const d2 = document.getElementById('dateFinValidite').value;
-            const display = document.getElementById('dureeDisplay');
-            if (!d1 || !d2) { display.textContent = ''; return 0; }
-            const diff = (new Date(d2) - new Date(d1)) / (1000 * 60 * 60 * 24);
-            if (diff < 0) { display.textContent = 'Date fin avant date début'; display.style.color = 'var(--danger)'; return 0; }
-            const heures = Math.round(diff * 24);
-            display.textContent = `Durée : +${heures}H`;
-            display.style.color = 'var(--primary)';
-            return heures;
+            const el = document.getElementById('dureeDisplay');
+            if (!d1 || !d2) { el.textContent = ''; return 0; }
+            const diff = (new Date(d2) - new Date(d1)) / (1000*60*60*24);
+            if (diff < 0) { el.textContent = 'Date invalide'; el.style.color='var(--danger)'; return 0; }
+            const h = Math.round(diff * 24);
+            el.textContent = `Durée : +${h}H`; el.style.color='var(--primary)';
+            return h;
         }
-
         document.getElementById('dateDebutValidite').addEventListener('change', calcDuree);
         document.getElementById('dateFinValidite').addEventListener('change', calcDuree);
 
         function getFormData() {
             const code = document.getElementById('typeCode').value;
-            const heures = calcDuree();
+            const h = calcDuree();
             return {
                 numero:            document.getElementById('numero').value.trim(),
                 typeCode:          code,
@@ -304,7 +301,7 @@
                 route:             getComboVal('selRoute', 'manRoute'),
                 dateDebutValidite: fromISODate(document.getElementById('dateDebutValidite').value),
                 dateFinValidite:   fromISODate(document.getElementById('dateFinValidite').value),
-                validiteExtension: heures > 0 ? `+${heures}H` : '',
+                validiteExtension: h > 0 ? `+${h}H` : '',
                 visaSRT:           'A',
                 signataire:        document.getElementById('signataire').value.trim(),
                 titreSignataire:   document.getElementById('titreSignataire').value.trim()
@@ -315,7 +312,7 @@
             const d = getFormData();
             const required = {
                 typeCode: 'Type', numero: 'N° Autorisation',
-                dateEmission: 'Date d\'émission', destinataire: 'Destinataire',
+                dateEmission: "Date d'émission", destinataire: 'Destinataire',
                 aeronefType: 'Aéronef', immatriculation: 'Immatriculation',
                 motif: 'Motif', operateur: 'Opérateur', route: 'Route',
                 dateDebutValidite: 'Date début', dateFinValidite: 'Date fin'
@@ -326,6 +323,77 @@
             return d;
         }
 
+        // ─── UPLOAD PDF ────────────────────────────────────────
+        const dropzone = document.getElementById('dropzone');
+        const fileInput = document.getElementById('fileInput');
+
+        dropzone.addEventListener('click', () => fileInput.click());
+        dropzone.querySelector('.btn-browse').addEventListener('click', (e) => { e.stopPropagation(); fileInput.click(); });
+        dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('dragover'); });
+        dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+        dropzone.addEventListener('drop', (e) => { e.preventDefault(); dropzone.classList.remove('dragover'); if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); });
+        fileInput.addEventListener('change', (e) => { if (e.target.files[0]) handleFile(e.target.files[0]); });
+        document.getElementById('btnRemoveFile').addEventListener('click', resetFile);
+
+        function handleFile(file) {
+            if (file.type !== 'application/pdf') { showToast('Fichier PDF uniquement', 'error'); return; }
+            currentFile = file;
+            document.getElementById('fileName').textContent = file.name;
+            document.getElementById('fileSize').textContent = formatFileSize(file.size);
+            document.getElementById('filePreview').classList.add('show');
+            dropzone.style.display = 'none';
+
+            // extraction IA si clé disponible
+            if (ANTHROPIC_API_KEY && !ANTHROPIC_API_KEY.startsWith('VOTRE')) {
+                extractData(file);
+            }
+        }
+
+        function resetFile() {
+            currentFile = null; fileInput.value = '';
+            document.getElementById('filePreview').classList.remove('show');
+            dropzone.style.display = 'block';
+            document.getElementById('extractionStatus').classList.remove('show');
+        }
+
+        async function extractData(file) {
+            const status = document.getElementById('extractionStatus');
+            status.className = 'extraction-status loading show';
+            document.getElementById('extractionMsg').textContent = "Extraction en cours...";
+            try {
+                const result = await extractAuthorizationData(file);
+                const d = result.data;
+                if (d.typeCode) document.getElementById('typeCode').value = d.typeCode;
+                if (d.numero) document.getElementById('numero').value = d.numero;
+                if (d.dateEmission) document.getElementById('dateEmission').value = toISODate(d.dateEmission);
+                if (d.dateReception) document.getElementById('dateReception').value = toISODate(d.dateReception);
+                if (d.dateDebutValidite) document.getElementById('dateDebutValidite').value = toISODate(d.dateDebutValidite);
+                if (d.dateFinValidite) document.getElementById('dateFinValidite').value = toISODate(d.dateFinValidite);
+                // pour les champs combo — on bascule en manuel et on remplit
+                const fillCombo = (manId, selId, val) => {
+                    if (!val) return;
+                    const man = document.getElementById(manId);
+                    const sel = document.getElementById(selId);
+                    man.value = val; man.classList.add('show'); sel.style.display = 'none';
+                };
+                fillCombo('manDestinataire', 'selDestinataire', d.destinataire);
+                fillCombo('manAeronef', 'selAeronef', d.aeronefType);
+                fillCombo('manImmatriculation', 'selImmatriculation', d.immatriculation);
+                fillCombo('manMotif', 'selMotif', d.motif);
+                fillCombo('manOperateur', 'selOperateur', d.operateur);
+                fillCombo('manRoute', 'selRoute', d.route);
+                if (d.signataire) document.getElementById('signataire').value = d.signataire;
+                if (d.titreSignataire) document.getElementById('titreSignataire').value = d.titreSignataire;
+                calcDuree();
+                status.className = 'extraction-status success show';
+                document.getElementById('extractionMsg').textContent = '✓ Extraction terminée — vérifiez les champs';
+            } catch (e) {
+                status.className = 'extraction-status error show';
+                document.getElementById('extractionMsg').textContent = '✗ ' + e.message;
+            }
+        }
+
+        // ─── APERÇU ────────────────────────────────────────────
         document.getElementById('btnPreview').addEventListener('click', () => {
             const d = validate();
             if (!d) return;
@@ -334,61 +402,55 @@
             document.getElementById('previewSection').scrollIntoView({ behavior: 'smooth' });
         });
 
-        document.getElementById('genForm').addEventListener('submit', (e) => {
+        // ─── ENREGISTRER ───────────────────────────────────────
+        document.getElementById('genForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const d = validate();
             if (!d) return;
-            try { downloadGeneratedPDF(d); showToast('PDF téléchargé', 'success'); }
-            catch (err) { showToast('Erreur: ' + err.message, 'error'); }
-        });
 
-        document.getElementById('btnGenAndSave').addEventListener('click', async () => {
-            const d = validate();
-            if (!d) return;
-
-            const btn = document.getElementById('btnGenAndSave');
+            const btn = document.getElementById('btnSave');
+            const btnText = document.getElementById('btnSaveText');
             btn.disabled = true;
+            btnText.textContent = 'Enregistrement...';
 
             try {
-                // 1. générer le PDF (une seule fois)
+                // générer le PDF
                 const pdfDoc = generateAuthorizationPDF(d);
                 const blob = getPDFBlob(d, pdfDoc);
-                const file = new File([blob], `${d.numero}.pdf`, { type: 'application/pdf' });
+                const pdfFile = new File([blob], `${d.numero}.pdf`, { type: 'application/pdf' });
 
-                // 2. télécharger le PDF
+                // télécharger localement
                 downloadGeneratedPDF(d, pdfDoc);
 
-                // 3. archiver dans Firestore
-                await createAuthorization(d, file);
+                // archiver (Storage optionnel — si pas activé, on archive juste les données)
+                await createAuthorization(d, currentFile || pdfFile);
                 showToast(`${d.numero} archivée — en attente d'approbation`, 'success');
 
-                // 4. notifier les directeurs (pas bloquant)
+                // notifier les directeurs
                 try {
                     const users = await getAllUsers();
                     const directors = users.filter(u => u.role === 'directeur' && u.email);
                     if (directors.length > 0) {
                         await notifyDirectors(directors, d, currentUserEmail);
+                        showToast(`Email envoyé à ${directors.length} directeur(s)`, 'info');
                     }
                 } catch (e) {
                     console.warn('Notification échouée:', e.message);
                 }
 
-                // 5. reset formulaire
+                // reset
                 document.getElementById('genForm').reset();
                 document.getElementById('previewSection').style.display = 'none';
-                await initParams();
+                resetFile();
+                initDefaults();
 
             } catch (err) {
-                console.error('Erreur archivage:', err);
+                console.error('Erreur:', err);
                 showToast('Erreur: ' + err.message, 'error');
             } finally {
                 btn.disabled = false;
+                btnText.textContent = 'Enregistrer';
             }
-        });
-
-        checkAuth(async (user) => {
-            currentUserEmail = user.email;
-            await initParams();
         });
     </script>
 </body>
