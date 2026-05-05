@@ -90,7 +90,7 @@
         });
 
         async function loginWithIdentifiant(identifiant, password) {
-            // cherche le directeur par identifiant dans la collection users
+            // cherche le directeur par identifiant dans Firestore
             const q = query(
                 collection(db, 'users'),
                 where('identifiant', '==', identifiant),
@@ -104,8 +104,6 @@
 
             const userData = snap.docs[0].data();
 
-            // vérifie le mot de passe (stocké hashé simple - voir users.html pour la création)
-            // on utilise l'email Firebase associé à cet identifiant
             if (!userData.firebaseEmail) {
                 throw { message: 'Compte non configuré correctement' };
             }
