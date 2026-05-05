@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Approbations - ANAC Archives DTA</title>
+    <link rel="stylesheet" href="../assets/css/style.css">
+    <style>
+        .status-badge-en_attente { background: #FFF3E0; color: #E65100; }
+        .status-badge-approuve   { background: #E8F5E9; color: #2E7D32; }
+
+        .approval-table table { width:100%; border-collapse:collapse; }
+        .approval-table th, .approval-table td { padding:13px 16px; text-align:left; border-bottom:1px solid var(--border-light); font-size:14px; }
+        .approval-table thead { background:var(--bg); }
+        .approval-table th { font-size:12px; font-weight:600; text-transform:uppercase; color:var(--text-light); letter-spacing:.5px; }
+        .approval-table tbody tr:hover { background:var(--bg); cursor:pointer; }
+
+        .sig-canvas-wrap {
+            border: 2px dashed var(--border);
+            border-radius: 8px;
+            background: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            padding: 16px;
+        }
+        #sigCanvas {
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            cursor: crosshair;
+            touch-action: none;
+        }
+        .sig-saved {
+            display: none;
+            max-width: 260px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <main class="main-content">
+            <div class="topbar">
+                <div>
+                    <div class="page-title">Approbations</div>
+                    <div class="page-subtitle">Autorisations en attente de votre validation</div>
+                </div>
+            </div>
+
+            <div class="content-wrapper">
+
+                <!-- Filtres rapides -->
+                <div style="display:flex; gap:10px; margin-bottom:20px;">
+                    <button class="btn btn-primary btn-sm filter-btn active" data-filter="en_attente" style="width:auto;">En attente</button>
+                    <button class="btn btn-secondary btn-sm filter-btn" data-filter="all" style="width:auto;">Toutes</button>
+                    <button class="btn btn-secondary btn-sm filter-btn" data-filter="approuve" style="width:auto;">Approuvées</button>
+                </div>
+
+                <div class="approval-table section-card" style="padding:0; overflow:hidden;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>N° Autorisation</th>
+                                <th>Type</th>
+                                <th>Opérateur</th>
+                                <th>Aéronef</th>
+                                <th>Date émission</th>
+                                <th>Statut</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="authBody">
+                            <tr><td colspan="7" style="text-align:center; padding:40px; color:var(--text-muted);">Chargement...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal détail + approbation -->
+    <div class="modal-overlay" id="detailModal">
+        <div class="modal" style="max-width:750px;">
+            <div class="modal-header">
+                <div class="modal-title" id="modalTitle">Autorisation</div>
+                <button class="modal-close" id="modalClose">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+            <div class="modal-body" id="modalBody"></div>
+            <div class="modal-footer" id="modalFooter"></div>
+        </div>
+    </div>
+
+    <!-- Modal édition -->
+    <div class="modal-overlay" id="editModal">
+        <div class="modal" style="max-width:750px;">
+            <div class="modal-header">
+                <div class="modal-title">Modifier l'autorisation</div>
+                <button class="modal-close" id="editModalClose">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+            <div class="modal-body" id="editModalBody"></div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="editCancel">Annuler</button>
+                <button class="btn btn-primary" id="editSave" style="width:auto; padding:10px 24px;">Enregistrer</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { checkAuth, injectSidebar } from '../assets/js/layout.js';
+        import { showToast, formatDate, getStatus, getTypeBadgeClass, fromISODate, toISODate } from '../assets/js/helpers.js';
+        import { getAllAuthorizations, getAuthorization, approveAuthorization, updateAuthorization } from '../assets/js/database.js';
+        import { loadParams } from '../assets/js/params.js';
+        import { downloadGeneratedPDF } from '../assets/js/pdf-gen.js';
+
+        injectSidebar('directeur');
+
+        let currentUser = null;
+        let currentUserData = null;
+        let allAuth = [];
+        let currentFilter = 'en_attente';
+        let currentRecord = null;
+        let params = {};
+
+        checkAuth(async (user, userData) => {
+            if (userData.role !== 'directeur') {
+                showToast('Accès réservé aux directeurs', 'warning');
+                setTimeout(() => window.location.href = 'dashboard.html', 2000);
+                return;
+            }
+            currentUser = user;
+            currentUserData = userData;
+            params = await loadParams();
+            await loadAll();
+        });
+
+        async function loadAll() {
+            try {
+                allAuth = await getAllAuthorizations({ limit: 1000 });
+                // trier par plus récent
+                allAuth.sort((a, b) => {
+                    const da = a.createdAt?.seconds || 0;
+                    const db2 = b.createdAt?.seconds || 0;
+                    return db2 - da;
+                });
+                renderTable();
+            } catch (e) {
+                showToast('Erreur: ' + e.message, 'error');
+            }
+        }
+
+        function renderTable() {
+            let list = allAuth;
+            if (currentFilter === 'en_attente') list = allAuth.filter(a => a.statut === 'en_attente' || !a.statut);
+            if (currentFilter === 'approuve')   list = allAuth.filter(a => a.statut === 'approuve');
+
+            if (list.length === 0) {
+                document.getElementById('authBody').innerHTML =
+                    `<tr><td colspan="7" style="text-align:center; padding:40px; color:var(--text-muted);">${currentFilter === 'en_attente' ? 'Aucune autorisation en attente' : 'Aucune autorisation'}</td></tr>`;
+                return;
+            }
+
+            document.getElementById('authBody').innerHTML = list.map(a => {
+                const statut = a.statut || 'en_attente';
+                const statutLabel = statut === 'approuve' ? 'Approuvée' : 'En attente';
+                return `<tr data-id="${a.id}">
+                    <td><strong>${a.numero || '—'}</strong></td>
+                    <td><span class="badge ${getTypeBadgeClass(a.typeCode)}">${a.typeCode || '—'}</span></td>
+                    <td>${a.operateur || '—'}</td>
+                    <td>${a.aeronefType || '—'} / ${a.immatriculation || '—'}</td>
+                    <td>${formatDate(a.dateEmission)}</td>
+                    <td><span class="badge status-badge-${statut}">${statutLabel}</span></td>
+                    <td>
+                        <button class="btn btn-secondary btn-sm" data-action="view" data-id="${a.id}">Voir</button>
+                    </td>
+                </tr>`;
+            }).join('');
+
+            document.querySelectorAll('[data-action="view"]').forEach(btn => {
+                btn.addEventListener('click', e => { e.stopPropagation(); showDetail(btn.dataset.id); });
+            });
+            document.querySelectorAll('#authBody tr[data-id]').forEach(tr => {
+                tr.addEventListener('click', () => showDetail(tr.dataset.id));
+            });
+        }
+
+        // filtres
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active', 'btn-primary'));
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.add('btn-secondary'));
+                btn.classList.add('active', 'btn-primary');
+                btn.classList.remove('btn-secondary');
+                currentFilter = btn.dataset.filter;
+                renderTable();
+            });
+        });
+
+        // ─── MODAL DÉTAIL ──────────────────────────────────────
+        async function showDetail(id) {
+            const rec = await getAuthorization(id);
+            if (!rec) return;
+            currentRecord = rec;
+
+            const statut = rec.statut || 'en_attente';
+            const status = getStatus(rec.dateDebutValidite, rec.dateFinValidite);
+
+            document.getElementById('modalTitle').textContent = rec.numero || 'Autorisation';
+            document.getElementById('modalBody').innerHTML = `
+                <div class="detail-grid">
+                    <div class="detail-item"><div class="detail-label">N° Autorisation</div><div class="detail-value">${rec.numero || '—'}</div></div>
+                    <div class="detail-item"><div class="detail-label">Type</div><div class="detail-value"><span class="badge ${getTypeBadgeClass(rec.typeCode)}">${rec.typeCode || '—'}</span> ${rec.type || ''}</div></div>
+                    <div class="detail-item"><div class="detail-label">Date émission</div><div class="detail-value">${formatDate(rec.dateEmission)}</div></div>
+                    <div class="detail-item"><div class="detail-label">Date réception</div><div class="detail-value">${formatDate(rec.dateReception)}</div></div>
+                    <div class="detail-item"><div class="detail-label">Opérateur</div><div class="detail-value">${rec.operateur || '—'}</div></div>
+                    <div class="detail-item"><div class="detail-label">Destinataire</div><div class="detail-value">${rec.destinataire || '—'}</div></div>
+                    <div class="detail-item"><div class="detail-label">Aéronef</div><div class="detail-value">${rec.aeronefType || '—'}</div></div>
+                    <div class="detail-item"><div class="detail-label">Immatriculation</div><div class="detail-value">${rec.immatriculation || '—'}</div></div>
+                    <div class="detail-item"><div class="detail-label">Motif</div><div class="detail-value">${rec.motif || '—'}</div></div>
+                    <div class="detail-item"><div class="detail-label">Statut validité</div><div class="detail-value"><span class="badge ${status.class}">${status.label}</span></div></div>
+                    <div class="detail-item full"><div class="detail-label">Route</div><div class="detail-value">${rec.route || '—'}</div></div>
+                    <div class="detail-item"><div class="detail-label">Date début validité</div><div class="detail-value">${formatDate(rec.dateDebutValidite)}</div></div>
+                    <div class="detail-item"><div class="detail-label">Date fin validité</div><div class="detail-value">${formatDate(rec.dateFinValidite)} ${rec.validiteExtension ? '<span class="badge badge-future">'+rec.validiteExtension+'</span>' : ''}</div></div>
+                    <div class="detail-item"><div class="detail-label">Créée par</div><div class="detail-value" style="font-size:13px;">${rec.createdBy || '—'}</div></div>
+                    <div class="detail-item"><div class="detail-label">Statut approbation</div><div class="detail-value"><span class="badge status-badge-${statut}">${statut === 'approuve' ? 'Approuvée' : 'En attente'}</span></div></div>
+                    ${rec.approvedBy ? `<div class="detail-item full"><div class="detail-label">Approuvée par</div><div class="detail-value" style="font-size:13px;">${rec.approvedBy}</div></div>` : ''}
+                </div>
+            `;
+
+            let footer = '';
+            footer += `<button class="btn btn-secondary" id="btnEdit">Modifier</button>`;
+            footer += `<button class="btn btn-secondary" id="btnPrint">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                Imprimer
+            </button>`;
+            if (statut !== 'approuve') {
+                footer += `<button class="btn btn-success" id="btnApprove" style="width:auto; padding:10px 24px;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                    Approuver
+                </button>`;
+            }
+            footer += `<button class="btn btn-primary" id="btnCloseDet" style="width:auto; padding:10px 20px;">Fermer</button>`;
+
+            document.getElementById('modalFooter').innerHTML = footer;
+            document.getElementById('detailModal').classList.add('show');
+
+            document.getElementById('btnCloseDet').addEventListener('click', () => document.getElementById('detailModal').classList.remove('show'));
+            document.getElementById('btnPrint').addEventListener('click', () => {
+                try { downloadGeneratedPDF(rec); }
+                catch (e) { showToast('Erreur PDF: ' + e.message, 'error'); }
+            });
+            document.getElementById('btnEdit').addEventListener('click', () => {
+                document.getElementById('detailModal').classList.remove('show');
+                openEditModal(rec);
+            });
+
+            const btnApprove = document.getElementById('btnApprove');
+            if (btnApprove) {
+                btnApprove.addEventListener('click', () => approveRecord(rec));
+            }
+        }
+
+        // ─── APPROBATION ───────────────────────────────────────
+        async function approveRecord(rec) {
+            // vérifie que le directeur a une signature enregistrée
+            const sigKey = `signature_${currentUser.uid}`;
+            const savedSig = localStorage.getItem(sigKey);
+
+            if (!savedSig) {
+                if (!confirm('Vous n\'avez pas encore enregistré votre signature numérique.\nVoulez-vous approuver sans signature ? (Vous pouvez l\'ajouter dans Paramètres)')) return;
+            }
+
+            if (!confirm(`Approuver l'autorisation ${rec.numero} ?`)) return;
+
+            try {
+                await approveAuthorization(rec.id, currentUser.uid, currentUserData.email || currentUserData.identifiant, savedSig);
+                showToast(`Autorisation ${rec.numero} approuvée`, 'success');
+                document.getElementById('detailModal').classList.remove('show');
+                await loadAll();
+            } catch (e) {
+                showToast('Erreur: ' + e.message, 'error');
+            }
+        }
+
+        // ─── MODAL ÉDITION ─────────────────────────────────────
+        function openEditModal(rec) {
+            document.getElementById('editModalBody').innerHTML = `
+                <div class="form-grid">
+                    <div class="form-group"><label class="form-label">N° Autorisation</label><input type="text" id="eNumero" class="form-input" value="${rec.numero || ''}"></div>
+                    <div class="form-group"><label class="form-label">Type</label>
+                        <select id="eTypeCode" class="form-select">
+                            <option value="SAT" ${rec.typeCode==='SAT'?'selected':''}>SAT - Survol et Atterrissage</option>
+                            <option value="SUR" ${rec.typeCode==='SUR'?'selected':''}>SUR - Survol</option>
+                            <option value="ATT" ${rec.typeCode==='ATT'?'selected':''}>ATT - Atterrissage</option>
+                        </select>
+                    </div>
+                    <div class="form-group"><label class="form-label">Date émission</label><input type="date" id="eDateEmission" class="form-input" value="${toISODate(rec.dateEmission)||''}"></div>
+                    <div class="form-group"><label class="form-label">Date réception</label><input type="date" id="eDateReception" class="form-input" value="${toISODate(rec.dateReception)||''}"></div>
+                    <div class="form-group"><label class="form-label">Destinataire</label><input type="text" id="eDestinataire" class="form-input" value="${rec.destinataire || ''}"></div>
+                    <div class="form-group"><label class="form-label">Aéronef</label><input type="text" id="eAeronef" class="form-input" value="${rec.aeronefType || ''}"></div>
+                    <div class="form-group"><label class="form-label">Immatriculation</label><input type="text" id="eImmat" class="form-input" value="${rec.immatriculation || ''}"></div>
+                    <div class="form-group"><label class="form-label">Motif</label><input type="text" id="eMotif" class="form-input" value="${rec.motif || ''}"></div>
+                    <div class="form-group"><label class="form-label">Opérateur</label><input type="text" id="eOperateur" class="form-input" value="${rec.operateur || ''}"></div>
+                    <div class="form-group full"><label class="form-label">Route</label><input type="text" id="eRoute" class="form-input" value="${rec.route || ''}"></div>
+                    <div class="form-group"><label class="form-label">Date début validité</label><input type="date" id="eDateDebut" class="form-input" value="${toISODate(rec.dateDebutValidite)||''}"></div>
+                    <div class="form-group"><label class="form-label">Date fin validité</label><input type="date" id="eDateFin" class="form-input" value="${toISODate(rec.dateFinValidite)||''}"></div>
+                    <div class="form-group"><label class="form-label">Signataire</label><input type="text" id="eSignataire" class="form-input" value="${rec.signataire || ''}"></div>
+                    <div class="form-group"><label class="form-label">Titre signataire</label><input type="text" id="eTitre" class="form-input" value="${rec.titreSignataire || ''}"></div>
+                </div>
+            `;
+            document.getElementById('editModal').classList.add('show');
+        }
+
+        document.getElementById('editModalClose').addEventListener('click', () => document.getElementById('editModal').classList.remove('show'));
+        document.getElementById('editCancel').addEventListener('click', () => document.getElementById('editModal').classList.remove('show'));
+
+        document.getElementById('editSave').addEventListener('click', async () => {
+            if (!currentRecord) return;
+            const TYPE_LABELS = { SAT: 'Survol et Atterrissage', SUR: 'Survol', ATT: 'Atterrissage' };
+            const code = document.getElementById('eTypeCode').value;
+            const d1 = document.getElementById('eDateDebut').value;
+            const d2 = document.getElementById('eDateFin').value;
+            const heures = (d1 && d2) ? Math.round((new Date(d2) - new Date(d1)) / (1000*60*60)) : 0;
+
+            const updated = {
+                ...currentRecord,
+                numero: document.getElementById('eNumero').value.trim(),
+                typeCode: code, type: TYPE_LABELS[code] || '',
+                dateEmission: fromISODate(document.getElementById('eDateEmission').value),
+                dateReception: fromISODate(document.getElementById('eDateReception').value),
+                destinataire: document.getElementById('eDestinataire').value.trim(),
+                aeronefType: document.getElementById('eAeronef').value.trim(),
+                immatriculation: document.getElementById('eImmat').value.trim(),
+                motif: document.getElementById('eMotif').value.trim(),
+                operateur: document.getElementById('eOperateur').value.trim(),
+                route: document.getElementById('eRoute').value.trim(),
+                dateDebutValidite: fromISODate(d1),
+                dateFinValidite: fromISODate(d2),
+                validiteExtension: heures > 0 ? `+${heures}H` : '',
+                signataire: document.getElementById('eSignataire').value.trim(),
+                titreSignataire: document.getElementById('eTitre').value.trim(),
+            };
+
+            try {
+                await updateAuthorization(currentRecord.id, updated);
+                showToast('Autorisation mise à jour', 'success');
+                document.getElementById('editModal').classList.remove('show');
+                await loadAll();
+            } catch (e) {
+                showToast('Erreur: ' + e.message, 'error');
+            }
+        });
+
+        document.getElementById('modalClose').addEventListener('click', () => document.getElementById('detailModal').classList.remove('show'));
+    </script>
+</body>
+</html>
