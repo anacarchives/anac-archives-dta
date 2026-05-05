@@ -175,11 +175,14 @@
         import { checkAuth, injectSidebar } from '../assets/js/layout.js';
         import { showToast, formatFileSize, toISODate, fromISODate } from '../assets/js/helpers.js';
         import { extractAuthorizationData } from '../assets/js/anthropic.js';
-        import { createAuthorization } from '../assets/js/database.js';
-        
+        import { createAuthorization, getAllUsers } from '../assets/js/database.js';
+        import { notifyDirectors } from '../assets/js/notification.js';
+
         injectSidebar('add');
-        checkAuth();
-        
+
+        let currentUserEmail = '';
+        checkAuth((user) => { currentUserEmail = user.email; });
+
         let currentFile = null;
         
         const dropzone = document.getElementById('dropzone');
@@ -319,17 +322,26 @@
             
             btnSave.disabled = true;
             btnSaveText.textContent = 'Enregistrement...';
-            
+
             try {
                 await createAuthorization(data, currentFile);
-                showToast(`Autorisation ${data.numero} enregistrée avec succès`, 'success');
-                
-                // Réinitialiser le formulaire
+                showToast(`Autorisation ${data.numero} enregistrée — en attente d'approbation`, 'success');
+
+                // notifier les directeurs par email
+                try {
+                    const users = await getAllUsers();
+                    const directors = users.filter(u => u.role === 'directeur' && u.email);
+                    await notifyDirectors(directors, data, currentUserEmail);
+                } catch (e) {
+                    console.warn('Notification email échouée (pas bloquant):', e);
+                }
+
+                // réinitialiser le formulaire
                 document.getElementById('authForm').reset();
                 document.getElementById('signataire').value = 'AHMED BABA AHMED';
                 document.getElementById('titreSignataire').value = 'Directeur Général';
                 resetFile();
-                
+
             } catch (error) {
                 console.error(error);
                 showToast('Erreur: ' + error.message, 'error');
