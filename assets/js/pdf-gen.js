@@ -1,11 +1,8 @@
-// pdf-generator.js
-// Corrections 05/05/2026 v2 :
-// - Marges réduites à 8mm (document plus large)
-// - R6 hauteur fixe 38mm collé en bas de page
-// - Signature/Nom/Titre à droite (MID)
-// - Texte conditions tronqué pour rester dans le rectangle
+// pdf-gen.js — génère le PDF en lisant les modèles depuis Firestore
 
 import { jsPDF } from "https://cdn.jsdelivr.net/npm/jspdf@2.5.1/+esm";
+import { db } from './firebase-config.js';
+import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const PAGE_W = 210;
 const PAGE_H = 297;
@@ -15,128 +12,119 @@ const CW     = M_R - M_L;
 const MID    = M_L + CW / 2;
 const R6H    = 52;
 
-// découpe un texte long en lignes qui tiennent dans maxWidth
-function splitText(doc, text, maxWidth, fontSize) {
-    doc.setFontSize(fontSize);
-    return doc.splitTextToSize(text, maxWidth);
+let cachedModels = null;
+
+async function getModels() {
+    if (cachedModels) return cachedModels;
+    try {
+        const snap = await getDoc(doc(db, 'params', 'modeles'));
+        cachedModels = snap.exists() ? snap.data() : {};
+    } catch (e) {
+        cachedModels = {};
+    }
+    return cachedModels;
 }
 
-export function generateAuthorizationPDF(data) {
-    const doc = new jsPDF({ unit: 'mm', format: 'a4' });
-    doc.setLineWidth(0.4);
-    doc.setFont('helvetica', 'bold');
+function applyFont(doc, font, size) {
+    const map = {
+        'bold':       ['helvetica', 'bold'],
+        'bolditalic': ['helvetica', 'bolditalic'],
+        'italic':     ['helvetica', 'italic'],
+        'normal':     ['helvetica', 'normal'],
+    };
+    const [f, s] = map[font] || ['helvetica', 'bold'];
+    doc.setFont(f, s).setFontSize(size);
+}
+
+export async function generateAuthorizationPDF(data) {
+    const models = await getModels();
+    const m = models[data.typeCode] || {};
+    const pdoc = new jsPDF({ unit: 'mm', format: 'a4' });
+    pdoc.setLineWidth(0.4);
+    pdoc.setFont('helvetica', 'bold');
 
     let y = 3;
     const TW = CW - 6;
 
-    // ══════════════════════════════
-    // R1 — Espace entête papier ANAC
-    // 35mm entête + 10mm espace = 45mm
-    // ══════════════════════════════
-    doc.rect(M_L, y, CW, 45);
+    // R1 — entête
+    pdoc.rect(M_L, y, CW, 45);
     y += 45;
 
-    // ══════════════════════════════
-    // R2 — Titre + Numéro + Type
-    // ══════════════════════════════
-    doc.rect(M_L, y, CW, 34);
-
+    // R2 — titre + numéro + type
+    pdoc.rect(M_L, y, CW, 34);
     const DX = M_R - 46;
-    doc.setFontSize(8);
-    doc.text('Date/ Dated', DX, y + 5);
-    doc.setFontSize(11);
-    doc.text(data.dateEmission || '', DX + 23, y + 13, { align: 'center' });
-
-    doc.setFontSize(19);
-    doc.text('Autorisation / Authorization', M_L + 3, y + 8);
-    doc.setFontSize(7.5);
-    doc.text('Aurorisation numéro / authorization number:', M_L + 3, y + 14);
-
-    doc.setFontSize(15);
-    doc.text(data.numero || '', M_L + 5, y + 24);
-
-    doc.setFontSize(8.5);
-    doc.text('Autorisation type / Authorization', M_L + 3, y + 30);
-    doc.setFontSize(13);
-    doc.text(data.type || '', M_L + 68, y + 30.5);
-
+    pdoc.setFontSize(8);
+    pdoc.text('Date/ Dated', DX, y + 5);
+    pdoc.setFontSize(11);
+    pdoc.text(data.dateEmission || '', DX + 23, y + 13, { align: 'center' });
+    pdoc.setFontSize(19);
+    pdoc.text('Autorisation / Authorization', M_L + 3, y + 8);
+    pdoc.setFontSize(7.5);
+    pdoc.text('Aurorisation numéro / authorization number:', M_L + 3, y + 14);
+    pdoc.setFontSize(15);
+    pdoc.text(data.numero || '', M_L + 5, y + 24);
+    pdoc.setFontSize(8.5);
+    pdoc.text('Autorisation type / Authorization', M_L + 3, y + 30);
+    pdoc.setFontSize(13);
+    pdoc.text(data.type || '', M_L + 68, y + 30.5);
     y += 34;
 
-    // ══════════════════════════════
-    // R3 — Info ANAC / Destinataire
-    // ══════════════════════════════
-    doc.rect(M_L, y, CW, 33);
-
-    doc.setFontSize(7.5);
-    doc.text("Délivrée par: Agence Nationale de l'Aviation Civile:", M_L + 3, y + 5);
-    doc.text("Delivered by: National Civil Aviation Autority:", M_L + 3, y + 10);
-    doc.text("Tél/Tel: 00 222 45 24  40 05", M_L + 3, y + 15);
-    doc.text("Télécopie/Fax: 00 222 45 25 35 78", M_L + 3, y + 20);
-    doc.text("Référence/Reference:", M_L + 3, y + 25);
-
-    doc.text('A/To:', MID + 3, y + 5);
-    doc.setFontSize(9);
-    doc.text(data.destinataire || '', MID + 13, y + 5);
-
-    doc.setFontSize(7.5);
-    doc.text('Tél/Tel:', MID + 3, y + 11);
-    doc.text('Télécopie/Fax:', MID + 3, y + 16);
-    doc.text('Date de recéption de la demande/Date of', MID + 3, y + 21);
-    doc.text('receipt of request:', MID + 3, y + 26);
-    doc.setFontSize(8.5);
-    doc.text(data.dateReception || data.dateEmission || '', MID + 46, y + 26);
-
+    // R3 — ANAC / destinataire
+    pdoc.rect(M_L, y, CW, 33);
+    pdoc.setFontSize(7.5);
+    pdoc.text("Délivrée par: Agence Nationale de l'Aviation Civile:", M_L + 3, y + 5);
+    pdoc.text("Delivered by: National Civil Aviation Autority:", M_L + 3, y + 10);
+    pdoc.text("Tél/Tel: 00 222 45 24  40 05", M_L + 3, y + 15);
+    pdoc.text("Télécopie/Fax: 00 222 45 25 35 78", M_L + 3, y + 20);
+    pdoc.text("Référence/Reference:", M_L + 3, y + 25);
+    pdoc.text('A/To:', MID + 3, y + 5);
+    pdoc.setFontSize(9);
+    pdoc.text(data.destinataire || '', MID + 13, y + 5);
+    pdoc.setFontSize(7.5);
+    pdoc.text('Tél/Tel:', MID + 3, y + 11);
+    pdoc.text('Télécopie/Fax:', MID + 3, y + 16);
+    pdoc.text('Date de recéption de la demande/Date of', MID + 3, y + 21);
+    pdoc.text('receipt of request:', MID + 3, y + 26);
+    pdoc.setFontSize(8.5);
+    pdoc.text(data.dateReception || data.dateEmission || '', MID + 46, y + 26);
     y += 33;
 
-    // ══════════════════════════════
-    // R4 — Visa + Accord + Aéronef
-    // ══════════════════════════════
-    doc.rect(M_L, y, CW, 43);
+    // R4 — Visa + accord + aéronef
+    pdoc.rect(M_L, y, CW, 43);
 
-    doc.setFontSize(9.5);
-    doc.text('Visa/SRT A', M_L + CW * 0.40, y + 5);
-    doc.text('Visa DTA',   M_L + CW * 0.70, y + 5);
+    const visaSRT = m.visaSRTPos || { texte: 'Visa/SRT A', x: 40, y: 5, fontSize: 9.5, font: 'bold' };
+    const visaDTA = m.visaDTAPos || { texte: 'Visa DTA',   x: 70, y: 5, fontSize: 9.5, font: 'bold' };
+
+    applyFont(pdoc, visaSRT.font, visaSRT.fontSize);
+    pdoc.text(visaSRT.texte, M_L + CW * (visaSRT.x / 100), y + visaSRT.y);
+
+    applyFont(pdoc, visaDTA.font, visaDTA.fontSize);
+    pdoc.text(visaDTA.texte, M_L + CW * (visaDTA.x / 100), y + visaDTA.y);
 
     if (data.signatureUrl) {
         try {
-            doc.addImage(data.signatureUrl, 'PNG', M_L + CW * 0.70 + 16, y - 1, 36, 10);
+            pdoc.addImage(data.signatureUrl, 'PNG', M_L + CW * (visaDTA.x / 100) + 16, y - 1, 36, 10);
         } catch (e) { console.warn('Signature:', e); }
     }
 
-    doc.setFontSize(8);
-    if (data.typeCode === 'SUR') {
-        doc.text(
-            "Honneur vous notifier notre accord de survol du territoire mauritanien en faveur de l'avion selon les informations ci-après #",
-            M_L + 3, y + 12
-        );
-    } else {
-        doc.text(
-            "Honneur vous notifier notre accord de survol du territoire mauritanien et l'atterrissage sur le(s)",
-            M_L + 3, y + 12
-        );
-        doc.text(
-            "aéroport(s) International de Nouakchott OUM TOUNSY en faveur de(s) avion(s) selon les",
-            M_L + 3, y + 17
-        );
+    const accord = m.texteAccord || { texte: '', x: 3, y: 12, fontSize: 8, font: 'bold' };
+    if (accord.texte) {
+        applyFont(pdoc, accord.font, accord.fontSize);
+        const lines = pdoc.splitTextToSize(accord.texte, TW);
+        pdoc.text(lines, M_L + accord.x, y + accord.y);
     }
 
-    doc.setFontSize(8);
-    doc.text('Aéronef type / aircraft type', M_L + CW * 0.25, y + 24, { align: 'center' });
-    doc.text('Immatriculation/ Registration', M_L + CW * 0.75, y + 24, { align: 'center' });
-
-    doc.setFontSize(13);
-    doc.text(data.aeronefType || '', M_L + CW * 0.25, y + 37, { align: 'center' });
-    doc.text(data.immatriculation || '', M_L + CW * 0.75, y + 37, { align: 'center' });
-
+    pdoc.setFont('helvetica', 'bold').setFontSize(8);
+    pdoc.text('Aéronef type / aircraft type', M_L + CW * 0.25, y + 24, { align: 'center' });
+    pdoc.text('Immatriculation/ Registration', M_L + CW * 0.75, y + 24, { align: 'center' });
+    pdoc.setFontSize(13);
+    pdoc.text(data.aeronefType || '', M_L + CW * 0.25, y + 37, { align: 'center' });
+    pdoc.text(data.immatriculation || '', M_L + CW * 0.75, y + 37, { align: 'center' });
     y += 43;
 
-    // ══════════════════════════════
-    // R5 — Motif + Dates + Conditions
-    // ══════════════════════════════
-    const BOTTOM = PAGE_H - 10;
-    const R5H    = BOTTOM - y - R6H - 10; // -10mm cédés à R6
-    doc.rect(M_L, y, CW, R5H);
-
+    // R5 — motif + dates + conditions
+    const R5H = PAGE_H - 3 - y - R6H - 10;
+    pdoc.rect(M_L, y, CW, R5H);
     let iy = y + 6;
 
     const champs = [
@@ -145,97 +133,67 @@ export function generateAuthorizationPDF(data) {
         [data.typeCode === 'SUR' ? 'itinéraire/Itinerary' : 'Route/Route:', data.route || ''],
     ];
     for (const [label, val] of champs) {
-        doc.setFont('helvetica', 'bold').setFontSize(8);
-        doc.text(label, M_L + 3, iy);
-        doc.text(val, M_L + 50, iy);
+        pdoc.setFont('helvetica', 'bold').setFontSize(8);
+        pdoc.text(label, M_L + 3, iy);
+        pdoc.text(val, M_L + 50, iy);
         iy += 6;
     }
 
     iy += 1;
-    doc.setFontSize(8);
-    doc.text('Date début de validité/Validity Start Date :', M_L + 3, iy);
-    doc.text(data.dateDebutValidite || '', M_L + 95, iy);
+    pdoc.setFontSize(8);
+    pdoc.text('Date début de validité/Validity Start Date :', M_L + 3, iy);
+    pdoc.text(data.dateDebutValidite || '', M_L + 95, iy);
+    iy += 5;
+    pdoc.text('Date fin vlidité/Validity End Date', M_L + 3, iy);
+    pdoc.text(data.dateFinValidite || '', M_L + 95, iy);
+    if (data.validiteExtension) pdoc.text(data.validiteExtension, M_L + 140, iy);
     iy += 5;
 
-    doc.text('Date fin vlidité/Validity End Date', M_L + 3, iy);
-    doc.text(data.dateFinValidite || '', M_L + 95, iy);
-    if (data.validiteExtension) {
-        doc.text(data.validiteExtension, M_L + 140, iy);
-    }
-    iy += 5;
-
-    // conditions — splitText pour éviter débordement
-    doc.setFont('helvetica', 'bolditalic').setFontSize(6.5);
-    const condTexts = [
-        "Cette autorisation est délivrée sous réserve que/ This permit is issued subject to :",
-        "1) Tous les docuemnts de bord de l'aéronef soient en cours de validité pendant l'opération du vol ci-dessus autorisé/ All aircraft 's onboard docuemnts be valid for the operation of authorized above flight;",
-        "2) La réglementation aérienne mauritanienne soit scrupuleusement respectée/ Mauritanian Aviation Regulation is scrupulously respected ;",
-    ];
-    for (const cond of condTexts) {
-        const lines = doc.splitTextToSize(cond, TW);
-        doc.text(lines, M_L + 3, iy);
-        iy += lines.length * 3;
+    // textes configurables depuis modèle
+    const condFields = ['condition1', 'condition2', 'condition3', 'nb1', 'nb2', 'salutations1', 'salutations2'];
+    for (const cfId of condFields) {
+        const cf = m[cfId];
+        if (!cf || !cf.texte) continue;
+        applyFont(pdoc, cf.font || 'bolditalic', cf.fontSize || 6.5);
+        const lines = pdoc.splitTextToSize(cf.texte, TW);
+        pdoc.text(lines, M_L + 3, iy);
+        iy += lines.length * ((cf.fontSize || 6.5) * 0.45) + 1;
     }
 
-    if (data.typeCode !== 'SUR') {
-        iy += 0.5;
-        const nb1 = doc.splitTextToSize("NB: Le paiement des frais et taxes relatifs à la délivrance de la présente autorisation sont dus dès la signature de celle-ci par l'ANAC.", TW);
-        const nb2 = doc.splitTextToSize("NB: The payment of the fees and taxes relating to the issue of this authorization are due as soon as it is signed by the ANAC.", TW);
-        doc.text(nb1, M_L + 3, iy); iy += nb1.length * 3;
-        doc.text(nb2, M_L + 3, iy);
-    }
+    y += R5H;
 
-    if (data.typeCode === 'SUR') {
-        iy += 3;
-        doc.setFontSize(7.5);
-        doc.text('Salutations distinguées Stop', M_L + 3, iy);
-        iy += 4;
-        doc.text('Nouakchott Mauritanie Stop et Fin', M_L + 3, iy);
-    }
-
-    // ══════════════════════════════
-    // R6 — Signature (connecté directement après R5)
-    // Nom/Titre/Signature à DROITE
-    // ══════════════════════════════
-    const sigY  = y + R5H;
-    const sigH  = PAGE_H - 3 - sigY;
-    doc.setFont('helvetica', 'bold');
-    doc.rect(M_L, sigY, CW, sigH);
-
+    // R6 — signature
+    const sigH = PAGE_H - 3 - y;
+    pdoc.setFont('helvetica', 'bold');
+    pdoc.rect(M_L, y, CW, sigH);
     const SX = MID + 5;
+    pdoc.setFontSize(8);
+    pdoc.text('Nom du signataire:', SX, y + 8);
+    pdoc.setFontSize(11);
+    pdoc.text(data.signataire || 'AHMED BABA AHMED', SX + 42, y + 8);
+    pdoc.setFontSize(8);
+    pdoc.text('Titre:', SX, y + 18);
+    pdoc.setFontSize(10);
+    pdoc.text(data.titreSignataire || 'Directeur Général', SX + 14, y + 18);
+    pdoc.setFontSize(8);
+    pdoc.text('Signature et cachet:', SX, y + 30);
 
-    doc.setFontSize(8);
-    doc.text('Nom du signataire:', SX, sigY + 8);
-    doc.setFontSize(11);
-    doc.text(data.signataire || 'AHMED BABA AHMED', SX + 42, sigY + 8);
-
-    doc.setFontSize(8);
-    doc.text('Titre:', SX, sigY + 18);
-    doc.setFontSize(10);
-    doc.text(data.titreSignataire || 'Directeur Général', SX + 14, sigY + 18);
-
-    doc.setFontSize(8);
-    doc.text('Signature et cachet:', SX, sigY + 30);
-
-    return doc;
+    return pdoc;
 }
 
-function safeName(s) {
-    return (s || '').replace(/[^a-zA-Z0-9-]/g, '_');
+function safeName(s) { return (s || '').replace(/[^a-zA-Z0-9-]/g, '_'); }
+
+export async function downloadGeneratedPDF(data, existingDoc = null) {
+    const d = existingDoc || await generateAuthorizationPDF(data);
+    d.save(`${safeName(data.numero) || 'autorisation'}_${safeName(data.operateur)}.pdf`);
 }
 
-export function downloadGeneratedPDF(data, existingDoc = null) {
-    const doc = existingDoc || generateAuthorizationPDF(data);
-    const name = `${safeName(data.numero) || 'autorisation'}_${safeName(data.operateur)}.pdf`;
-    doc.save(name);
+export async function getPDFBlob(data, existingDoc = null) {
+    const d = existingDoc || await generateAuthorizationPDF(data);
+    return d.output('blob');
 }
 
-export function getPDFBlob(data, existingDoc = null) {
-    const doc = existingDoc || generateAuthorizationPDF(data);
-    return doc.output('blob');
-}
-
-export function getPDFDataURI(data, existingDoc = null) {
-    const doc = existingDoc || generateAuthorizationPDF(data);
-    return doc.output('datauristring');
+export async function getPDFDataURI(data, existingDoc = null) {
+    const d = existingDoc || await generateAuthorizationPDF(data);
+    return d.output('datauristring');
 }
