@@ -10,6 +10,10 @@
         .manual-input { display:none; }
         .manual-input.show { display:block; }
         .toggle-link { font-size:11px; color:var(--primary); cursor:pointer; text-decoration:underline; text-align:right; display:block; }
+        /* MAJUSCULES automatiques sur tous les champs texte */
+        #genForm input[type="text"],
+        #genForm select,
+        #genForm input.manual-input { text-transform: uppercase; }
     </style>
 </head>
 <body>
@@ -214,7 +218,20 @@
             params = await loadParams();
             initCombos();
             initDefaults();
+            initUppercase();
         });
+
+        // force la saisie en MAJUSCULES sur tous les champs texte du formulaire
+        function initUppercase() {
+            document.querySelectorAll('#genForm input[type="text"], #genForm input.manual-input').forEach(input => {
+                input.addEventListener('input', (e) => {
+                    const start = e.target.selectionStart;
+                    const end = e.target.selectionEnd;
+                    e.target.value = e.target.value.toUpperCase();
+                    e.target.setSelectionRange(start, end);
+                });
+            });
+        }
 
         function initCombos() {
             COMBOS.forEach(({ key, selId }) => {
