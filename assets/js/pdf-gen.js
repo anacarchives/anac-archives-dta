@@ -1,4 +1,8 @@
-// pdf-gen.js — génère le PDF en lisant les modèles depuis Firestore
+// pdf-gen.js
+// Génère le PDF avec 6 rectangles. R1 toujours vide (entête papier).
+// R2-R6 : remplis avec les textes définis dans le modèle Firestore (params/modeles).
+// Les données du formulaire (numéro, dates, opérateur...) sont injectées séparément
+// si le modèle contient des placeholders {{numero}}, {{dateEmission}}, etc.
 
 import { jsPDF } from "https://cdn.jsdelivr.net/npm/jspdf@2.5.1/+esm";
 import { db } from './firebase-config.js';
@@ -9,8 +13,13 @@ const PAGE_H = 297;
 const M_L    = 3;
 const M_R    = PAGE_W - 3;
 const CW     = M_R - M_L;
-const MID    = M_L + CW / 2;
-const R6H    = 52;
+
+// Hauteurs fixes des rectangles
+const R1_H = 45;
+const R2_H = 34;
+const R3_H = 33;
+const R4_H = 43;
+const R6_H = 52;
 
 let cachedModels = null;
 
@@ -25,7 +34,9 @@ async function getModels() {
     return cachedModels;
 }
 
-function applyFont(doc, font, size) {
+export function clearModelsCache() { cachedModels = null; }
+
+function applyFont(pdoc, font, size) {
     const map = {
         'bold':       ['helvetica', 'bold'],
         'bolditalic': ['helvetica', 'bolditalic'],
@@ -33,152 +44,124 @@ function applyFont(doc, font, size) {
         'normal':     ['helvetica', 'normal'],
     };
     const [f, s] = map[font] || ['helvetica', 'bold'];
-    doc.setFont(f, s).setFontSize(size);
+    pdoc.setFont(f, s).setFontSize(size);
 }
 
+// remplace les placeholders {{xxx}} par les valeurs du formulaire
+function fillPlaceholders(text, data) {
+    if (!text || !data) return text;
+    return text
+        .replace(/\{\{numero\}\}/g, data.numero || '')
+        .replace(/\{\{type\}\}/g, data.type || '')
+        .replace(/\{\{typeCode\}\}/g, data.typeCode || '')
+        .replace(/\{\{dateEmission\}\}/g, data.dateEmission || '')
+        .replace(/\{\{dateReception\}\}/g, data.dateReception || '')
+        .replace(/\{\{destinataire\}\}/g, data.destinataire || '')
+        .replace(/\{\{aeronefType\}\}/g, data.aeronefType || '')
+        .replace(/\{\{immatriculation\}\}/g, data.immatriculation || '')
+        .replace(/\{\{motif\}\}/g, data.motif || '')
+        .replace(/\{\{operateur\}\}/g, data.operateur || '')
+        .replace(/\{\{route\}\}/g, data.route || '')
+        .replace(/\{\{dateDebutValidite\}\}/g, data.dateDebutValidite || '')
+        .replace(/\{\{dateFinValidite\}\}/g, data.dateFinValidite || '')
+        .replace(/\{\{validiteExtension\}\}/g, data.validiteExtension || '')
+        .replace(/\{\{signataire\}\}/g, data.signataire || '')
+        .replace(/\{\{titreSignataire\}\}/g, data.titreSignataire || '');
+}
+
+// Dessine un rectangle et y place les textes du modèle
+function drawRect(pdoc, x, y, w, h, texts, data) {
+    pdoc.rect(x, y, w, h);
+    if (!texts || !Array.isArray(texts)) return;
+    const TW = w - 6; // largeur de texte avec padding 3mm
+    for (const t of texts) {
+        if (!t.texte) continue;
+        applyFont(pdoc, t.font || 'bold', t.fontSize || 8);
+        const filled = fillPlaceholders(t.texte, data);
+        const lines = pdoc.splitTextToSize(filled, TW);
+        pdoc.text(lines, x + (t.x || 0), y + (t.y || 5));
+    }
+}
+
+// génère le PDF basé sur le modèle stocké
+async function buildPDF(typeCode, model, data) {
+    const pdoc = new jsPDF({ unit: 'mm', format: 'a4' });
+    pdoc.setLineWidth(0.4);
+
+    let y = 3;
+
+    // R1 — entête (toujours vide)
+    pdoc.rect(M_L, y, CW, R1_H);
+    y += R1_H;
+
+    // R2
+    drawRect(pdoc, M_L, y, CW, R2_H, model?.R2, data);
+    y += R2_H;
+
+    // R3
+    drawRect(pdoc, M_L, y, CW, R3_H, model?.R3, data);
+    y += R3_H;
+
+    // R4
+    drawRect(pdoc, M_L, y, CW, R4_H, model?.R4, data);
+
+    // signature directeur sur R4 si fournie (toujours visible peu importe le modèle)
+    if (data && data.signatureUrl) {
+        try {
+            pdoc.addImage(data.signatureUrl, 'PNG', M_L + CW * 0.70 + 16, y - 1, 36, 10);
+        } catch (e) {}
+    }
+
+    y += R4_H;
+
+    // R5 — hauteur calculée pour aller jusqu'à R6
+    const R5_H = PAGE_H - 3 - y - R6_H;
+    drawRect(pdoc, M_L, y, CW, R5_H, model?.R5, data);
+    y += R5_H;
+
+    // R6 — descend jusqu'à 3mm du bas
+    const r6Final = PAGE_H - 3 - y;
+    drawRect(pdoc, M_L, y, CW, r6Final, model?.R6, data);
+
+    return pdoc;
+}
+
+// Données fictives pour l'aperçu (utilisé dans modeles.html)
+const PREVIEW_DATA = {
+    numero: 'EXEMPLE-001-26',
+    type: 'Type exemple',
+    typeCode: 'XXX',
+    dateEmission: '07/05/2026',
+    dateReception: '08/05/2026',
+    destinataire: 'NOM DESTINATAIRE',
+    aeronefType: 'B737',
+    immatriculation: '5TXXX',
+    motif: 'MOTIF EXEMPLE',
+    operateur: 'OPERATEUR EXEMPLE',
+    route: 'GMNO-LFTM',
+    dateDebutValidite: '07/05/2026',
+    dateFinValidite: '10/05/2026',
+    validiteExtension: '+72H',
+    signataire: 'AHMED BABA AHMED',
+    titreSignataire: 'Directeur Général',
+};
+
+// Pour l'éditeur : génère un aperçu sans cacher (utilise le modèle passé en paramètre)
+export async function generatePreviewPDF(typeCode, model) {
+    const fakeData = { ...PREVIEW_DATA, typeCode, type: typeCode };
+    return await buildPDF(typeCode, model, fakeData);
+}
+
+export async function getPreviewDataURI(typeCode, model) {
+    const pdoc = await generatePreviewPDF(typeCode, model);
+    return pdoc.output('datauristring');
+}
+
+// Pour la création d'autorisation : charge le modèle depuis Firestore
 export async function generateAuthorizationPDF(data) {
     const models = await getModels();
     const m = models[data.typeCode] || {};
-    const pdoc = new jsPDF({ unit: 'mm', format: 'a4' });
-    pdoc.setLineWidth(0.4);
-    pdoc.setFont('helvetica', 'bold');
-
-    let y = 3;
-    const TW = CW - 6;
-
-    // R1 — entête
-    pdoc.rect(M_L, y, CW, 45);
-    y += 45;
-
-    // R2 — titre + numéro + type
-    pdoc.rect(M_L, y, CW, 34);
-    const DX = M_R - 46;
-    pdoc.setFontSize(8);
-    pdoc.text('Date/ Dated', DX, y + 5);
-    pdoc.setFontSize(11);
-    pdoc.text(data.dateEmission || '', DX + 23, y + 13, { align: 'center' });
-    pdoc.setFontSize(19);
-    pdoc.text('Autorisation / Authorization', M_L + 3, y + 8);
-    pdoc.setFontSize(7.5);
-    pdoc.text('Aurorisation numéro / authorization number:', M_L + 3, y + 14);
-    pdoc.setFontSize(15);
-    pdoc.text(data.numero || '', M_L + 5, y + 24);
-    pdoc.setFontSize(8.5);
-    pdoc.text('Autorisation type / Authorization', M_L + 3, y + 30);
-    pdoc.setFontSize(13);
-    pdoc.text(data.type || '', M_L + 68, y + 30.5);
-    y += 34;
-
-    // R3 — ANAC / destinataire
-    pdoc.rect(M_L, y, CW, 33);
-    pdoc.setFontSize(7.5);
-    pdoc.text("Délivrée par: Agence Nationale de l'Aviation Civile:", M_L + 3, y + 5);
-    pdoc.text("Delivered by: National Civil Aviation Autority:", M_L + 3, y + 10);
-    pdoc.text("Tél/Tel: 00 222 45 24  40 05", M_L + 3, y + 15);
-    pdoc.text("Télécopie/Fax: 00 222 45 25 35 78", M_L + 3, y + 20);
-    pdoc.text("Référence/Reference:", M_L + 3, y + 25);
-    pdoc.text('A/To:', MID + 3, y + 5);
-    pdoc.setFontSize(9);
-    pdoc.text(data.destinataire || '', MID + 13, y + 5);
-    pdoc.setFontSize(7.5);
-    pdoc.text('Tél/Tel:', MID + 3, y + 11);
-    pdoc.text('Télécopie/Fax:', MID + 3, y + 16);
-    pdoc.text('Date de recéption de la demande/Date of', MID + 3, y + 21);
-    pdoc.text('receipt of request:', MID + 3, y + 26);
-    pdoc.setFontSize(8.5);
-    pdoc.text(data.dateReception || data.dateEmission || '', MID + 46, y + 26);
-    y += 33;
-
-    // R4 — Visa + accord + aéronef
-    pdoc.rect(M_L, y, CW, 43);
-
-    const visaSRT = m.visaSRTPos || { texte: 'Visa/SRT A', x: 40, y: 5, fontSize: 9.5, font: 'bold' };
-    const visaDTA = m.visaDTAPos || { texte: 'Visa DTA',   x: 70, y: 5, fontSize: 9.5, font: 'bold' };
-
-    applyFont(pdoc, visaSRT.font, visaSRT.fontSize);
-    pdoc.text(visaSRT.texte, M_L + CW * (visaSRT.x / 100), y + visaSRT.y);
-
-    applyFont(pdoc, visaDTA.font, visaDTA.fontSize);
-    pdoc.text(visaDTA.texte, M_L + CW * (visaDTA.x / 100), y + visaDTA.y);
-
-    if (data.signatureUrl) {
-        try {
-            pdoc.addImage(data.signatureUrl, 'PNG', M_L + CW * (visaDTA.x / 100) + 16, y - 1, 36, 10);
-        } catch (e) { console.warn('Signature:', e); }
-    }
-
-    const accord = m.texteAccord || { texte: '', x: 3, y: 12, fontSize: 8, font: 'bold' };
-    if (accord.texte) {
-        applyFont(pdoc, accord.font, accord.fontSize);
-        const lines = pdoc.splitTextToSize(accord.texte, TW);
-        pdoc.text(lines, M_L + accord.x, y + accord.y);
-    }
-
-    pdoc.setFont('helvetica', 'bold').setFontSize(8);
-    pdoc.text('Aéronef type / aircraft type', M_L + CW * 0.25, y + 24, { align: 'center' });
-    pdoc.text('Immatriculation/ Registration', M_L + CW * 0.75, y + 24, { align: 'center' });
-    pdoc.setFontSize(13);
-    pdoc.text(data.aeronefType || '', M_L + CW * 0.25, y + 37, { align: 'center' });
-    pdoc.text(data.immatriculation || '', M_L + CW * 0.75, y + 37, { align: 'center' });
-    y += 43;
-
-    // R5 — motif + dates + conditions
-    const R5H = PAGE_H - 3 - y - R6H - 10;
-    pdoc.rect(M_L, y, CW, R5H);
-    let iy = y + 6;
-
-    const champs = [
-        ['Motif/Motif:', data.motif || ''],
-        ['Opérateur/Operator:', data.operateur || ''],
-        [data.typeCode === 'SUR' ? 'itinéraire/Itinerary' : 'Route/Route:', data.route || ''],
-    ];
-    for (const [label, val] of champs) {
-        pdoc.setFont('helvetica', 'bold').setFontSize(8);
-        pdoc.text(label, M_L + 3, iy);
-        pdoc.text(val, M_L + 50, iy);
-        iy += 6;
-    }
-
-    iy += 1;
-    pdoc.setFontSize(8);
-    pdoc.text('Date début de validité/Validity Start Date :', M_L + 3, iy);
-    pdoc.text(data.dateDebutValidite || '', M_L + 95, iy);
-    iy += 5;
-    pdoc.text('Date fin vlidité/Validity End Date', M_L + 3, iy);
-    pdoc.text(data.dateFinValidite || '', M_L + 95, iy);
-    if (data.validiteExtension) pdoc.text(data.validiteExtension, M_L + 140, iy);
-    iy += 5;
-
-    // textes configurables depuis modèle
-    const condFields = ['condition1', 'condition2', 'condition3', 'nb1', 'nb2', 'salutations1', 'salutations2'];
-    for (const cfId of condFields) {
-        const cf = m[cfId];
-        if (!cf || !cf.texte) continue;
-        applyFont(pdoc, cf.font || 'bolditalic', cf.fontSize || 6.5);
-        const lines = pdoc.splitTextToSize(cf.texte, TW);
-        pdoc.text(lines, M_L + 3, iy);
-        iy += lines.length * ((cf.fontSize || 6.5) * 0.45) + 1;
-    }
-
-    y += R5H;
-
-    // R6 — signature
-    const sigH = PAGE_H - 3 - y;
-    pdoc.setFont('helvetica', 'bold');
-    pdoc.rect(M_L, y, CW, sigH);
-    const SX = MID + 5;
-    pdoc.setFontSize(8);
-    pdoc.text('Nom du signataire:', SX, y + 8);
-    pdoc.setFontSize(11);
-    pdoc.text(data.signataire || 'AHMED BABA AHMED', SX + 42, y + 8);
-    pdoc.setFontSize(8);
-    pdoc.text('Titre:', SX, y + 18);
-    pdoc.setFontSize(10);
-    pdoc.text(data.titreSignataire || 'Directeur Général', SX + 14, y + 18);
-    pdoc.setFontSize(8);
-    pdoc.text('Signature et cachet:', SX, y + 30);
-
-    return pdoc;
+    return await buildPDF(data.typeCode, m, data);
 }
 
 function safeName(s) { return (s || '').replace(/[^a-zA-Z0-9-]/g, '_'); }
