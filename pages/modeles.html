@@ -8,13 +8,14 @@
     <style>
         .editor-layout {
             display: grid;
-            grid-template-columns: 340px 1fr;
-            gap: 20px;
+            grid-template-columns: 280px 1fr 1fr;
+            gap: 16px;
             align-items: start;
+            margin-top: 16px;
         }
 
-        /* panneau gauche — liste des champs */
-        .fields-panel {
+        /* Panneau gauche — sélection rectangle + textes */
+        .rects-panel {
             background: white;
             border: 1px solid var(--border-light);
             border-radius: 12px;
@@ -22,122 +23,148 @@
             overflow: hidden;
             box-shadow: var(--shadow-sm);
             position: sticky;
-            top: 20px;
+            top: 16px;
         }
-        .fields-panel-header {
-            padding: 16px 20px;
+        .rects-panel-header {
+            padding: 14px 16px;
             border-bottom: 1px solid var(--border-light);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-        .fields-panel-header h3 {
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 700;
             color: var(--primary);
-            margin: 0;
         }
-        .fields-list {
-            max-height: 70vh;
-            overflow-y: auto;
-        }
-        .field-item {
-            padding: 14px 20px;
+
+        .rect-button {
+            width: 100%;
+            text-align: left;
+            padding: 12px 16px;
+            border: none;
             border-bottom: 1px solid #F5F5F5;
+            background: white;
             cursor: pointer;
             transition: background 0.15s;
-        }
-        .field-item:hover { background: var(--bg); }
-        .field-item.active { background: #EFF3FB; border-left: 3px solid var(--primary); }
-        .field-item-name {
             font-size: 13px;
-            font-weight: 600;
-            color: var(--text);
-            margin-bottom: 3px;
         }
-        .field-item-preview {
-            font-size: 11px;
-            color: var(--text-muted);
+        .rect-button:hover { background: var(--bg); }
+        .rect-button.active { background: #EFF3FB; border-left: 3px solid var(--primary); padding-left: 13px; }
+        .rect-button .rect-name { font-weight: 600; color: var(--text); margin-bottom: 2px; }
+        .rect-button .rect-info { font-size: 11px; color: var(--text-muted); }
+
+        /* Liste des textes dans le rectangle sélectionné */
+        .texts-list {
+            border-top: 1px solid var(--border-light);
+            padding: 12px;
+            max-height: 280px;
+            overflow-y: auto;
+        }
+        .text-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.15s;
+            margin-bottom: 4px;
+        }
+        .text-item:hover { background: var(--bg); }
+        .text-item.active { background: #EFF3FB; }
+        .text-item-content {
+            flex: 1;
+            font-size: 12px;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            max-width: 280px;
         }
+        .text-item-delete {
+            background: none;
+            border: none;
+            color: var(--danger);
+            cursor: pointer;
+            font-size: 16px;
+            padding: 2px 6px;
+            opacity: 0.5;
+        }
+        .text-item-delete:hover { opacity: 1; }
 
-        /* panneau droite — éditeur du champ sélectionné */
+        .btn-add-text {
+            width: calc(100% - 24px);
+            margin: 0 12px 12px;
+            padding: 10px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .btn-add-text:hover { background: var(--primary-dark); }
+
+        /* Panneau central — édition du texte sélectionné */
         .edit-panel {
             background: white;
             border: 1px solid var(--border-light);
             border-radius: 12px;
-            padding: 24px;
+            padding: 18px;
             box-shadow: var(--shadow-sm);
         }
-        .edit-panel-empty {
+        .edit-empty {
             text-align: center;
-            padding: 60px 20px;
+            padding: 40px 20px;
             color: var(--text-muted);
+            font-size: 13px;
         }
-        .edit-panel-empty svg { margin-bottom: 12px; opacity: 0.3; }
 
-        .edit-section { margin-bottom: 20px; }
+        .edit-section { margin-bottom: 16px; }
         .edit-section-title {
             font-size: 11px;
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.6px;
             color: var(--text-light);
-            margin-bottom: 12px;
+            margin-bottom: 8px;
         }
-
-        .edit-row {
-            display: flex;
-            gap: 12px;
-            margin-bottom: 12px;
-        }
+        .edit-row { display: flex; gap: 10px; }
         .edit-row .form-group { flex: 1; margin: 0; }
 
-        .font-preview {
-            padding: 12px 16px;
-            background: var(--bg);
-            border-radius: 8px;
+        /* Panneau droite — aperçu PDF */
+        .preview-panel {
+            background: white;
             border: 1px solid var(--border-light);
-            margin-top: 8px;
-            min-height: 40px;
+            border-radius: 12px;
+            padding: 12px;
+            box-shadow: var(--shadow-sm);
+            position: sticky;
+            top: 16px;
         }
-
-        .position-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-        }
-        .position-input {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .position-input label {
-            font-size: 12px;
+        .preview-panel-header {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
             color: var(--text-light);
-            width: 20px;
-            font-weight: 600;
+            margin-bottom: 10px;
         }
-        .position-input input {
-            flex: 1;
+        #pdfPreview {
+            width: 100%;
+            height: 75vh;
+            border: 1px solid var(--border-light);
+            border-radius: 6px;
         }
 
-        /* type selector */
+        /* Type tabs */
         .type-tabs {
             display: flex;
             gap: 8px;
             flex-wrap: wrap;
-            margin-bottom: 20px;
+            margin-bottom: 16px;
         }
         .type-tab {
-            padding: 8px 16px;
+            padding: 8px 14px;
             border-radius: 20px;
             border: 1.5px solid var(--border);
             background: white;
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.15s;
@@ -150,26 +177,19 @@
             color: white;
         }
 
+        /* Save bar */
         .save-bar {
             position: fixed;
-            bottom: 0;
-            left: 240px;
-            right: 0;
+            bottom: 0; left: 240px; right: 0;
             background: white;
             border-top: 1px solid var(--border-light);
-            padding: 14px 32px;
+            padding: 12px 28px;
             display: flex;
             align-items: center;
             justify-content: space-between;
             box-shadow: 0 -2px 12px rgba(0,0,0,0.06);
             z-index: 100;
         }
-        .save-bar-info {
-            font-size: 13px;
-            color: var(--text-light);
-        }
-        .save-bar-info strong { color: var(--primary); }
-
         .content-wrapper { padding-bottom: 80px; }
     </style>
 </head>
@@ -190,20 +210,25 @@
 
                 <div class="editor-layout">
 
-                    <!-- Liste des champs -->
-                    <div class="fields-panel">
-                        <div class="fields-panel-header">
-                            <h3 id="panelTitle">Champs du document</h3>
+                    <!-- Panneau rectangles + textes -->
+                    <div class="rects-panel">
+                        <div class="rects-panel-header" id="rectsHeader">Rectangles</div>
+                        <div id="rectsList"></div>
+                        <div class="texts-list" id="textsList" style="display:none;">
+                            <div id="textsItems"></div>
+                            <button class="btn-add-text" id="btnAddText">+ Ajouter un texte</button>
                         </div>
-                        <div class="fields-list" id="fieldsList"></div>
                     </div>
 
-                    <!-- Éditeur -->
+                    <!-- Panneau édition -->
                     <div class="edit-panel" id="editPanel">
-                        <div class="edit-panel-empty">
-                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                            <p>Sélectionnez un champ à gauche pour le modifier</p>
-                        </div>
+                        <div class="edit-empty">Sélectionnez un rectangle puis un texte pour le modifier</div>
+                    </div>
+
+                    <!-- Panneau aperçu -->
+                    <div class="preview-panel">
+                        <div class="preview-panel-header">Aperçu PDF</div>
+                        <iframe id="pdfPreview"></iframe>
                     </div>
 
                 </div>
@@ -211,10 +236,9 @@
         </main>
     </div>
 
-    <!-- Barre de sauvegarde -->
     <div class="save-bar">
-        <div class="save-bar-info">Type sélectionné : <strong id="saveBarType">—</strong></div>
-        <button class="btn btn-primary" id="btnSaveAll" style="width:auto; padding:10px 28px;">
+        <div style="font-size:13px; color:var(--text-light);">Type : <strong id="saveBarType" style="color:var(--primary);">—</strong></div>
+        <button class="btn btn-primary" id="btnSaveAll" style="width:auto; padding:10px 24px;">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
             Enregistrer le modèle
         </button>
@@ -225,10 +249,10 @@
         import { showToast } from '../assets/js/helpers.js';
         import { db } from '../assets/js/firebase-config.js';
         import { doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { generatePreviewPDF, getPreviewDataURI } from '../assets/js/pdf-gen.js';
 
         injectSidebar('modeles');
 
-        // ─── TYPES ─────────────────────────────────────────────
         const TYPES = [
             { code: 'SAT', label: 'Survol et Atterrissage' },
             { code: 'SUR', label: 'Survol' },
@@ -237,126 +261,49 @@
             { code: 'TDM', label: 'Transport de Dépouille Mortelle' },
         ];
 
-        // ─── CHAMPS CONFIGURABLES ───────────────────────────────
-        // Chaque champ a : id, nom, texte par défaut, position (x%,y en mm), taille police, police
-        const DEFAULT_FIELDS = (typeCode) => [
-            {
-                id: 'texteAccord',
-                nom: 'Texte d\'accord',
-                texte: typeCode === 'SUR'
-                    ? "Honneur vous notifier notre accord de survol du territoire mauritanien en faveur de l'avion selon les informations ci-après #"
-                    : typeCode === 'SAT'
-                    ? "Honneur vous notifier notre accord de survol du territoire mauritanien et l'atterrissage sur le(s) aéroport(s) International de Nouakchott OUM TOUNSY en faveur de(s) avion(s) selon les"
-                    : '',
-                x: 3, y: 12, fontSize: 8, font: 'bold',
-                description: 'Texte après Visa DTA'
-            },
-            {
-                id: 'condition1',
-                nom: 'Condition 1',
-                texte: "Cette autorisation est délivrée sous réserve que/ This permit is issued subject to :",
-                x: 3, y: 0, fontSize: 6.5, font: 'bolditalic',
-                description: 'Première ligne des conditions'
-            },
-            {
-                id: 'condition2',
-                nom: 'Condition 2',
-                texte: "1) Tous les docuemnts de bord de l'aéronef soient en cours de validité pendant l'opération du vol ci-dessus autorisé/ All aircraft 's onboard docuemnts be valid for the operation of authorized above flight;",
-                x: 3, y: 0, fontSize: 6.5, font: 'bolditalic',
-                description: 'Condition validité documents'
-            },
-            {
-                id: 'condition3',
-                nom: 'Condition 3',
-                texte: "2) La réglementation aérienne mauritanienne soit scrupuleusement respectée/ Mauritanian Aviation Regulation is scrupulously respected ;",
-                x: 3, y: 0, fontSize: 6.5, font: 'bolditalic',
-                description: 'Condition réglementation'
-            },
-            {
-                id: 'nb1',
-                nom: 'NB Paiement (FR)',
-                texte: typeCode === 'SUR' ? '' : "NB: Le paiement des frais et taxes relatifs à la délivrance de la présente autorisation sont dus dès la signature de celle-ci par l'ANAC.",
-                x: 3, y: 0, fontSize: 6.5, font: 'bolditalic',
-                description: 'Note paiement (français)',
-                hidden: typeCode === 'SUR'
-            },
-            {
-                id: 'nb2',
-                nom: 'NB Paiement (EN)',
-                texte: typeCode === 'SUR' ? '' : "NB: The payment of the fees and taxes relating to the issue of this authorization are due as soon as it is signed by the ANAC.",
-                x: 3, y: 0, fontSize: 6.5, font: 'bolditalic',
-                description: 'Note paiement (anglais)',
-                hidden: typeCode === 'SUR'
-            },
-            {
-                id: 'salutations1',
-                nom: 'Salutations ligne 1',
-                texte: typeCode === 'SUR' ? 'Salutations distinguées Stop' : '',
-                x: 3, y: 0, fontSize: 7.5, font: 'bolditalic',
-                description: 'Première ligne de salutations',
-                hidden: typeCode !== 'SUR'
-            },
-            {
-                id: 'salutations2',
-                nom: 'Salutations ligne 2',
-                texte: typeCode === 'SUR' ? 'Nouakchott Mauritanie Stop et Fin' : '',
-                x: 3, y: 0, fontSize: 7.5, font: 'bolditalic',
-                description: 'Deuxième ligne de salutations',
-                hidden: typeCode !== 'SUR'
-            },
-            {
-                id: 'visaSRTPos',
-                nom: 'Position Visa/SRT',
-                texte: 'Visa/SRT A',
-                x: 40, y: 5, fontSize: 9.5, font: 'bold',
-                description: 'Texte et position du Visa SRT (x = % de la largeur)'
-            },
-            {
-                id: 'visaDTAPos',
-                nom: 'Position Visa DTA',
-                texte: 'Visa DTA',
-                x: 70, y: 5, fontSize: 9.5, font: 'bold',
-                description: 'Texte et position du Visa DTA (x = % de la largeur)'
-            },
+        // 5 rectangles éditables (R1 réservé pour entête papier)
+        const RECTS = [
+            { id: 'R2', label: 'Rectangle 2', info: 'Titre / Numéro / Type' },
+            { id: 'R3', label: 'Rectangle 3', info: 'Info ANAC / Destinataire' },
+            { id: 'R4', label: 'Rectangle 4', info: 'Visa / Aéronef' },
+            { id: 'R5', label: 'Rectangle 5', info: 'Motif / Dates / Conditions' },
+            { id: 'R6', label: 'Rectangle 6', info: 'Signature' },
         ];
 
         let currentType = 'SAT';
-        let currentFieldId = null;
-        let allModels = {}; // { SAT: { texteAccord: {...}, ... }, SUR: {...}, ... }
+        let currentRect = null;
+        let currentTextIdx = null;
+        // structure : { SAT: { R2: [{texte, x, y, fontSize, font}, ...], R3: [...], ... }, SUR: {...}, ... }
+        let allModels = {};
+        let previewTimeout = null;
 
         checkAuth(async (user, userData) => {
             if (userData.role !== 'admin') {
-                showToast('Accès réservé à l\'administrateur', 'warning');
+                showToast('Accès admin uniquement', 'warning');
                 setTimeout(() => window.location.href = 'dashboard.html', 1500);
                 return;
             }
-            await loadAllModels();
+            await loadModels();
             renderTypeTabs();
             selectType('SAT');
+            updatePreview();
         });
 
-        // ─── FIRESTORE ─────────────────────────────────────────
-        async function loadAllModels() {
+        async function loadModels() {
             try {
                 const snap = await getDoc(doc(db, 'params', 'modeles'));
-                if (snap.exists()) {
-                    allModels = snap.data();
-                }
-            } catch (e) {
-                console.warn('Modèles non chargés:', e);
-            }
-            // initialiser les types manquants avec les défauts
+                if (snap.exists()) allModels = snap.data();
+            } catch (e) {}
+            // initialiser les types/rects manquants
             TYPES.forEach(t => {
-                if (!allModels[t.code]) {
-                    allModels[t.code] = {};
-                    DEFAULT_FIELDS(t.code).forEach(f => {
-                        allModels[t.code][f.id] = { ...f };
-                    });
-                }
+                if (!allModels[t.code]) allModels[t.code] = {};
+                RECTS.forEach(r => {
+                    if (!allModels[t.code][r.id]) allModels[t.code][r.id] = [];
+                });
             });
         }
 
-        async function saveModel() {
+        async function saveModels() {
             try {
                 await setDoc(doc(db, 'params', 'modeles'), allModels);
                 showToast('Modèle enregistré', 'success');
@@ -365,66 +312,96 @@
             }
         }
 
-        // ─── UI ────────────────────────────────────────────────
         function renderTypeTabs() {
             document.getElementById('typeTabs').innerHTML = TYPES.map(t => `
                 <button class="type-tab ${t.code === currentType ? 'active' : ''}" data-type="${t.code}">
                     ${t.code} — ${t.label}
                 </button>
             `).join('');
-
-            document.querySelectorAll('.type-tab').forEach(btn => {
-                btn.addEventListener('click', () => selectType(btn.dataset.type));
+            document.querySelectorAll('.type-tab').forEach(b => {
+                b.addEventListener('click', () => selectType(b.dataset.type));
             });
         }
 
         function selectType(code) {
             currentType = code;
-            currentFieldId = null;
+            currentRect = null;
+            currentTextIdx = null;
+            document.querySelectorAll('.type-tab').forEach(b => b.classList.toggle('active', b.dataset.type === code));
+            const t = TYPES.find(x => x.code === code);
+            document.getElementById('saveBarType').textContent = `${code} — ${t?.label || ''}`;
+            renderRectsList();
+            document.getElementById('textsList').style.display = 'none';
+            showEmptyEditor();
+            updatePreview();
+        }
 
-            document.querySelectorAll('.type-tab').forEach(b => {
-                b.classList.toggle('active', b.dataset.type === code);
+        function renderRectsList() {
+            document.getElementById('rectsList').innerHTML = RECTS.map(r => {
+                const count = (allModels[currentType][r.id] || []).length;
+                return `
+                    <button class="rect-button ${r.id === currentRect ? 'active' : ''}" data-rect="${r.id}">
+                        <div class="rect-name">${r.label}</div>
+                        <div class="rect-info">${r.info} — ${count} texte${count > 1 ? 's' : ''}</div>
+                    </button>
+                `;
+            }).join('');
+            document.querySelectorAll('.rect-button').forEach(b => {
+                b.addEventListener('click', () => selectRect(b.dataset.rect));
             });
+        }
 
-            const typeObj = TYPES.find(t => t.code === code);
-            document.getElementById('saveBarType').textContent = `${code} — ${typeObj?.label || ''}`;
-            document.getElementById('panelTitle').textContent = `Champs — ${code}`;
-
-            renderFieldsList();
+        function selectRect(rectId) {
+            currentRect = rectId;
+            currentTextIdx = null;
+            renderRectsList();
+            renderTextsList();
+            document.getElementById('textsList').style.display = 'block';
             showEmptyEditor();
         }
 
-        function renderFieldsList() {
-            const fields = Object.values(allModels[currentType] || {});
-            document.getElementById('fieldsList').innerHTML = fields.map(f => `
-                <div class="field-item ${f.id === currentFieldId ? 'active' : ''}" data-id="${f.id}">
-                    <div class="field-item-name">${f.nom}</div>
-                    <div class="field-item-preview">${f.texte || '(vide)'}</div>
-                </div>
-            `).join('');
+        function renderTextsList() {
+            const texts = allModels[currentType][currentRect] || [];
+            document.getElementById('textsItems').innerHTML = texts.length === 0
+                ? '<div style="text-align:center; padding:14px; color:var(--text-muted); font-size:12px;">Aucun texte. Cliquez "+ Ajouter".</div>'
+                : texts.map((t, i) => `
+                    <div class="text-item ${i === currentTextIdx ? 'active' : ''}" data-idx="${i}">
+                        <div class="text-item-content">${t.texte || '(vide)'}</div>
+                        <button class="text-item-delete" data-idx="${i}">×</button>
+                    </div>
+                `).join('');
 
-            document.querySelectorAll('.field-item').forEach(el => {
-                el.addEventListener('click', () => selectField(el.dataset.id));
+            document.querySelectorAll('.text-item').forEach(el => {
+                el.addEventListener('click', (e) => {
+                    if (e.target.classList.contains('text-item-delete')) return;
+                    selectText(parseInt(el.dataset.idx));
+                });
+            });
+            document.querySelectorAll('.text-item-delete').forEach(b => {
+                b.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    deleteText(parseInt(b.dataset.idx));
+                });
             });
         }
 
-        function selectField(fieldId) {
-            currentFieldId = fieldId;
-            renderFieldsList(); // refresh active state
+        function selectText(idx) {
+            currentTextIdx = idx;
+            renderTextsList();
+            renderEditPanel();
+        }
 
-            const field = allModels[currentType][fieldId];
-            if (!field) return;
-
+        function renderEditPanel() {
+            if (currentTextIdx === null) { showEmptyEditor(); return; }
+            const t = allModels[currentType][currentRect][currentTextIdx];
             document.getElementById('editPanel').innerHTML = `
-                <div style="margin-bottom:20px;">
-                    <div style="font-size:18px; font-weight:700; color:var(--primary); margin-bottom:4px;">${field.nom}</div>
-                    <div style="font-size:13px; color:var(--text-muted);">${field.description || ''}</div>
+                <div style="font-size:14px; font-weight:700; color:var(--primary); margin-bottom:14px;">
+                    ${currentRect} — Texte #${currentTextIdx + 1}
                 </div>
 
                 <div class="edit-section">
                     <div class="edit-section-title">Texte</div>
-                    <textarea id="editTexte" class="form-input" rows="4" style="width:100%; resize:vertical;">${field.texte || ''}</textarea>
-                    <div class="font-preview" id="fontPreview" style="font-size:${field.fontSize}px;">${field.texte || '(vide)'}</div>
+                    <textarea id="eTexte" class="form-input" rows="4" style="width:100%; resize:vertical;">${t.texte || ''}</textarea>
                 </div>
 
                 <div class="edit-section">
@@ -432,96 +409,98 @@
                     <div class="edit-row">
                         <div class="form-group">
                             <label class="form-label">Taille (pt)</label>
-                            <input type="number" id="editFontSize" class="form-input" value="${field.fontSize || 8}" min="5" max="30" step="0.5">
+                            <input type="number" id="eFontSize" class="form-input" value="${t.fontSize || 8}" min="5" max="30" step="0.5">
                         </div>
                         <div class="form-group">
                             <label class="form-label">Style</label>
-                            <select id="editFont" class="form-select">
-                                <option value="bold" ${field.font === 'bold' ? 'selected' : ''}>Gras</option>
-                                <option value="bolditalic" ${field.font === 'bolditalic' ? 'selected' : ''}>Gras Italique</option>
-                                <option value="normal" ${field.font === 'normal' ? 'selected' : ''}>Normal</option>
-                                <option value="italic" ${field.font === 'italic' ? 'selected' : ''}>Italique</option>
+                            <select id="eFont" class="form-select">
+                                <option value="bold" ${t.font === 'bold' ? 'selected' : ''}>Gras</option>
+                                <option value="bolditalic" ${t.font === 'bolditalic' ? 'selected' : ''}>Gras Italique</option>
+                                <option value="italic" ${t.font === 'italic' ? 'selected' : ''}>Italique</option>
+                                <option value="normal" ${t.font === 'normal' ? 'selected' : ''}>Normal</option>
                             </select>
                         </div>
                     </div>
                 </div>
 
                 <div class="edit-section">
-                    <div class="edit-section-title">Position</div>
-                    <div class="position-grid">
-                        <div class="position-input">
-                            <label>X</label>
-                            <input type="number" id="editX" class="form-input" value="${field.x || 0}" step="0.5">
-                            <span style="font-size:11px; color:var(--text-muted);">${fieldId.includes('Pos') ? '%' : 'mm'}</span>
+                    <div class="edit-section-title">Position (mm depuis coin haut-gauche du rectangle)</div>
+                    <div class="edit-row">
+                        <div class="form-group">
+                            <label class="form-label">X (mm)</label>
+                            <input type="number" id="eX" class="form-input" value="${t.x || 0}" step="0.5">
                         </div>
-                        <div class="position-input">
-                            <label>Y</label>
-                            <input type="number" id="editY" class="form-input" value="${field.y || 0}" step="0.5">
-                            <span style="font-size:11px; color:var(--text-muted);">mm</span>
+                        <div class="form-group">
+                            <label class="form-label">Y (mm)</label>
+                            <input type="number" id="eY" class="form-input" value="${t.y || 0}" step="0.5">
                         </div>
                     </div>
-                    <div style="font-size:11px; color:var(--text-muted); margin-top:8px;">
-                        ${fieldId.includes('Pos') ? 'X = pourcentage de la largeur (0-100). Ex: 40 = 40% de la largeur.' : 'X = mm depuis le bord gauche. Y = mm depuis le haut du rectangle.'}
-                    </div>
-                </div>
-
-                <div style="display:flex; gap:10px; margin-top:24px;">
-                    <button class="btn btn-secondary" id="btnReset" style="width:auto; padding:10px 18px;">Réinitialiser</button>
-                    <button class="btn btn-primary" id="btnApplyField" style="width:auto; padding:10px 24px;">Appliquer</button>
                 </div>
             `;
 
-            // mise à jour preview en temps réel
-            document.getElementById('editTexte').addEventListener('input', (e) => {
-                document.getElementById('fontPreview').textContent = e.target.value || '(vide)';
-            });
-            document.getElementById('editFontSize').addEventListener('input', (e) => {
-                document.getElementById('fontPreview').style.fontSize = e.target.value + 'px';
-            });
-            document.getElementById('editFont').addEventListener('change', (e) => {
-                const fp = document.getElementById('fontPreview');
-                fp.style.fontWeight = e.target.value.includes('bold') ? 'bold' : 'normal';
-                fp.style.fontStyle = e.target.value.includes('italic') ? 'italic' : 'normal';
-            });
-
-            document.getElementById('btnApplyField').addEventListener('click', applyField);
-            document.getElementById('btnReset').addEventListener('click', () => {
-                const defaults = DEFAULT_FIELDS(currentType);
-                const def = defaults.find(f => f.id === fieldId);
-                if (def) {
-                    allModels[currentType][fieldId] = { ...def };
-                    selectField(fieldId);
-                    renderFieldsList();
-                }
+            // appliquer en temps réel
+            ['eTexte', 'eFontSize', 'eFont', 'eX', 'eY'].forEach(id => {
+                document.getElementById(id).addEventListener('input', applyEdit);
+                document.getElementById(id).addEventListener('change', applyEdit);
             });
         }
 
-        function applyField() {
-            const texte    = document.getElementById('editTexte').value;
-            const fontSize = parseFloat(document.getElementById('editFontSize').value);
-            const font     = document.getElementById('editFont').value;
-            const x        = parseFloat(document.getElementById('editX').value);
-            const y        = parseFloat(document.getElementById('editY').value);
-
-            allModels[currentType][currentFieldId] = {
-                ...allModels[currentType][currentFieldId],
-                texte, fontSize, font, x, y
-            };
-
-            renderFieldsList();
-            showToast('Champ modifié — n\'oubliez pas d\'enregistrer', 'info');
+        function applyEdit() {
+            if (currentTextIdx === null) return;
+            const t = allModels[currentType][currentRect][currentTextIdx];
+            t.texte    = document.getElementById('eTexte').value;
+            t.fontSize = parseFloat(document.getElementById('eFontSize').value) || 8;
+            t.font     = document.getElementById('eFont').value;
+            t.x        = parseFloat(document.getElementById('eX').value) || 0;
+            t.y        = parseFloat(document.getElementById('eY').value) || 0;
+            renderTextsList();
+            queuePreview();
         }
 
         function showEmptyEditor() {
-            document.getElementById('editPanel').innerHTML = `
-                <div class="edit-panel-empty">
-                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                    <p>Sélectionnez un champ à gauche pour le modifier</p>
-                </div>
-            `;
+            document.getElementById('editPanel').innerHTML = '<div class="edit-empty">Sélectionnez un texte à modifier</div>';
         }
 
-        document.getElementById('btnSaveAll').addEventListener('click', saveModel);
+        document.getElementById('btnAddText').addEventListener('click', () => {
+            const newText = { texte: 'Nouveau texte', x: 3, y: 5, fontSize: 8, font: 'bold' };
+            allModels[currentType][currentRect].push(newText);
+            const newIdx = allModels[currentType][currentRect].length - 1;
+            renderRectsList();
+            renderTextsList();
+            selectText(newIdx);
+            queuePreview();
+        });
+
+        function deleteText(idx) {
+            if (!confirm('Supprimer ce texte ?')) return;
+            allModels[currentType][currentRect].splice(idx, 1);
+            if (currentTextIdx === idx) {
+                currentTextIdx = null;
+                showEmptyEditor();
+            } else if (currentTextIdx > idx) {
+                currentTextIdx--;
+            }
+            renderRectsList();
+            renderTextsList();
+            queuePreview();
+        }
+
+        // Aperçu PDF en temps réel (debounced)
+        function queuePreview() {
+            clearTimeout(previewTimeout);
+            previewTimeout = setTimeout(updatePreview, 400);
+        }
+
+        async function updatePreview() {
+            try {
+                const dataUri = await getPreviewDataURI(currentType, allModels[currentType]);
+                document.getElementById('pdfPreview').src = dataUri;
+            } catch (e) {
+                console.error('Aperçu:', e);
+            }
+        }
+
+        document.getElementById('btnSaveAll').addEventListener('click', saveModels);
     </script>
 </body>
 </html>
