@@ -6,105 +6,95 @@
     <title>Paramètres - ANAC Archives DTA</title>
     <link rel="stylesheet" href="../assets/css/style.css">
     <style>
-        .params-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-        }
-        .param-card {
+        .field-section {
             background: white;
             border: 1px solid var(--border-light);
-            border-radius: var(--radius-lg);
+            border-radius: 12px;
             padding: 20px;
+            margin-bottom: 16px;
             box-shadow: var(--shadow-sm);
         }
-        .param-card-title {
-            font-size: 13px;
-            font-weight: 700;
-            color: var(--primary);
+        .field-section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             margin-bottom: 14px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
         }
-        /* ligne d'ajout : input grand, bouton + petit */
-        .param-add-row {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 12px;
-            align-items: center;
+        .field-section-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text);
         }
-        .param-add-row input {
-            flex: 1;
-            min-width: 0;
+        .field-section-id {
+            font-family: monospace;
+            font-size: 11px;
+            color: var(--text-muted);
+            background: var(--bg);
+            padding: 2px 8px;
+            border-radius: 4px;
+            margin-left: 8px;
         }
-        .btn-plus {
-            width: 34px;
-            height: 34px;
-            min-width: 34px;
-            border-radius: 8px;
-            background: var(--primary);
-            color: white;
-            border: none;
-            font-size: 22px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-            transition: background 0.15s;
-        }
-        .btn-plus:hover { background: var(--primary-dark); }
-        /* tags */
-        .param-tag-list {
+        .values-list {
             display: flex;
             flex-wrap: wrap;
             gap: 8px;
-            min-height: 28px;
+            margin-bottom: 12px;
+            min-height: 40px;
         }
-        .param-tag {
+        .value-chip {
             display: inline-flex;
             align-items: center;
             gap: 6px;
+            padding: 6px 12px;
             background: var(--bg);
-            border: 1px solid var(--border);
-            border-radius: 20px;
-            padding: 4px 12px;
-            font-size: 13px;
-            color: var(--text);
+            border: 1px solid var(--border-light);
+            border-radius: 16px;
+            font-size: 12px;
         }
-        .param-tag .del {
+        .value-chip button {
             background: none;
             border: none;
+            color: var(--danger);
             cursor: pointer;
-            color: var(--text-muted);
             padding: 0;
-            font-size: 17px;
+            font-size: 16px;
             line-height: 1;
+            opacity: 0.6;
         }
-        .param-tag .del:hover { color: var(--danger); }
-        .param-empty {
-            font-size: 12px;
+        .value-chip button:hover { opacity: 1; }
+        .add-value-row {
+            display: flex;
+            gap: 8px;
+        }
+        .add-value-row input { flex: 1; }
+        .empty-msg {
+            padding: 14px;
+            text-align: center;
             color: var(--text-muted);
+            font-size: 13px;
             font-style: italic;
         }
-        .param-card.full { grid-column: 1 / -1; }
-        /* valeurs par défaut */
-        .def-row {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 10px;
+        .info-box {
+            background: #E3F2FD;
+            border: 1px solid #90CAF9;
+            border-radius: 8px;
+            padding: 14px 16px;
+            margin-bottom: 16px;
+            font-size: 12px;
+            color: #1565C0;
         }
-        .def-row label {
-            font-size: 13px;
-            color: var(--text-light);
-            width: 150px;
-            flex-shrink: 0;
+        .signature-canvas-wrap {
+            border: 2px dashed var(--border);
+            border-radius: 8px;
+            background: white;
+            padding: 8px;
         }
-        .def-row input { flex: 1; }
-        @media (max-width: 900px) {
-            .params-grid { grid-template-columns: 1fr; }
-            .param-card.full { grid-column: 1; }
+        #signaturePad {
+            display: block;
+            background: #FAFBFC;
+            border-radius: 4px;
+            cursor: crosshair;
+            touch-action: none;
         }
     </style>
 </head>
@@ -114,136 +104,35 @@
             <div class="topbar">
                 <div>
                     <div class="page-title">Paramètres</div>
-                    <div class="page-subtitle">Configuration des valeurs utilisées dans le générateur</div>
+                    <div class="page-subtitle">Valeurs prédéfinies pour les listes déroulantes</div>
                 </div>
-                <button class="btn btn-primary" id="btnSaveAll" style="width:auto; padding:10px 24px;">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-                    Enregistrer tout
-                </button>
             </div>
 
-            <div class="content-wrapper">
+            <div class="content-wrapper" style="max-width:900px;">
 
-                <!-- Valeurs par défaut -->
-                <div class="param-card" style="margin-bottom:20px;">
-                    <div class="param-card-title">Valeurs par défaut</div>
-                    <div class="def-row">
-                        <label>Visa SRT</label>
-                        <input type="text" id="defVisaSRT" class="form-input" style="max-width:100px;" placeholder="A">
+                <!-- Signature directeur -->
+                <div class="field-section directeur-only" id="sigSection" style="display:none;">
+                    <div class="field-section-header">
+                        <div class="field-section-title">Ma signature</div>
                     </div>
-                    <div class="def-row">
-                        <label>Signataire</label>
-                        <input type="text" id="defSignataire" class="form-input">
-                    </div>
-                    <div class="def-row">
-                        <label>Titre signataire</label>
-                        <input type="text" id="defTitreSignataire" class="form-input">
-                    </div>
-                </div>
-
-                <!-- Listes -->
-                <div class="params-grid">
-
-                    <div class="param-card">
-                        <div class="param-card-title">Opérateurs</div>
-                        <div class="param-add-row">
-                            <input type="text" class="form-input" id="inOperateurs" placeholder="Ajouter...">
-                            <button class="btn-plus" onclick="addItem('operateurs','inOperateurs')">+</button>
-                        </div>
-                        <div class="param-tag-list" id="lstOperateurs"></div>
-                    </div>
-
-                    <div class="param-card">
-                        <div class="param-card-title">Destinataires (A/To)</div>
-                        <div class="param-add-row">
-                            <input type="text" class="form-input" id="inDestinataires" placeholder="Ajouter...">
-                            <button class="btn-plus" onclick="addItem('destinataires','inDestinataires')">+</button>
-                        </div>
-                        <div class="param-tag-list" id="lstDestinataires"></div>
-                    </div>
-
-                    <div class="param-card">
-                        <div class="param-card-title">Types d'aéronef</div>
-                        <div class="param-add-row">
-                            <input type="text" class="form-input" id="inAeronefs" placeholder="Ajouter...">
-                            <button class="btn-plus" onclick="addItem('aeronefs','inAeronefs')">+</button>
-                        </div>
-                        <div class="param-tag-list" id="lstAeronefs"></div>
-                    </div>
-
-                    <div class="param-card">
-                        <div class="param-card-title">Immatriculations</div>
-                        <div class="param-add-row">
-                            <input type="text" class="form-input" id="inImmatriculations" placeholder="Ajouter...">
-                            <button class="btn-plus" onclick="addItem('immatriculations','inImmatriculations')">+</button>
-                        </div>
-                        <div class="param-tag-list" id="lstImmatriculations"></div>
-                    </div>
-
-                    <div class="param-card">
-                        <div class="param-card-title">Motifs</div>
-                        <div class="param-add-row">
-                            <input type="text" class="form-input" id="inMotifs" placeholder="Ajouter...">
-                            <button class="btn-plus" onclick="addItem('motifs','inMotifs')">+</button>
-                        </div>
-                        <div class="param-tag-list" id="lstMotifs"></div>
-                    </div>
-
-                    <div class="param-card">
-                        <div class="param-card-title">Routes / Itinéraires</div>
-                        <div class="param-add-row">
-                            <input type="text" class="form-input" id="inRoutes" placeholder="Ajouter...">
-                            <button class="btn-plus" onclick="addItem('routes','inRoutes')">+</button>
-                        </div>
-                        <div class="param-tag-list" id="lstRoutes"></div>
-                    </div>
-
-                </div>
-
-                <!-- Compte -->
-                <div class="param-card" style="margin-top:20px;">
-                    <div class="param-card-title">Mon compte</div>
-                    <div class="def-row">
-                        <label>Nom</label>
-                        <div id="profileName" style="font-size:14px; color:var(--text);">—</div>
-                    </div>
-                    <div class="def-row">
-                        <label>Email</label>
-                        <div id="profileEmail" style="font-size:14px; color:var(--text);">—</div>
-                    </div>
-                    <div class="def-row">
-                        <label>Rôle</label>
-                        <div id="profileRole" style="font-size:14px; color:var(--text);">—</div>
-                    </div>
-                    <div style="margin-top:14px;">
-                        <button class="btn btn-secondary" id="btnChangePwd" style="width:auto; padding:8px 18px;">
-                            Changer mon mot de passe
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Signature numérique — visible seulement pour le directeur -->
-                <div class="param-card" id="sigSection" style="margin-top:20px; display:none;">
-                    <div class="param-card-title">Ma signature numérique</div>
-                    <p style="font-size:13px; color:var(--text-light); margin-bottom:14px;">
-                        Dessinez votre signature ci-dessous. Elle sera apposée automatiquement sur le Visa DTA lors de chaque approbation.
+                    <p style="font-size:13px; color:var(--text-light); margin-bottom:12px;">
+                        Dessinez votre signature ci-dessous. Elle sera apposée sur les autorisations que vous approuvez.
                     </p>
-
-                    <div style="display:flex; flex-direction:column; gap:12px; align-items:flex-start;">
-                        <canvas id="sigCanvas" width="400" height="140"
-                            style="border:2px dashed var(--border); border-radius:8px; cursor:crosshair; touch-action:none; background:white;">
-                        </canvas>
-
-                        <div style="display:flex; gap:10px;">
-                            <button class="btn btn-secondary btn-sm" id="btnClearSig" style="width:auto; padding:7px 14px;">Effacer</button>
-                            <button class="btn btn-primary btn-sm" id="btnSaveSig" style="width:auto; padding:7px 14px;">Enregistrer la signature</button>
-                        </div>
-
-                        <div id="sigPreview" style="display:none;">
-                            <p style="font-size:12px; color:var(--success); margin-bottom:6px;">✓ Signature enregistrée</p>
-                            <img id="sigImg" style="max-width:200px; border:1px solid var(--border); border-radius:6px;">
-                        </div>
+                    <div class="signature-canvas-wrap">
+                        <canvas id="signaturePad" width="600" height="180"></canvas>
                     </div>
+                    <div style="display:flex; gap:8px; margin-top:12px;">
+                        <button class="btn btn-secondary" id="btnClearSig" style="width:auto; padding:8px 16px;">Effacer</button>
+                        <button class="btn btn-primary" id="btnSaveSig" style="width:auto; padding:8px 16px;">Enregistrer la signature</button>
+                    </div>
+                </div>
+
+                <!-- Champs personnalisés type "select" -->
+                <div class="no-directeur" id="paramsSection">
+                    <div class="info-box">
+                        <strong>Comment ça marche :</strong> Pour chaque champ de type "Liste déroulante" créé dans <strong>Champs personnalisés</strong>, vous pouvez ici ajouter des valeurs fréquentes. Lors de la saisie d'une autorisation, l'utilisateur pourra choisir une de ces valeurs ou saisir une nouvelle valeur manuellement.
+                    </div>
+                    <div id="sectionsContainer"></div>
                 </div>
 
             </div>
@@ -253,209 +142,195 @@
     <script type="module">
         import { checkAuth, injectSidebar } from '../assets/js/layout.js';
         import { showToast } from '../assets/js/helpers.js';
-        import { loadParams, saveParams } from '../assets/js/params.js';
-        import { auth } from '../assets/js/firebase-config.js';
-        import { sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { db } from '../assets/js/firebase-config.js';
+        import { doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         injectSidebar('settings');
 
-        let params = {};
-
-        const LISTS = [
-            { key: 'operateurs',       inId: 'inOperateurs',       lstId: 'lstOperateurs' },
-            { key: 'destinataires',    inId: 'inDestinataires',    lstId: 'lstDestinataires' },
-            { key: 'aeronefs',         inId: 'inAeronefs',         lstId: 'lstAeronefs' },
-            { key: 'immatriculations', inId: 'inImmatriculations', lstId: 'lstImmatriculations' },
-            { key: 'motifs',           inId: 'inMotifs',           lstId: 'lstMotifs' },
-            { key: 'routes',           inId: 'inRoutes',           lstId: 'lstRoutes' },
-        ];
+        let CHAMPS = {};
+        let currentUserUid = null;
+        let currentRole = null;
 
         checkAuth(async (user, userData) => {
-            document.getElementById('profileName').textContent = userData.name || '—';
-            document.getElementById('profileEmail').textContent = userData.email || userData.identifiant || user.email;
-            const roleLabels = { admin: 'Administrateur', directeur: 'Directeur', agent: 'Agent' };
-            document.getElementById('profileRole').textContent = roleLabels[userData.role] || 'Agent';
-
-            // section signature visible seulement pour directeur
+            currentUserUid = user.uid;
+            currentRole = userData.role;
             if (userData.role === 'directeur') {
                 document.getElementById('sigSection').style.display = 'block';
-                initSignature(user.uid);
-                // le directeur ne voit pas les listes de paramètres
-                document.querySelector('.params-grid').style.display = 'none';
-                document.querySelector('.param-card').style.display = 'none'; // valeurs par défaut
+                initSignaturePad();
             } else {
-                params = await loadParams();
-                renderAll();
+                await loadChamps();
+                renderSections();
             }
         });
 
-        function renderAll() {
-            document.getElementById('defVisaSRT').value = params.visaSRT || 'A';
-            document.getElementById('defSignataire').value = params.signataire || '';
-            document.getElementById('defTitreSignataire').value = params.titreSignataire || '';
-            LISTS.forEach(({ key, lstId }) => renderList(key, lstId));
+        async function loadChamps() {
+            try {
+                const snap = await getDoc(doc(db, 'params', 'champs'));
+                if (snap.exists()) CHAMPS = snap.data().list || {};
+            } catch (e) {
+                console.error(e);
+            }
         }
 
-        function renderList(key, lstId) {
-            const list = params[key] || [];
-            const el = document.getElementById(lstId);
-            if (!el) return;
+        function renderSections() {
+            const container = document.getElementById('sectionsContainer');
+            // garder seulement les champs de type "select"
+            const selects = Object.values(CHAMPS)
+                .filter(c => c.type === 'select')
+                .sort((a, b) => (a.order || 0) - (b.order || 0));
 
-            if (list.length === 0) {
-                el.innerHTML = '<span class="param-empty">Aucune valeur</span>';
+            if (selects.length === 0) {
+                container.innerHTML = `
+                    <div class="field-section">
+                        <div class="empty-msg">
+                            Aucun champ de type "Liste déroulante". Créez-en dans <a href="champs.html">Champs personnalisés</a>.
+                        </div>
+                    </div>
+                `;
                 return;
             }
 
-            el.innerHTML = list.map((v, i) => `
-                <div class="param-tag">
-                    <span>${v}</span>
-                    <button class="del" data-key="${key}" data-i="${i}">×</button>
+            container.innerHTML = selects.map(c => `
+                <div class="field-section" data-id="${c.id}">
+                    <div class="field-section-header">
+                        <div>
+                            <span class="field-section-title">${c.name}</span>
+                            <span class="field-section-id">{{${c.id}}}</span>
+                        </div>
+                    </div>
+                    <div class="values-list" id="vals_${c.id}">
+                        ${(c.options || []).length === 0
+                            ? '<div class="empty-msg" style="width:100%;">Aucune valeur. Ajoutez-en une ci-dessous.</div>'
+                            : (c.options || []).map(opt => `
+                                <span class="value-chip">
+                                    ${opt}
+                                    <button data-id="${c.id}" data-val="${opt}" title="Supprimer">×</button>
+                                </span>
+                            `).join('')
+                        }
+                    </div>
+                    <div class="add-value-row">
+                        <input type="text" class="form-input" placeholder="Nouvelle valeur..." id="add_${c.id}">
+                        <button class="btn btn-primary" data-id="${c.id}" style="width:auto; padding:8px 16px;" data-action="add">Ajouter</button>
+                    </div>
                 </div>
             `).join('');
 
-            el.querySelectorAll('.del').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    params[btn.dataset.key].splice(parseInt(btn.dataset.i), 1);
-                    renderList(btn.dataset.key, lstId);
+            container.querySelectorAll('[data-action="add"]').forEach(b => {
+                b.addEventListener('click', () => addValue(b.dataset.id));
+            });
+            container.querySelectorAll('.value-chip button').forEach(b => {
+                b.addEventListener('click', () => removeValue(b.dataset.id, b.dataset.val));
+            });
+            container.querySelectorAll('input[id^="add_"]').forEach(input => {
+                input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const id = input.id.replace('add_', '');
+                        addValue(id);
+                    }
                 });
             });
         }
 
-        // accessible depuis les onclick="" dans le HTML
-        window.addItem = function(key, inId) {
-            const input = document.getElementById(inId);
+        async function addValue(fieldId) {
+            const input = document.getElementById('add_' + fieldId);
             const val = input.value.trim();
             if (!val) return;
-            if (!params[key]) params[key] = [];
-            if (params[key].includes(val)) {
-                showToast('Valeur déjà présente', 'warning');
+            const champ = CHAMPS[fieldId];
+            if (!champ) return;
+            if (!champ.options) champ.options = [];
+            if (champ.options.includes(val)) {
+                showToast('Cette valeur existe déjà', 'warning');
                 return;
             }
-            params[key].push(val);
-            input.value = '';
-            const cfg = LISTS.find(l => l.key === key);
-            if (cfg) renderList(key, cfg.lstId);
-        };
-
-        // touche Entrée pour ajouter
-        LISTS.forEach(({ key, inId }) => {
-            const el = document.getElementById(inId);
-            if (el) el.addEventListener('keydown', e => {
-                if (e.key === 'Enter') { e.preventDefault(); window.addItem(key, inId); }
-            });
-        });
-
-        document.getElementById('btnSaveAll').addEventListener('click', async () => {
-            params.visaSRT         = document.getElementById('defVisaSRT').value.trim();
-            params.signataire      = document.getElementById('defSignataire').value.trim();
-            params.titreSignataire = document.getElementById('defTitreSignataire').value.trim();
+            champ.options.push(val);
             try {
-                await saveParams(params);
-                showToast('Paramètres enregistrés', 'success');
+                await setDoc(doc(db, 'params', 'champs'), { list: CHAMPS });
+                input.value = '';
+                renderSections();
+                showToast('Valeur ajoutée', 'success');
             } catch (e) {
                 showToast('Erreur: ' + e.message, 'error');
             }
-        });
+        }
 
-        document.getElementById('btnChangePwd').addEventListener('click', async () => {
-            if (!auth.currentUser) return;
-            if (!confirm(`Envoyer un email de réinitialisation à ${auth.currentUser.email} ?`)) return;
+        async function removeValue(fieldId, val) {
+            const champ = CHAMPS[fieldId];
+            if (!champ || !champ.options) return;
+            champ.options = champ.options.filter(o => o !== val);
             try {
-                await sendPasswordResetEmail(auth, auth.currentUser.email);
-                showToast('Email envoyé', 'success');
+                await setDoc(doc(db, 'params', 'champs'), { list: CHAMPS });
+                renderSections();
+                showToast('Valeur supprimée', 'success');
             } catch (e) {
                 showToast('Erreur: ' + e.message, 'error');
             }
-        });
+        }
 
-        // ─── SIGNATURE NUMÉRIQUE ───────────────────────────────
-        function initSignature(uid) {
-            const canvas = document.getElementById('sigCanvas');
+        // ─── SIGNATURE PAD ────────────────────────────────────
+        function initSignaturePad() {
+            const canvas = document.getElementById('signaturePad');
             const ctx = canvas.getContext('2d');
-            const sigKey = `signature_${uid}`;
+            ctx.strokeStyle = '#1A4FBA';
+            ctx.lineWidth = 2;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
 
-            // si une signature existe déjà, l'afficher
-            const saved = localStorage.getItem(sigKey);
+            // charger signature existante
+            const saved = localStorage.getItem(`signature_${currentUserUid}`);
             if (saved) {
-                showSavedSignature(saved);
+                const img = new Image();
+                img.onload = () => ctx.drawImage(img, 0, 0);
+                img.src = saved;
             }
 
             let drawing = false;
             let lastX = 0, lastY = 0;
 
-            ctx.strokeStyle = '#1F3864';
-            ctx.lineWidth = 2;
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
-
             function getPos(e) {
                 const rect = canvas.getBoundingClientRect();
                 const scaleX = canvas.width / rect.width;
                 const scaleY = canvas.height / rect.height;
-                if (e.touches) {
-                    return {
-                        x: (e.touches[0].clientX - rect.left) * scaleX,
-                        y: (e.touches[0].clientY - rect.top) * scaleY
-                    };
-                }
-                return {
-                    x: (e.clientX - rect.left) * scaleX,
-                    y: (e.clientY - rect.top) * scaleY
-                };
+                const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+                const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+                return { x: x * scaleX, y: y * scaleY };
             }
 
-            canvas.addEventListener('mousedown', (e) => {
+            function start(e) {
+                e.preventDefault();
                 drawing = true;
-                const pos = getPos(e);
-                lastX = pos.x; lastY = pos.y;
-            });
-            canvas.addEventListener('mousemove', (e) => {
+                const p = getPos(e);
+                lastX = p.x; lastY = p.y;
+            }
+            function draw(e) {
                 if (!drawing) return;
-                const pos = getPos(e);
+                e.preventDefault();
+                const p = getPos(e);
                 ctx.beginPath();
                 ctx.moveTo(lastX, lastY);
-                ctx.lineTo(pos.x, pos.y);
+                ctx.lineTo(p.x, p.y);
                 ctx.stroke();
-                lastX = pos.x; lastY = pos.y;
-            });
-            canvas.addEventListener('mouseup', () => drawing = false);
-            canvas.addEventListener('mouseleave', () => drawing = false);
+                lastX = p.x; lastY = p.y;
+            }
+            function stop() { drawing = false; }
 
-            // support tactile (tablette)
-            canvas.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                drawing = true;
-                const pos = getPos(e);
-                lastX = pos.x; lastY = pos.y;
-            });
-            canvas.addEventListener('touchmove', (e) => {
-                e.preventDefault();
-                if (!drawing) return;
-                const pos = getPos(e);
-                ctx.beginPath();
-                ctx.moveTo(lastX, lastY);
-                ctx.lineTo(pos.x, pos.y);
-                ctx.stroke();
-                lastX = pos.x; lastY = pos.y;
-            });
-            canvas.addEventListener('touchend', () => drawing = false);
+            canvas.addEventListener('mousedown', start);
+            canvas.addEventListener('mousemove', draw);
+            canvas.addEventListener('mouseup', stop);
+            canvas.addEventListener('mouseleave', stop);
+            canvas.addEventListener('touchstart', start);
+            canvas.addEventListener('touchmove', draw);
+            canvas.addEventListener('touchend', stop);
 
             document.getElementById('btnClearSig').addEventListener('click', () => {
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
-                document.getElementById('sigPreview').style.display = 'none';
             });
-
             document.getElementById('btnSaveSig').addEventListener('click', () => {
-                const dataUrl = canvas.toDataURL('image/png');
-                localStorage.setItem(sigKey, dataUrl);
-                showSavedSignature(dataUrl);
+                const data = canvas.toDataURL('image/png');
+                localStorage.setItem(`signature_${currentUserUid}`, data);
                 showToast('Signature enregistrée', 'success');
             });
-        }
-
-        function showSavedSignature(dataUrl) {
-            document.getElementById('sigPreview').style.display = 'block';
-            document.getElementById('sigImg').src = dataUrl;
         }
     </script>
 </body>
