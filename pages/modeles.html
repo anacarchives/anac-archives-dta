@@ -253,13 +253,20 @@
 
         injectSidebar('modeles');
 
-        const TYPES = [
-            { code: 'SAT', label: 'Survol et Atterrissage' },
-            { code: 'SUR', label: 'Survol' },
-            { code: 'BLP', label: 'Block Permit' },
-            { code: 'NPM', label: 'Notification Permanente' },
-            { code: 'TDM', label: 'Transport de Dépouille Mortelle' },
-        ];
+        let TYPES = []; // chargé depuis Firestore
+
+        async function loadTypes() {
+            try {
+                const snap = await getDoc(doc(db, 'params', 'types'));
+                if (snap.exists() && snap.data().list) {
+                    const list = snap.data().list;
+                    TYPES = Object.values(list).map(t => ({ code: t.code, label: t.label }));
+                }
+            } catch (e) { console.error(e); }
+            if (TYPES.length === 0) {
+                TYPES = [{ code: 'SAT', label: 'Survol et Atterrissage' }];
+            }
+        }
 
         // 5 rectangles éditables (R1 réservé pour entête papier)
         const RECTS = [
@@ -283,9 +290,12 @@
                 setTimeout(() => window.location.href = 'dashboard.html', 1500);
                 return;
             }
+            await loadTypes();
             await loadModels();
             renderTypeTabs();
-            selectType('SAT');
+            if (TYPES.length > 0) {
+                selectType(TYPES[0].code);
+            }
             updatePreview();
         });
 
@@ -294,7 +304,6 @@
                 const snap = await getDoc(doc(db, 'params', 'modeles'));
                 if (snap.exists()) allModels = snap.data();
             } catch (e) {}
-            // initialiser les types/rects manquants
             TYPES.forEach(t => {
                 if (!allModels[t.code]) allModels[t.code] = {};
                 RECTS.forEach(r => {
