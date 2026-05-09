@@ -474,6 +474,11 @@
 
                 document.getElementById('genForm').reset();
                 document.getElementById('previewSection').style.display = 'none';
+
+                // rediriger vers la liste après 1.5s
+                setTimeout(() => {
+                    window.location.href = 'liste.html';
+                }, 1500);
             } catch (err) {
                 console.error(err);
                 showToast('Erreur: ' + err.message, 'error');
