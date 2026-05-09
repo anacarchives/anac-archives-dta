@@ -86,24 +86,30 @@ function usesCinzel(model) {
     return false;
 }
 
-// précharger les images de manière à ce que applyImageTheme fonctionne sync
+// précharge toutes les images du modèle, applique les thèmes, met en cache
 async function prepareImages(model) {
     const promises = [];
     for (const key of Object.keys(model)) {
         const arr = model[key];
         if (!Array.isArray(arr)) continue;
         for (const t of arr) {
-            if (t && t.kind === 'image' && t.dataUrl && (t.theme === 'grayscale' || t.theme === 'watermark')) {
-                promises.push(new Promise((resolve) => {
-                    const img = new Image();
-                    img.onload = () => {
-                        // déclencher le cache
-                        applyImageTheme(t.dataUrl, t.theme);
-                        resolve();
-                    };
-                    img.onerror = () => resolve();
-                    img.src = t.dataUrl;
-                }));
+            if (t && t.kind === 'image') {
+                const src = t.url || t.dataUrl;
+                if (!src) continue;
+                const theme = t.theme || 'normal';
+                const cacheKey = src + '__' + theme;
+                if (_imgCache[cacheKey]) continue;
+
+                promises.push((async () => {
+                    try {
+                        // charger l'image en dataUrl (gère URL Storage et data: déjà encodée)
+                        const baseDataUrl = src.startsWith('data:') ? src : await loadImageAsDataUrl(src);
+                        const themed = applyThemeToDataUrl(baseDataUrl, theme);
+                        _imgCache[cacheKey] = themed;
+                    } catch (e) {
+                        console.warn('Image preload failed:', e.message);
+                    }
+                })());
             }
         }
     }
@@ -172,7 +178,9 @@ function drawRect(pdoc, x, y, w, h, texts, data) {
     if (!texts || !Array.isArray(texts)) return;
     const TW = w - 6;
     for (const t of texts) {
-        if (t.kind === 'image' && t.dataUrl) {
+        if (t.kind === 'image') {
+            const src = t.url || t.dataUrl;
+            if (!src) continue;
             try {
                 const ix = x + (t.x || 0);
                 const iy = y + (t.y || 0);
@@ -181,11 +189,9 @@ function drawRect(pdoc, x, y, w, h, texts, data) {
                 const opacity = (t.opacity !== undefined) ? t.opacity : 1;
                 const theme = t.theme || 'normal';
 
-                // appliquer le thème via canvas si nécessaire
-                let imgData = t.dataUrl;
-                if (theme === 'grayscale' || theme === 'watermark') {
-                    imgData = applyImageTheme(t.dataUrl, theme);
-                }
+                // utiliser l'image préparée depuis le cache (stockée par dataURL en cache)
+                const cacheKey = src + '__' + theme;
+                let imgData = _imgCache[cacheKey] || src;
 
                 if (opacity < 1) {
                     pdoc.saveGraphicsState();
@@ -208,18 +214,38 @@ function drawRect(pdoc, x, y, w, h, texts, data) {
     }
 }
 
-// applique un thème (grayscale, watermark) à une image dataUrl
-const _imgThemeCache = {};
-function applyImageTheme(dataUrl, theme) {
-    const cacheKey = dataUrl.substring(0, 100) + '__' + theme;
-    if (_imgThemeCache[cacheKey]) return _imgThemeCache[cacheKey];
+// cache global pour images thématisées (clé = src+theme)
+const _imgCache = {};
+
+// charge une image depuis URL ou dataUrl en dataUrl base64 prêt pour jsPDF
+function loadImageAsDataUrl(src) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous'; // nécessaire pour les images Storage
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.naturalWidth || img.width;
+            canvas.height = img.naturalHeight || img.height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+            try {
+                resolve(canvas.toDataURL('image/png'));
+            } catch (e) {
+                reject(e);
+            }
+        };
+        img.onerror = () => reject(new Error('Image load failed: ' + src));
+        img.src = src;
+    });
+}
+
+// applique un thème (grayscale, watermark) à une dataUrl déjà chargée
+function applyThemeToDataUrl(dataUrl, theme) {
+    if (theme === 'normal' || !theme) return dataUrl;
 
     const img = new Image();
     img.src = dataUrl;
-    if (!img.complete) {
-        // si l'image n'est pas chargée, retourner l'original (sera traité au prochain rendu)
-        return dataUrl;
-    }
+    if (!img.complete) return dataUrl;
 
     const canvas = document.createElement('canvas');
     canvas.width = img.naturalWidth || img.width;
@@ -235,7 +261,6 @@ function applyImageTheme(dataUrl, theme) {
             d[i] = d[i+1] = d[i+2] = avg;
         }
     } else if (theme === 'watermark') {
-        // très clair / délavé
         for (let i = 0; i < d.length; i += 4) {
             const avg = (d[i] + d[i+1] + d[i+2]) / 3;
             const v = Math.min(255, avg * 0.4 + 180);
@@ -243,9 +268,7 @@ function applyImageTheme(dataUrl, theme) {
         }
     }
     ctx.putImageData(imgData, 0, 0);
-    const result = canvas.toDataURL('image/png');
-    _imgThemeCache[cacheKey] = result;
-    return result;
+    return canvas.toDataURL('image/png');
 }
 
 // génère le PDF basé sur le modèle stocké
