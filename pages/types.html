@@ -3,93 +3,101 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Liste des autorisations - ANAC Archives DTA</title>
+    <title>Types d'autorisation - ANAC Archives DTA</title>
     <link rel="stylesheet" href="../assets/css/style.css">
     <style>
-        /* barre de filtres compacte en haut */
-        .compact-filters {
+        .types-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 16px;
+            margin-top: 16px;
+        }
+        .type-card {
+            background: white;
+            border: 1px solid var(--border-light);
+            border-radius: 12px;
+            padding: 18px;
+            box-shadow: var(--shadow-sm);
+        }
+        .type-card-header {
             display: flex;
-            gap: 10px;
-            align-items: center;
-            background: white;
-            padding: 12px 16px;
-            border-radius: 10px;
-            border: 1px solid var(--border-light);
-            margin-bottom: 18px;
-            box-shadow: var(--shadow-sm);
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 10px;
         }
-        .compact-filters .search-wrap {
-            position: relative;
-            flex: 1;
-            max-width: 320px;
-        }
-        .compact-filters .search-wrap svg {
-            position: absolute;
-            left: 12px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: var(--text-muted);
-            pointer-events: none;
-        }
-        .compact-filters .search-wrap input {
-            padding-left: 36px;
-            height: 38px;
-        }
-        .compact-filters select {
-            height: 38px;
-            padding: 0 12px;
-            min-width: 130px;
-        }
-        .compact-filters .reset-btn {
-            margin-left: auto;
+        .type-code {
+            display: inline-block;
+            padding: 4px 12px;
+            background: var(--primary);
+            color: white;
+            border-radius: 6px;
             font-size: 13px;
-            color: var(--text-light);
-            background: none;
-            border: none;
-            cursor: pointer;
-            padding: 8px 12px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
         }
-        .compact-filters .reset-btn:hover { color: var(--primary); }
-
-        /* tableau plus aéré */
-        .liste-table {
-            background: white;
-            border-radius: 10px;
-            overflow: hidden;
-            box-shadow: var(--shadow-sm);
-            border: 1px solid var(--border-light);
-        }
-        .liste-table table { width: 100%; border-collapse: collapse; }
-        .liste-table thead { background: #FAFBFC; }
-        .liste-table th {
-            padding: 16px 20px;
-            text-align: left;
-            font-size: 11px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.6px;
-            color: var(--text-light);
-            border-bottom: 1px solid var(--border-light);
-        }
-        .liste-table td {
-            padding: 18px 20px;
+        .type-label {
             font-size: 14px;
-            border-bottom: 1px solid #F0F2F5;
-            vertical-align: middle;
+            font-weight: 600;
+            color: var(--text);
+            margin: 8px 0 4px;
         }
-        .liste-table tbody tr {
-            transition: background 0.15s;
+        .type-format {
+            font-size: 12px;
+            color: var(--text-muted);
+            font-family: monospace;
+            background: var(--bg);
+            padding: 6px 10px;
+            border-radius: 6px;
+            margin: 8px 0;
         }
-        .liste-table tbody tr:hover { background: #FAFBFC; }
-        .liste-table tbody tr:last-child td { border-bottom: none; }
-
-        .compteur {
-            font-size: 13px;
+        .type-example {
+            font-size: 11px;
             color: var(--text-light);
-            margin-bottom: 14px;
-            margin-left: 4px;
+            margin-top: 6px;
         }
-        .compteur strong { color: var(--primary); font-size: 15px; }
+        .type-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+            justify-content: flex-end;
+        }
+        .btn-icon {
+            background: none;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 6px 10px;
+            cursor: pointer;
+            font-size: 12px;
+            color: var(--text-light);
+            transition: all 0.15s;
+        }
+        .btn-icon:hover { color: var(--primary); border-color: var(--primary); }
+        .btn-icon.danger:hover { color: var(--danger); border-color: var(--danger); }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-muted);
+        }
+        .empty-state svg { opacity: 0.3; margin-bottom: 12px; }
+
+        .help-box {
+            background: #FFF8E1;
+            border: 1px solid #FFE082;
+            border-radius: 8px;
+            padding: 14px 16px;
+            margin-top: 16px;
+            font-size: 12px;
+            color: #5D4037;
+        }
+        .help-box code {
+            background: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+            color: var(--primary);
+            font-size: 11px;
+        }
     </style>
 </head>
 <body>
@@ -97,323 +105,226 @@
         <main class="main-content">
             <div class="topbar">
                 <div>
-                    <div class="page-title">Liste des autorisations</div>
+                    <div class="page-title">Types d'autorisation</div>
+                    <div class="page-subtitle">Gérez les types et leur format de numérotation</div>
                 </div>
+                <button class="btn btn-primary" id="btnNew" style="width:auto; padding:10px 24px;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    Nouveau type
+                </button>
             </div>
 
             <div class="content-wrapper">
+                <div class="types-grid" id="typesGrid"></div>
 
-                <!-- barre filtres compacte -->
-                <div class="compact-filters">
-                    <div class="search-wrap">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                        <input type="text" id="searchInput" class="form-input" placeholder="Rechercher...">
-                    </div>
-                    <select id="filterType" class="form-select">
-                        <option value="">Tous types</option>
-                    </select>
-                    <select id="filterYear" class="form-select"><option value="">Toutes années</option></select>
-                    <select id="filterStatus" class="form-select">
-                        <option value="">Tous statuts</option>
-                        <option value="en_attente">En attente</option>
-                        <option value="approuve">Approuvées</option>
-                    </select>
-                    <button class="reset-btn" id="btnReset">Réinitialiser</button>
+                <div class="help-box">
+                    <strong>Format du numéro :</strong> utilisez des balises pour générer automatiquement le numéro.<br>
+                    <code>{NUM:3}</code> → numéro séquentiel sur 3 chiffres (001, 002...)<br>
+                    <code>{YY}</code> → année sur 2 chiffres (26)<br>
+                    <code>{YYYY}</code> → année sur 4 chiffres (2026)<br>
+                    <strong>Exemple :</strong> <code>SAT-{NUM:3}-{YY}</code> donnera <code>SAT-001-26</code>
                 </div>
-
-                <div id="resultsCount" class="compteur"></div>
-
-                <div class="liste-table">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>N° Autorisation</th>
-                                <th>Type</th>
-                                <th>Opérateur</th>
-                                <th>Aéronef</th>
-                                <th>Immat.</th>
-                                <th>Validité</th>
-                                <th>Approbation</th>
-                                <th></th>
-                            </tr>
-                        </thead>
-                        <tbody id="resultsBody">
-                            <tr><td colspan="8" style="text-align:center; padding:60px; color:var(--text-muted);">Chargement...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-
-                <div id="pagination" class="pagination"></div>
             </div>
         </main>
     </div>
 
-    <!-- Modal détail -->
-    <div class="modal-overlay" id="detailModal">
-        <div class="modal" style="max-width:780px;">
+    <!-- Modal création/édition -->
+    <div class="modal-overlay" id="formModal">
+        <div class="modal" style="max-width:520px;">
             <div class="modal-header">
-                <div class="modal-title" id="modalTitle">Autorisation</div>
+                <div class="modal-title" id="modalTitle">Nouveau type</div>
                 <button class="modal-close" id="modalClose">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 </button>
             </div>
-            <div class="modal-body" id="modalBody"></div>
-            <div class="modal-footer" id="modalFooter"></div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Code court (3-4 lettres) *</label>
+                    <input type="text" id="fCode" class="form-input" maxlength="6" style="text-transform:uppercase;">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Nom complet *</label>
+                    <input type="text" id="fLabel" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Format du numéro *</label>
+                    <input type="text" id="fFormat" class="form-input" style="font-family:monospace;">
+                    <div style="font-size:11px; color:var(--text-muted); margin-top:6px;">
+                        Aperçu : <span id="formatPreview" style="font-family:monospace; font-weight:700; color:var(--primary);"></span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="btnCancel" style="width:auto; padding:10px 18px;">Annuler</button>
+                <button class="btn btn-primary" id="btnSave" style="width:auto; padding:10px 24px;">Enregistrer</button>
+            </div>
         </div>
     </div>
 
     <script type="module">
         import { checkAuth, injectSidebar } from '../assets/js/layout.js';
-        import { showToast, formatDate, getStatus, getTypeBadgeClass } from '../assets/js/helpers.js';
-        import { getAllAuthorizations, getAuthorization, deleteAuthorization, approveAuthorization } from '../assets/js/database.js';
-        import { downloadGeneratedPDF } from '../assets/js/pdf-gen.js';
+        import { showToast } from '../assets/js/helpers.js';
         import { db } from '../assets/js/firebase-config.js';
-        import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        injectSidebar('liste');
+        injectSidebar('types');
 
-        let allRecords = [];
-        let currentUser = null;
-        let currentAuthUser = null;
-        let currentPage = 1;
-        const PER_PAGE = 20;
+        let types = {};
+        let editingCode = null; // null = création, sinon code du type édité
+
+        const TYPES_DOC = doc(db, 'params', 'types');
 
         checkAuth(async (user, userData) => {
-            currentAuthUser = user;
-            currentUser = userData;
-            await loadTypeFilter();
-            await loadData();
+            if (userData.role !== 'admin') {
+                showToast('Accès admin uniquement', 'warning');
+                setTimeout(() => window.location.href = 'dashboard.html', 1500);
+                return;
+            }
+            await loadTypes();
+            renderTypes();
         });
 
-        async function loadTypeFilter() {
+        async function loadTypes() {
             try {
-                const snap = await getDoc(doc(db, 'params', 'types'));
-                if (snap.exists() && snap.data().list) {
-                    const list = snap.data().list;
-                    const sel = document.getElementById('filterType');
-                    Object.values(list).forEach(t => {
-                        const opt = document.createElement('option');
-                        opt.value = t.code;
-                        opt.textContent = t.code;
-                        sel.appendChild(opt);
-                    });
+                const snap = await getDoc(TYPES_DOC);
+                if (snap.exists()) {
+                    types = snap.data().list || {};
+                } else {
+                    types = {};
                 }
-            } catch (e) {}
+            } catch (e) {
+                console.error(e);
+                showToast('Erreur chargement: ' + e.message, 'error');
+            }
         }
 
-        async function loadData() {
+        async function saveTypes() {
+            await setDoc(TYPES_DOC, { list: types });
+        }
+
+        function renderTypes() {
+            const grid = document.getElementById('typesGrid');
+            const codes = Object.keys(types);
+            if (codes.length === 0) {
+                grid.innerHTML = `
+                    <div class="empty-state" style="grid-column:1/-1;">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                        <p>Aucun type. Cliquez "Nouveau type" pour commencer.</p>
+                    </div>
+                `;
+                return;
+            }
+            grid.innerHTML = codes.map(c => {
+                const t = types[c];
+                const example = generateExample(t.format);
+                return `
+                    <div class="type-card">
+                        <div class="type-card-header">
+                            <span class="type-code">${t.code}</span>
+                        </div>
+                        <div class="type-label">${t.label}</div>
+                        <div class="type-format">${t.format}</div>
+                        <div class="type-example">Exemple : <strong>${example}</strong></div>
+                        <div class="type-actions">
+                            <button class="btn-icon" data-action="edit" data-code="${c}">Modifier</button>
+                            <button class="btn-icon danger" data-action="delete" data-code="${c}">Supprimer</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            grid.querySelectorAll('[data-action="edit"]').forEach(b =>
+                b.addEventListener('click', () => openEdit(b.dataset.code)));
+            grid.querySelectorAll('[data-action="delete"]').forEach(b =>
+                b.addEventListener('click', () => deleteType(b.dataset.code)));
+        }
+
+        function generateExample(format) {
+            const yy = String(new Date().getFullYear()).slice(-2);
+            const yyyy = String(new Date().getFullYear());
+            return (format || '')
+                .replace(/\{NUM:(\d+)\}/g, (_, n) => '1'.padStart(parseInt(n), '0'))
+                .replace(/\{NUM\}/g, '1')
+                .replace(/\{YY\}/g, yy)
+                .replace(/\{YYYY\}/g, yyyy);
+        }
+
+        function openNew() {
+            editingCode = null;
+            document.getElementById('modalTitle').textContent = 'Nouveau type';
+            document.getElementById('fCode').value = '';
+            document.getElementById('fLabel').value = '';
+            document.getElementById('fFormat').value = '';
+            document.getElementById('formatPreview').textContent = '';
+            document.getElementById('fCode').disabled = false;
+            document.getElementById('formModal').classList.add('show');
+        }
+
+        function openEdit(code) {
+            editingCode = code;
+            const t = types[code];
+            document.getElementById('modalTitle').textContent = `Modifier ${code}`;
+            document.getElementById('fCode').value = t.code;
+            document.getElementById('fLabel').value = t.label;
+            document.getElementById('fFormat').value = t.format;
+            document.getElementById('formatPreview').textContent = generateExample(t.format);
+            document.getElementById('fCode').disabled = true; // ne pas changer le code en édition
+            document.getElementById('formModal').classList.add('show');
+        }
+
+        function closeModal() {
+            document.getElementById('formModal').classList.remove('show');
+        }
+
+        async function saveType() {
+            const code   = document.getElementById('fCode').value.trim().toUpperCase();
+            const label  = document.getElementById('fLabel').value.trim();
+            const format = document.getElementById('fFormat').value.trim();
+
+            if (!code || !label || !format) {
+                showToast('Tous les champs sont requis', 'warning');
+                return;
+            }
+            if (!editingCode && types[code]) {
+                showToast('Ce code existe déjà', 'warning');
+                return;
+            }
+
+            types[code] = { code, label, format };
             try {
-                allRecords = await getAllAuthorizations({ limit: 1000 });
-                // tri par plus récent
-                allRecords.sort((a, b) => {
-                    const da = a.createdAt?.seconds || 0;
-                    const db = b.createdAt?.seconds || 0;
-                    return db - da;
-                });
-                buildYearFilter();
-                applyFilters();
+                await saveTypes();
+                showToast('Type enregistré', 'success');
+                closeModal();
+                renderTypes();
             } catch (e) {
-                console.error('Erreur load:', e);
                 showToast('Erreur: ' + e.message, 'error');
             }
         }
 
-        function buildYearFilter() {
-            const years = [...new Set(allRecords.map(r => r.year).filter(Boolean))].sort((a, b) => b - a);
-            const sel = document.getElementById('filterYear');
-            sel.innerHTML = '<option value="">Toutes années</option>' + years.map(y => `<option value="${y}">${y}</option>`).join('');
-        }
-
-        function applyFilters() {
-            const search = document.getElementById('searchInput').value.toLowerCase();
-            const type = document.getElementById('filterType').value;
-            const year = document.getElementById('filterYear').value;
-            const status = document.getElementById('filterStatus').value;
-
-            // l'archive prend les approuvées — la liste montre tout par défaut
-            // mais si on filtre sur "approuvées", on les voit ici aussi
-            let results = allRecords;
-            if (search) results = results.filter(r => (r.searchIndex || '').toLowerCase().includes(search));
-            if (type) results = results.filter(r => r.typeCode === type);
-            if (year) results = results.filter(r => String(r.year) === String(year));
-            if (status === 'approuve') results = results.filter(r => r.statut === 'approuve');
-            if (status === 'en_attente') results = results.filter(r => r.statut !== 'approuve');
-
-            renderTable(results);
-        }
-
-        function renderTable(results) {
-            document.getElementById('resultsCount').innerHTML = `<strong>${results.length}</strong> autorisation(s)`;
-
-            if (results.length === 0) {
-                document.getElementById('resultsBody').innerHTML = '<tr><td colspan="8" style="text-align:center; padding:60px; color:var(--text-muted);">Aucune autorisation</td></tr>';
-                document.getElementById('pagination').innerHTML = '';
-                return;
-            }
-
-            const totalPages = Math.ceil(results.length / PER_PAGE);
-            if (currentPage > totalPages) currentPage = 1;
-            const start = (currentPage - 1) * PER_PAGE;
-            const pageResults = results.slice(start, start + PER_PAGE);
-
-            document.getElementById('resultsBody').innerHTML = pageResults.map(a => {
-                const label = a.statut === 'approuve' ? 'Approuvée' : 'En attente';
-                const cls   = a.statut === 'approuve' ? 'badge-active' : 'badge-soon';
-                return `<tr data-id="${a.id}">
-                    <td><strong>${a.numero || '—'}</strong></td>
-                    <td><span class="badge ${getTypeBadgeClass(a.typeCode)}">${a.typeCode || '—'}</span></td>
-                    <td>${a.operateur || '—'}</td>
-                    <td>${a.aeronefType || '—'}</td>
-                    <td>${a.immatriculation || '—'}</td>
-                    <td style="font-size:13px; color:var(--text-light);">${formatDate(a.dateDebutValidite)} → ${formatDate(a.dateFinValidite)}</td>
-                    <td><span class="badge ${cls}">${label}</span></td>
-                    <td><button class="btn btn-secondary btn-sm" data-action="view" data-id="${a.id}">Voir</button></td>
-                </tr>`;
-            }).join('');
-
-            renderPagination(totalPages);
-
-            document.querySelectorAll('[data-action="view"]').forEach(btn => {
-                btn.addEventListener('click', () => showDetail(btn.dataset.id));
-            });
-        }
-
-        function renderPagination(totalPages) {
-            const c = document.getElementById('pagination');
-            if (totalPages <= 1) { c.innerHTML = ''; return; }
-            let html = `<button ${currentPage === 1 ? 'disabled' : ''} data-page="${currentPage - 1}">←</button>`;
-            for (let i = 1; i <= totalPages; i++) {
-                html += `<button class="${i === currentPage ? 'active' : ''}" data-page="${i}">${i}</button>`;
-            }
-            html += `<button ${currentPage === totalPages ? 'disabled' : ''} data-page="${currentPage + 1}">→</button>`;
-            c.innerHTML = html;
-            c.querySelectorAll('button[data-page]').forEach(b => b.addEventListener('click', () => {
-                currentPage = parseInt(b.dataset.page);
-                applyFilters();
-            }));
-        }
-
-        // events filtres
-        document.getElementById('searchInput').addEventListener('input', () => { currentPage = 1; applyFilters(); });
-        document.getElementById('filterType').addEventListener('change', () => { currentPage = 1; applyFilters(); });
-        document.getElementById('filterYear').addEventListener('change', () => { currentPage = 1; applyFilters(); });
-        document.getElementById('filterStatus').addEventListener('change', () => { currentPage = 1; applyFilters(); });
-        document.getElementById('btnReset').addEventListener('click', () => {
-            document.getElementById('searchInput').value = '';
-            document.getElementById('filterType').value = '';
-            document.getElementById('filterYear').value = '';
-            document.getElementById('filterStatus').value = '';
-            currentPage = 1;
-            applyFilters();
-        });
-
-        // ─── MODAL ─────────────────────────────────────────────
-        async function showDetail(id) {
-            const rec = await getAuthorization(id);
-            if (!rec) return;
-
-            const valStatus = getStatus(rec.dateDebutValidite, rec.dateFinValidite);
-            const approval = rec.statut === 'approuve' ? 'Approuvée' : 'En attente';
-
-            document.getElementById('modalTitle').textContent = rec.numero || 'Autorisation';
-            document.getElementById('modalBody').innerHTML = `
-                <div class="detail-grid">
-                    <div class="detail-item"><div class="detail-label">N° Autorisation</div><div class="detail-value">${rec.numero || '—'}</div></div>
-                    <div class="detail-item"><div class="detail-label">Type</div><div class="detail-value"><span class="badge ${getTypeBadgeClass(rec.typeCode)}">${rec.typeCode || '—'}</span> ${rec.type || ''}</div></div>
-                    <div class="detail-item"><div class="detail-label">Date émission</div><div class="detail-value">${formatDate(rec.dateEmission)}</div></div>
-                    <div class="detail-item"><div class="detail-label">Date réception</div><div class="detail-value">${formatDate(rec.dateReception)}</div></div>
-                    <div class="detail-item"><div class="detail-label">Opérateur</div><div class="detail-value">${rec.operateur || '—'}</div></div>
-                    <div class="detail-item"><div class="detail-label">Destinataire</div><div class="detail-value">${rec.destinataire || '—'}</div></div>
-                    <div class="detail-item"><div class="detail-label">Aéronef</div><div class="detail-value">${rec.aeronefType || '—'}</div></div>
-                    <div class="detail-item"><div class="detail-label">Immatriculation</div><div class="detail-value">${rec.immatriculation || '—'}</div></div>
-                    <div class="detail-item"><div class="detail-label">Motif</div><div class="detail-value">${rec.motif || '—'}</div></div>
-                    <div class="detail-item full"><div class="detail-label">Route</div><div class="detail-value">${rec.route || '—'}</div></div>
-                    <div class="detail-item"><div class="detail-label">Date début validité</div><div class="detail-value">${formatDate(rec.dateDebutValidite)}</div></div>
-                    <div class="detail-item"><div class="detail-label">Date fin validité</div><div class="detail-value">${formatDate(rec.dateFinValidite)} ${rec.validiteExtension ? `<span class="badge badge-future">${rec.validiteExtension}</span>` : ''}</div></div>
-                    <div class="detail-item"><div class="detail-label">Validité</div><div class="detail-value"><span class="badge ${valStatus.class}">${valStatus.label}</span></div></div>
-                    <div class="detail-item"><div class="detail-label">Approbation</div><div class="detail-value">${approval}</div></div>
-                    <div class="detail-item"><div class="detail-label">Créée par</div><div class="detail-value" style="font-size:13px;">${rec.createdBy || '—'}</div></div>
-                    ${rec.approvedBy ? `<div class="detail-item"><div class="detail-label">Approuvée par</div><div class="detail-value" style="font-size:13px;">${rec.approvedBy}</div></div>` : ''}
-                </div>
-            `;
-
-            let footer = '';
-            footer += `<button class="btn btn-secondary" id="btnPrint">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-                Imprimer
-            </button>`;
-
-            if (currentUser?.role === 'directeur' && rec.statut !== 'approuve') {
-                footer += `<button class="btn btn-success" id="btnApprove" style="width:auto; padding:10px 20px;">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-                    Approuver
-                </button>`;
-            }
-
-            if (currentUser?.role === 'admin') {
-                footer += `<button class="btn btn-danger" id="btnDelete">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                    Supprimer
-                </button>`;
-            }
-
-            footer += `<button class="btn btn-primary" id="btnCloseDet" style="width:auto; padding:10px 20px;">Fermer</button>`;
-
-            document.getElementById('modalFooter').innerHTML = footer;
-            document.getElementById('detailModal').classList.add('show');
-
-            document.getElementById('btnCloseDet').addEventListener('click', closeModal);
-
-            document.getElementById('btnPrint').addEventListener('click', () => {
-                try {
-                    downloadGeneratedPDF(rec);
-                    showToast('PDF généré', 'info');
-                } catch (e) {
-                    showToast('Erreur: ' + e.message, 'error');
-                }
-            });
-
-            const btnApprove = document.getElementById('btnApprove');
-            if (btnApprove) {
-                btnApprove.addEventListener('click', async () => {
-                    if (!confirm(`Approuver l'autorisation ${rec.numero} ?`)) return;
-                    try {
-                        const sigKey = `signature_${currentAuthUser.uid}`;
-                        const sig = localStorage.getItem(sigKey) || null;
-                        if (!sig) {
-                            if (!confirm("Vous n'avez pas de signature enregistrée dans Paramètres. Approuver quand même ?")) return;
-                        }
-                        await approveAuthorization(rec.id, currentAuthUser.uid, currentUser.email || currentUser.identifiant || '', sig);
-                        showToast(`Autorisation ${rec.numero} approuvée`, 'success');
-                        closeModal();
-                        await loadData();
-                    } catch (e) {
-                        showToast('Erreur: ' + e.message, 'error');
-                    }
-                });
-            }
-
-            const btnDelete = document.getElementById('btnDelete');
-            if (btnDelete) {
-                btnDelete.addEventListener('click', async () => {
-                    if (!confirm(`Supprimer définitivement ${rec.numero} ?`)) return;
-                    try {
-                        await deleteAuthorization(rec.id);
-                        showToast('Autorisation supprimée', 'success');
-                        closeModal();
-                        await loadData();
-                    } catch (e) {
-                        showToast('Erreur: ' + e.message, 'error');
-                    }
-                });
+        async function deleteType(code) {
+            if (!confirm(`Supprimer le type ${code} ?`)) return;
+            delete types[code];
+            try {
+                await saveTypes();
+                showToast('Type supprimé', 'success');
+                renderTypes();
+            } catch (e) {
+                showToast('Erreur: ' + e.message, 'error');
             }
         }
 
-        function closeModal() {
-            document.getElementById('detailModal').classList.remove('show');
-        }
-
+        document.getElementById('btnNew').addEventListener('click', openNew);
         document.getElementById('modalClose').addEventListener('click', closeModal);
+        document.getElementById('btnCancel').addEventListener('click', closeModal);
+        document.getElementById('btnSave').addEventListener('click', saveType);
+
+        // aperçu du format en temps réel
+        document.getElementById('fFormat').addEventListener('input', (e) => {
+            document.getElementById('formatPreview').textContent = generateExample(e.target.value);
+        });
+        document.getElementById('fCode').addEventListener('input', (e) => {
+            e.target.value = e.target.value.toUpperCase();
+        });
     </script>
 </body>
 </html>
