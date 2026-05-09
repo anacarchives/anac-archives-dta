@@ -6,14 +6,22 @@
     <title>Nouvelle saisie - ANAC Archives DTA</title>
     <link rel="stylesheet" href="../assets/css/style.css">
     <style>
-        .field-combo { display:flex; flex-direction:column; gap:5px; }
-        .manual-input { display:none; }
-        .manual-input.show { display:block; }
-        .toggle-link { font-size:11px; color:var(--primary); cursor:pointer; text-decoration:underline; text-align:right; display:block; }
-        /* MAJUSCULES automatiques sur tous les champs texte */
         #genForm input[type="text"],
+        #genForm input[type="number"],
         #genForm select,
-        #genForm input.manual-input { text-transform: uppercase; }
+        #genForm textarea { text-transform: uppercase; }
+        #genForm input[type="date"] { text-transform: none; }
+
+        .empty-types {
+            background: #FFF3E0;
+            border: 1px solid #FFB74D;
+            border-radius: 8px;
+            padding: 16px;
+            color: #E65100;
+            font-size: 13px;
+            text-align: center;
+        }
+        .empty-types a { color: var(--primary); font-weight: 600; }
     </style>
 </head>
 <body>
@@ -27,143 +35,15 @@
 
             <div class="content-wrapper" style="max-width:900px;">
 
-                <!-- Upload PDF optionnel -->
-                <div class="section-card" id="uploadSection">
-                    <div class="section-title">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                        Importer un PDF scanné (optionnel)
-                    </div>
-
-                    <div id="filePreview" class="file-preview">
-                        <div class="file-icon">PDF</div>
-                        <div class="file-info">
-                            <div class="file-name" id="fileName"></div>
-                            <div class="file-size" id="fileSize"></div>
-                        </div>
-                        <button class="btn-remove-file" id="btnRemoveFile">×</button>
-                    </div>
-
-                    <div id="dropzone" class="dropzone">
-                        <div class="dropzone-icon">
-                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                        </div>
-                        <h3>Glissez un PDF ici</h3>
-                        <p>ou <span class="btn-browse" style="color:var(--primary); cursor:pointer; text-decoration:underline;">parcourir</span></p>
-                        <input type="file" id="fileInput" accept="application/pdf" style="display:none">
-                    </div>
-
-                    <div id="extractionStatus" class="extraction-status">
-                        <div class="extraction-spinner"></div>
-                        <div id="extractionMsg">Extraction en cours...</div>
+                <div id="emptyTypesMsg" style="display:none;">
+                    <div class="empty-types">
+                        Aucun type d'autorisation configuré. <a href="types.html">Créer un type</a> avant de continuer.
                     </div>
                 </div>
 
-                <!-- Formulaire -->
-                <div class="section-card">
+                <div class="section-card" id="formCard">
                     <form id="genForm">
-                        <div class="form-grid">
-
-                            <div class="form-group">
-                                <label class="form-label">Type *</label>
-                                <select id="typeCode" class="form-select" required>
-                                    <option value="">—</option>
-                                    <option value="SAT">SAT - Survol et Atterrissage</option>
-                                    <option value="SUR">SUR - Survol uniquement</option>
-                                    <option value="ATT">ATT - Atterrissage uniquement</option>
-                                </select>
-                            </div>
-
-                            <div class="form-group">
-                                <label class="form-label">N° Autorisation *</label>
-                                <input type="text" id="numero" class="form-input" required>
-                            </div>
-
-                            <div class="form-group">
-                                <label class="form-label">Date d'émission *</label>
-                                <input type="date" id="dateEmission" class="form-input" required>
-                            </div>
-
-                            <div class="form-group">
-                                <label class="form-label">Date de réception</label>
-                                <input type="date" id="dateReception" class="form-input">
-                            </div>
-
-                            <div class="form-group">
-                                <label class="form-label">Destinataire (A/To) *</label>
-                                <div class="field-combo">
-                                    <select id="selDestinataire" class="form-select"></select>
-                                    <input type="text" id="manDestinataire" class="form-input manual-input">
-                                    <span class="toggle-link" data-sel="selDestinataire" data-man="manDestinataire">Saisir manuellement</span>
-                                </div>
-                            </div>
-
-                            <div class="form-group">
-                                <label class="form-label">Type d'aéronef *</label>
-                                <div class="field-combo">
-                                    <select id="selAeronef" class="form-select"></select>
-                                    <input type="text" id="manAeronef" class="form-input manual-input">
-                                    <span class="toggle-link" data-sel="selAeronef" data-man="manAeronef">Saisir manuellement</span>
-                                </div>
-                            </div>
-
-                            <div class="form-group">
-                                <label class="form-label">Immatriculation *</label>
-                                <div class="field-combo">
-                                    <select id="selImmatriculation" class="form-select"></select>
-                                    <input type="text" id="manImmatriculation" class="form-input manual-input">
-                                    <span class="toggle-link" data-sel="selImmatriculation" data-man="manImmatriculation">Saisir manuellement</span>
-                                </div>
-                            </div>
-
-                            <div class="form-group">
-                                <label class="form-label">Motif *</label>
-                                <div class="field-combo">
-                                    <select id="selMotif" class="form-select"></select>
-                                    <input type="text" id="manMotif" class="form-input manual-input">
-                                    <span class="toggle-link" data-sel="selMotif" data-man="manMotif">Saisir manuellement</span>
-                                </div>
-                            </div>
-
-                            <div class="form-group">
-                                <label class="form-label">Opérateur *</label>
-                                <div class="field-combo">
-                                    <select id="selOperateur" class="form-select"></select>
-                                    <input type="text" id="manOperateur" class="form-input manual-input">
-                                    <span class="toggle-link" data-sel="selOperateur" data-man="manOperateur">Saisir manuellement</span>
-                                </div>
-                            </div>
-
-                            <div class="form-group full">
-                                <label class="form-label">Route / Itinéraire *</label>
-                                <div class="field-combo">
-                                    <select id="selRoute" class="form-select"></select>
-                                    <input type="text" id="manRoute" class="form-input manual-input">
-                                    <span class="toggle-link" data-sel="selRoute" data-man="manRoute">Saisir manuellement</span>
-                                </div>
-                            </div>
-
-                            <div class="form-group">
-                                <label class="form-label">Date début validité *</label>
-                                <input type="date" id="dateDebutValidite" class="form-input" required>
-                            </div>
-
-                            <div class="form-group">
-                                <label class="form-label">Date fin validité *</label>
-                                <input type="date" id="dateFinValidite" class="form-input" required>
-                                <div id="dureeDisplay" style="font-size:12px; color:var(--primary); margin-top:4px; font-weight:600;"></div>
-                            </div>
-
-                            <div class="form-group">
-                                <label class="form-label">Signataire</label>
-                                <input type="text" id="signataire" class="form-input">
-                            </div>
-
-                            <div class="form-group">
-                                <label class="form-label">Titre signataire</label>
-                                <input type="text" id="titreSignataire" class="form-input">
-                            </div>
-
-                        </div>
+                        <div class="form-grid" id="formFields"></div>
 
                         <div class="btn-row">
                             <button type="button" class="btn btn-secondary" id="btnPreview">
@@ -188,235 +68,205 @@
 
     <script type="module">
         import { checkAuth, injectSidebar } from '../assets/js/layout.js';
-        import { showToast, formatFileSize, toISODate, fromISODate } from '../assets/js/helpers.js';
-        import { generateAuthorizationPDF, downloadGeneratedPDF, getPDFDataURI, getPDFBlob } from '../assets/js/pdf-gen.js';
+        import { showToast, fromISODate } from '../assets/js/helpers.js';
+        import { generateAuthorizationPDF, downloadGeneratedPDF, getPDFDataURI, getPDFBlob, clearModelsCache } from '../assets/js/pdf-gen.js';
         import { createAuthorization, getAllUsers } from '../assets/js/database.js';
-        import { loadParams } from '../assets/js/params.js';
         import { notifyDirectors } from '../assets/js/notification.js';
-        import { extractAuthorizationData } from '../assets/js/anthropic.js';
-        import { ANTHROPIC_API_KEY } from '../assets/js/firebase-config.js';
+        import { db } from '../assets/js/firebase-config.js';
+        import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         injectSidebar('generator');
 
         let currentUserEmail = '';
-        let currentFile = null;
-        let params = {};
-
-        const TYPE_LABELS = { SAT: 'Survol et Atterrissage', SUR: 'Survol', ATT: 'Atterrissage' };
-
-        const COMBOS = [
-            { key: 'destinataires',    selId: 'selDestinataire',    manId: 'manDestinataire' },
-            { key: 'aeronefs',         selId: 'selAeronef',         manId: 'manAeronef' },
-            { key: 'immatriculations', selId: 'selImmatriculation', manId: 'manImmatriculation' },
-            { key: 'motifs',           selId: 'selMotif',           manId: 'manMotif' },
-            { key: 'operateurs',       selId: 'selOperateur',       manId: 'manOperateur' },
-            { key: 'routes',           selId: 'selRoute',           manId: 'manRoute' },
-        ];
+        let TYPES = {};   // { SAT: { code, label, format }, ... }
+        let CHAMPS = {};  // { idChamp: { id, name, type, options, required, scope, types } }
 
         checkAuth(async (user) => {
             currentUserEmail = user.email || '';
-            params = await loadParams();
-            initCombos();
-            initDefaults();
-            initUppercase();
+            await loadConfig();
+            renderForm();
         });
 
-        // force la saisie en MAJUSCULES sur tous les champs texte du formulaire
-        function initUppercase() {
-            document.querySelectorAll('#genForm input[type="text"], #genForm input.manual-input').forEach(input => {
-                input.addEventListener('input', (e) => {
-                    const start = e.target.selectionStart;
-                    const end = e.target.selectionEnd;
-                    e.target.value = e.target.value.toUpperCase();
-                    e.target.setSelectionRange(start, end);
-                });
-            });
+        async function loadConfig() {
+            try {
+                const [tSnap, cSnap] = await Promise.all([
+                    getDoc(doc(db, 'params', 'types')),
+                    getDoc(doc(db, 'params', 'champs'))
+                ]);
+                TYPES = tSnap.exists() ? (tSnap.data().list || {}) : {};
+                CHAMPS = cSnap.exists() ? (cSnap.data().list || {}) : {};
+            } catch (e) {
+                console.error(e);
+                showToast('Erreur chargement: ' + e.message, 'error');
+            }
         }
 
-        function initCombos() {
-            COMBOS.forEach(({ key, selId }) => {
-                const sel = document.getElementById(selId);
-                sel.innerHTML = '<option value="">—</option>';
-                (params[key] || []).forEach(val => {
-                    const opt = document.createElement('option');
-                    opt.value = val; opt.textContent = val;
-                    sel.appendChild(opt);
-                });
-                const manOpt = document.createElement('option');
-                manOpt.value = '__manual__'; manOpt.textContent = '— Saisir manuellement —';
-                sel.appendChild(manOpt);
-            });
+        function renderForm() {
+            const codes = Object.keys(TYPES);
+            if (codes.length === 0) {
+                document.getElementById('emptyTypesMsg').style.display = 'block';
+                document.getElementById('formCard').style.display = 'none';
+                return;
+            }
+
+            // dropdown des types + bouton enregistrer
+            let html = `
+                <div class="form-group">
+                    <label class="form-label">Type d'autorisation *</label>
+                    <select id="fType" class="form-select" required>
+                        <option value="">—</option>
+                        ${codes.map(c => `<option value="${c}">${TYPES[c].code} — ${TYPES[c].label}</option>`).join('')}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">N° Autorisation *</label>
+                    <input type="text" id="fNumero" class="form-input" required>
+                    <div style="font-size:11px; color:var(--text-muted); margin-top:4px;" id="numHint"></div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Date d'émission *</label>
+                    <input type="date" id="fDateEmission" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Date de réception</label>
+                    <input type="date" id="fDateReception" class="form-input">
+                </div>
+            `;
+
+            // champs personnalisés (rendus selon le type sélectionné — pour l'instant on affiche les globaux)
+            html += '<div id="customFields" class="form-grid" style="grid-column:1/-1; padding:0; gap:0;"></div>';
+
+            document.getElementById('formFields').innerHTML = html;
+            document.getElementById('fType').addEventListener('change', onTypeChange);
         }
 
-        function initDefaults() {
-            document.getElementById('signataire').value = params.signataire || 'AHMED BABA AHMED';
-            document.getElementById('titreSignataire').value = params.titreSignataire || 'Directeur Général';
+        function onTypeChange() {
+            const code = document.getElementById('fType').value;
+            const t = TYPES[code];
+            if (!t) {
+                document.getElementById('numHint').textContent = '';
+                document.getElementById('customFields').innerHTML = '';
+                return;
+            }
+            // suggérer un numéro selon le format
+            const example = generateNumExample(t.format);
+            document.getElementById('numHint').textContent = `Format suggéré : ${example}`;
+            // si le numéro est vide, le pré-remplir
+            const numInput = document.getElementById('fNumero');
+            if (!numInput.value) numInput.value = example;
+            // afficher les champs personnalisés
+            renderCustomFields(code);
         }
 
-        // toggle manuel
-        document.querySelectorAll('.toggle-link').forEach(link => {
-            link.addEventListener('click', () => {
-                const sel = document.getElementById(link.dataset.sel);
-                const man = document.getElementById(link.dataset.man);
-                const isManual = man.classList.contains('show');
-                man.classList.toggle('show', !isManual);
-                sel.style.display = isManual ? '' : 'none';
-                link.textContent = isManual ? 'Saisir manuellement' : 'Choisir dans la liste';
-                if (!isManual) man.focus();
-            });
-        });
-
-        COMBOS.forEach(({ selId, manId }) => {
-            document.getElementById(selId).addEventListener('change', (e) => {
-                if (e.target.value === '__manual__') {
-                    const man = document.getElementById(manId);
-                    const link = e.target.closest('.field-combo').querySelector('.toggle-link');
-                    man.classList.add('show');
-                    e.target.style.display = 'none';
-                    if (link) link.textContent = 'Choisir dans la liste';
-                    man.focus();
-                }
-            });
-        });
-
-        function getComboVal(selId, manId) {
-            const man = document.getElementById(manId);
-            if (man.classList.contains('show')) return man.value.trim();
-            const sel = document.getElementById(selId);
-            return sel.value === '__manual__' ? '' : sel.value;
+        function generateNumExample(format) {
+            const yy = String(new Date().getFullYear()).slice(-2);
+            const yyyy = String(new Date().getFullYear());
+            return (format || '')
+                .replace(/\{NUM:(\d+)\}/g, (_, n) => '1'.padStart(parseInt(n), '0'))
+                .replace(/\{NUM\}/g, '1')
+                .replace(/\{YY\}/g, yy)
+                .replace(/\{YYYY\}/g, yyyy);
         }
 
-        // calcul durée automatique
-        function calcDuree() {
-            const d1 = document.getElementById('dateDebutValidite').value;
-            const d2 = document.getElementById('dateFinValidite').value;
-            const el = document.getElementById('dureeDisplay');
-            if (!d1 || !d2) { el.textContent = ''; return 0; }
-            const diff = (new Date(d2) - new Date(d1)) / (1000*60*60*24);
-            if (diff < 0) { el.textContent = 'Date invalide'; el.style.color='var(--danger)'; return 0; }
-            const h = Math.round(diff * 24);
-            el.textContent = `Durée : +${h}H`; el.style.color='var(--primary)';
-            return h;
+        function renderCustomFields(typeCode) {
+            // garder les champs visibles : globaux + ceux du type sélectionné
+            const visible = Object.values(CHAMPS).filter(c =>
+                c.scope === 'global' || (c.types || []).includes(typeCode)
+            );
+
+            const c = document.getElementById('customFields');
+            if (visible.length === 0) {
+                c.innerHTML = '';
+                return;
+            }
+            c.innerHTML = visible.map(f => renderField(f)).join('');
         }
-        document.getElementById('dateDebutValidite').addEventListener('change', calcDuree);
-        document.getElementById('dateFinValidite').addEventListener('change', calcDuree);
+
+        function renderField(f) {
+            const reqStar = f.required ? ' *' : '';
+            const reqAttr = f.required ? 'required' : '';
+            let input = '';
+            switch (f.type) {
+                case 'textarea':
+                    input = `<textarea id="cf_${f.id}" class="form-input" rows="3" ${reqAttr}></textarea>`;
+                    break;
+                case 'number':
+                    input = `<input type="number" id="cf_${f.id}" class="form-input" ${reqAttr}>`;
+                    break;
+                case 'date':
+                    input = `<input type="date" id="cf_${f.id}" class="form-input" ${reqAttr}>`;
+                    break;
+                case 'select':
+                    input = `<select id="cf_${f.id}" class="form-select" ${reqAttr}>
+                        <option value="">—</option>
+                        ${(f.options || []).map(o => `<option value="${o}">${o}</option>`).join('')}
+                    </select>`;
+                    break;
+                default:
+                    input = `<input type="text" id="cf_${f.id}" class="form-input" ${reqAttr}>`;
+            }
+            const fullClass = f.type === 'textarea' ? 'full' : '';
+            return `<div class="form-group ${fullClass}"><label class="form-label">${f.name}${reqStar}</label>${input}</div>`;
+        }
 
         function getFormData() {
-            const code = document.getElementById('typeCode').value;
-            const h = calcDuree();
-            return {
-                numero:            document.getElementById('numero').value.trim(),
-                typeCode:          code,
-                type:              TYPE_LABELS[code] || '',
-                dateEmission:      fromISODate(document.getElementById('dateEmission').value),
-                dateReception:     fromISODate(document.getElementById('dateReception').value),
-                destinataire:      getComboVal('selDestinataire', 'manDestinataire'),
-                aeronefType:       getComboVal('selAeronef', 'manAeronef'),
-                immatriculation:   getComboVal('selImmatriculation', 'manImmatriculation'),
-                motif:             getComboVal('selMotif', 'manMotif'),
-                operateur:         getComboVal('selOperateur', 'manOperateur'),
-                route:             getComboVal('selRoute', 'manRoute'),
-                dateDebutValidite: fromISODate(document.getElementById('dateDebutValidite').value),
-                dateFinValidite:   fromISODate(document.getElementById('dateFinValidite').value),
-                validiteExtension: h > 0 ? `+${h}H` : '',
-                visaSRT:           'A',
-                signataire:        document.getElementById('signataire').value.trim(),
-                titreSignataire:   document.getElementById('titreSignataire').value.trim()
+            const code = document.getElementById('fType').value;
+            const t = TYPES[code] || {};
+
+            const data = {
+                numero:        document.getElementById('fNumero').value.trim(),
+                typeCode:      code,
+                type:          t.label || '',
+                dateEmission:  fromISODate(document.getElementById('fDateEmission').value),
+                dateReception: fromISODate(document.getElementById('fDateReception').value),
             };
+
+            // ajouter tous les champs personnalisés
+            const visible = Object.values(CHAMPS).filter(c =>
+                c.scope === 'global' || (c.types || []).includes(code)
+            );
+            for (const f of visible) {
+                const el = document.getElementById('cf_' + f.id);
+                if (!el) continue;
+                let val = el.value.trim();
+                if (f.type === 'date' && val) val = fromISODate(val);
+                data[f.id] = val;
+            }
+            return data;
         }
 
         function validate() {
             const d = getFormData();
-            const required = {
-                typeCode: 'Type', numero: 'N° Autorisation',
-                dateEmission: "Date d'émission", destinataire: 'Destinataire',
-                aeronefType: 'Aéronef', immatriculation: 'Immatriculation',
-                motif: 'Motif', operateur: 'Opérateur', route: 'Route',
-                dateDebutValidite: 'Date début', dateFinValidite: 'Date fin'
-            };
-            for (const [f, label] of Object.entries(required)) {
-                if (!d[f]) { showToast(`Champ requis : ${label}`, 'warning'); return null; }
+            if (!d.typeCode) { showToast('Sélectionnez un type', 'warning'); return null; }
+            if (!d.numero) { showToast('N° Autorisation requis', 'warning'); return null; }
+            if (!d.dateEmission) { showToast("Date d'émission requise", 'warning'); return null; }
+
+            // valider les champs personnalisés obligatoires
+            const visible = Object.values(CHAMPS).filter(c =>
+                c.scope === 'global' || (c.types || []).includes(d.typeCode)
+            );
+            for (const f of visible) {
+                if (f.required && !d[f.id]) {
+                    showToast(`Champ requis : ${f.name}`, 'warning');
+                    return null;
+                }
             }
             return d;
         }
 
-        // ─── UPLOAD PDF ────────────────────────────────────────
-        const dropzone = document.getElementById('dropzone');
-        const fileInput = document.getElementById('fileInput');
-
-        dropzone.addEventListener('click', () => fileInput.click());
-        dropzone.querySelector('.btn-browse').addEventListener('click', (e) => { e.stopPropagation(); fileInput.click(); });
-        dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('dragover'); });
-        dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
-        dropzone.addEventListener('drop', (e) => { e.preventDefault(); dropzone.classList.remove('dragover'); if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); });
-        fileInput.addEventListener('change', (e) => { if (e.target.files[0]) handleFile(e.target.files[0]); });
-        document.getElementById('btnRemoveFile').addEventListener('click', resetFile);
-
-        function handleFile(file) {
-            if (file.type !== 'application/pdf') { showToast('Fichier PDF uniquement', 'error'); return; }
-            currentFile = file;
-            document.getElementById('fileName').textContent = file.name;
-            document.getElementById('fileSize').textContent = formatFileSize(file.size);
-            document.getElementById('filePreview').classList.add('show');
-            dropzone.style.display = 'none';
-
-            // extraction IA si clé disponible
-            if (ANTHROPIC_API_KEY && !ANTHROPIC_API_KEY.startsWith('VOTRE')) {
-                extractData(file);
-            }
-        }
-
-        function resetFile() {
-            currentFile = null; fileInput.value = '';
-            document.getElementById('filePreview').classList.remove('show');
-            dropzone.style.display = 'block';
-            document.getElementById('extractionStatus').classList.remove('show');
-        }
-
-        async function extractData(file) {
-            const status = document.getElementById('extractionStatus');
-            status.className = 'extraction-status loading show';
-            document.getElementById('extractionMsg').textContent = "Extraction en cours...";
-            try {
-                const result = await extractAuthorizationData(file);
-                const d = result.data;
-                if (d.typeCode) document.getElementById('typeCode').value = d.typeCode;
-                if (d.numero) document.getElementById('numero').value = d.numero;
-                if (d.dateEmission) document.getElementById('dateEmission').value = toISODate(d.dateEmission);
-                if (d.dateReception) document.getElementById('dateReception').value = toISODate(d.dateReception);
-                if (d.dateDebutValidite) document.getElementById('dateDebutValidite').value = toISODate(d.dateDebutValidite);
-                if (d.dateFinValidite) document.getElementById('dateFinValidite').value = toISODate(d.dateFinValidite);
-                // pour les champs combo — on bascule en manuel et on remplit
-                const fillCombo = (manId, selId, val) => {
-                    if (!val) return;
-                    const man = document.getElementById(manId);
-                    const sel = document.getElementById(selId);
-                    man.value = val; man.classList.add('show'); sel.style.display = 'none';
-                };
-                fillCombo('manDestinataire', 'selDestinataire', d.destinataire);
-                fillCombo('manAeronef', 'selAeronef', d.aeronefType);
-                fillCombo('manImmatriculation', 'selImmatriculation', d.immatriculation);
-                fillCombo('manMotif', 'selMotif', d.motif);
-                fillCombo('manOperateur', 'selOperateur', d.operateur);
-                fillCombo('manRoute', 'selRoute', d.route);
-                if (d.signataire) document.getElementById('signataire').value = d.signataire;
-                if (d.titreSignataire) document.getElementById('titreSignataire').value = d.titreSignataire;
-                calcDuree();
-                status.className = 'extraction-status success show';
-                document.getElementById('extractionMsg').textContent = '✓ Extraction terminée — vérifiez les champs';
-            } catch (e) {
-                status.className = 'extraction-status error show';
-                document.getElementById('extractionMsg').textContent = '✗ ' + e.message;
-            }
-        }
-
         // ─── APERÇU ────────────────────────────────────────────
-        document.getElementById('btnPreview').addEventListener('click', () => {
+        document.getElementById('btnPreview').addEventListener('click', async () => {
             const d = validate();
             if (!d) return;
-            document.getElementById('pdfPreview').src = getPDFDataURI(d);
-            document.getElementById('previewSection').style.display = 'block';
-            document.getElementById('previewSection').scrollIntoView({ behavior: 'smooth' });
+            try {
+                clearModelsCache(); // pour avoir la dernière version du modèle
+                const uri = await getPDFDataURI(d);
+                document.getElementById('pdfPreview').src = uri;
+                document.getElementById('previewSection').style.display = 'block';
+                document.getElementById('previewSection').scrollIntoView({ behavior: 'smooth' });
+            } catch (e) {
+                showToast('Erreur aperçu: ' + e.message, 'error');
+            }
         });
 
         // ─── ENREGISTRER ───────────────────────────────────────
@@ -431,19 +281,16 @@
             btnText.textContent = 'Enregistrement...';
 
             try {
-                // générer le PDF
-                const pdfDoc = generateAuthorizationPDF(d);
-                const blob = getPDFBlob(d, pdfDoc);
+                clearModelsCache();
+                const pdfDoc = await generateAuthorizationPDF(d);
+                const blob = await getPDFBlob(d, pdfDoc);
                 const pdfFile = new File([blob], `${d.numero}.pdf`, { type: 'application/pdf' });
 
-                // télécharger localement
-                downloadGeneratedPDF(d, pdfDoc);
-
-                // archiver (Storage optionnel — si pas activé, on archive juste les données)
-                await createAuthorization(d, currentFile || pdfFile);
+                await downloadGeneratedPDF(d, pdfDoc);
+                await createAuthorization(d, pdfFile);
                 showToast(`${d.numero} archivée — en attente d'approbation`, 'success');
 
-                // notifier les directeurs
+                // notification email
                 try {
                     const users = await getAllUsers();
                     const directors = users.filter(u => u.role === 'directeur' && u.email);
@@ -452,17 +299,13 @@
                         showToast(`Email envoyé à ${directors.length} directeur(s)`, 'info');
                     }
                 } catch (e) {
-                    console.warn('Notification échouée:', e.message);
+                    console.warn('Notification:', e.message);
                 }
 
-                // reset
                 document.getElementById('genForm').reset();
                 document.getElementById('previewSection').style.display = 'none';
-                resetFile();
-                initDefaults();
-
             } catch (err) {
-                console.error('Erreur:', err);
+                console.error(err);
                 showToast('Erreur: ' + err.message, 'error');
             } finally {
                 btn.disabled = false;
