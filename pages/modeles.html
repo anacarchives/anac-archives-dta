@@ -249,8 +249,9 @@
     <script type="module">
         import { checkAuth, injectSidebar } from '../assets/js/layout.js';
         import { showToast } from '../assets/js/helpers.js';
-        import { db } from '../assets/js/firebase-config.js';
+        import { db, storage } from '../assets/js/firebase-config.js';
         import { doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
         import { generatePreviewPDF, getPreviewDataURI } from '../assets/js/pdf-gen.js';
 
         injectSidebar('modeles');
@@ -422,7 +423,7 @@
                     <div class="edit-section">
                         <div class="edit-section-title">Image</div>
                         <div style="background:#F8F9FB; border:1px dashed var(--border); border-radius:6px; padding:10px; text-align:center; margin-bottom:10px;">
-                            ${t.dataUrl ? `<img src="${t.dataUrl}" style="max-width:100%; max-height:120px;">` : '<div style="color:var(--text-muted); font-size:12px;">Aucune image</div>'}
+                            ${(t.url || t.dataUrl) ? `<img src="${t.url || t.dataUrl}" style="max-width:100%; max-height:120px;">` : '<div style="color:var(--text-muted); font-size:12px;">Aucune image</div>'}
                         </div>
                         <button class="btn-add-text" id="btnReplaceImage" style="margin:0;">Remplacer l'image</button>
                     </div>
@@ -614,28 +615,41 @@
             const file = e.target.files[0];
             if (!file) return;
 
-            // limite 1MB pour Firestore
-            if (file.size > 1024 * 1024) {
-                showToast('Image trop grosse (max 1MB). Compressez-la avant.', 'warning');
+            // limite 5MB raisonnable
+            if (file.size > 5 * 1024 * 1024) {
+                showToast('Image trop grosse (max 5 MB)', 'warning');
                 e.target.value = '';
                 return;
             }
 
             try {
-                const dataUrl = await readFileAsDataUrl(file);
+                showToast('Upload en cours...', 'info');
                 const replaceIdx = e.target.dataset.replaceIdx;
+
+                // upload vers Firebase Storage
+                const ext = (file.name.split('.').pop() || 'png').toLowerCase();
+                const fileName = `models/${currentType}/${currentRect}_${Date.now()}.${ext}`;
+                const ref = storageRef(storage, fileName);
+                await uploadBytes(ref, file);
+                const url = await getDownloadURL(ref);
 
                 if (replaceIdx !== '' && replaceIdx !== undefined) {
                     // remplacement de l'image existante
                     const idx = parseInt(replaceIdx);
                     const item = allModels[currentType][currentRect][idx];
-                    item.dataUrl = dataUrl;
+                    // supprimer l'ancienne si c'était dans Storage
+                    if (item.storagePath) {
+                        try { await deleteObject(storageRef(storage, item.storagePath)); } catch (e) {}
+                    }
+                    item.url = url;
+                    item.storagePath = fileName;
+                    delete item.dataUrl; // nettoyer l'ancien base64 si présent
                     selectText(idx);
                 } else {
-                    // nouvel ajout
                     const newImage = {
                         kind: 'image',
-                        dataUrl: dataUrl,
+                        url: url,
+                        storagePath: fileName,
                         x: 5,
                         y: 5,
                         width: 30,
@@ -650,25 +664,33 @@
                     selectText(newIdx);
                 }
                 queuePreview();
-                showToast('Image ajoutée', 'success');
+                showToast('Image téléversée', 'success');
             } catch (err) {
-                showToast('Erreur: ' + err.message, 'error');
+                console.error(err);
+                if (err.code === 'storage/unauthorized' || err.message.includes('CORS')) {
+                    showToast('Storage non activé. Activez Blaze + Storage dans Firebase.', 'error');
+                } else {
+                    showToast('Erreur: ' + err.message, 'error');
+                }
             }
 
-            e.target.value = ''; // reset pour permettre de réuploader le même fichier
+            e.target.value = '';
         });
 
-        function readFileAsDataUrl(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = () => resolve(reader.result);
-                reader.onerror = () => reject(new Error('Lecture du fichier impossible'));
-                reader.readAsDataURL(file);
-            });
-        }
+        async function deleteText(idx) {
+            const item = allModels[currentType][currentRect][idx];
+            const isImg = item.kind === 'image';
+            if (!confirm(isImg ? 'Supprimer cette image ?' : 'Supprimer ce texte ?')) return;
 
-        function deleteText(idx) {
-            if (!confirm('Supprimer ce texte ?')) return;
+            // si c'est une image dans Storage, la supprimer
+            if (isImg && item.storagePath) {
+                try {
+                    await deleteObject(storageRef(storage, item.storagePath));
+                } catch (e) {
+                    console.warn('Suppression Storage:', e);
+                }
+            }
+
             allModels[currentType][currentRect].splice(idx, 1);
             if (currentTextIdx === idx) {
                 currentTextIdx = null;
