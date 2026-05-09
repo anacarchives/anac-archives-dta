@@ -129,16 +129,13 @@
                             <tr>
                                 <th>N° Autorisation</th>
                                 <th>Type</th>
-                                <th>Opérateur</th>
-                                <th>Aéronef</th>
-                                <th>Immat.</th>
-                                <th>Validité</th>
+                                <th>Date d'émission</th>
                                 <th>Approbation</th>
                                 <th></th>
                             </tr>
                         </thead>
                         <tbody id="resultsBody">
-                            <tr><td colspan="8" style="text-align:center; padding:60px; color:var(--text-muted);">Chargement...</td></tr>
+                            <tr><td colspan="5" style="text-align:center; padding:60px; color:var(--text-muted);">Chargement...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -247,7 +244,7 @@
             document.getElementById('resultsCount').innerHTML = `<strong>${results.length}</strong> autorisation(s)`;
 
             if (results.length === 0) {
-                document.getElementById('resultsBody').innerHTML = '<tr><td colspan="8" style="text-align:center; padding:60px; color:var(--text-muted);">Aucune autorisation</td></tr>';
+                document.getElementById('resultsBody').innerHTML = '<tr><td colspan="5" style="text-align:center; padding:60px; color:var(--text-muted);">Aucune autorisation</td></tr>';
                 document.getElementById('pagination').innerHTML = '';
                 return;
             }
@@ -263,10 +260,7 @@
                 return `<tr data-id="${a.id}">
                     <td><strong>${a.numero || '—'}</strong></td>
                     <td><span class="badge ${getTypeBadgeClass(a.typeCode)}">${a.typeCode || '—'}</span></td>
-                    <td>${a.operateur || '—'}</td>
-                    <td>${a.aeronefType || '—'}</td>
-                    <td>${a.immatriculation || '—'}</td>
-                    <td style="font-size:13px; color:var(--text-light);">${formatDate(a.dateDebutValidite)} → ${formatDate(a.dateFinValidite)}</td>
+                    <td style="font-size:13px; color:var(--text-light);">${formatDate(a.dateEmission)}</td>
                     <td><span class="badge ${cls}">${label}</span></td>
                     <td><button class="btn btn-secondary btn-sm" data-action="view" data-id="${a.id}">Voir</button></td>
                 </tr>`;
