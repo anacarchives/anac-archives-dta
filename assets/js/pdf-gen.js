@@ -47,26 +47,13 @@ function applyFont(pdoc, font, size) {
     pdoc.setFont(f, s).setFontSize(size);
 }
 
-// remplace les placeholders {{xxx}} par les valeurs du formulaire
+// remplace TOUS les placeholders {{xxx}} par data[xxx]
+// fonctionne avec n'importe quel champ créé dans la page "Champs personnalisés"
 function fillPlaceholders(text, data) {
     if (!text || !data) return text;
-    return text
-        .replace(/\{\{numero\}\}/g, data.numero || '')
-        .replace(/\{\{type\}\}/g, data.type || '')
-        .replace(/\{\{typeCode\}\}/g, data.typeCode || '')
-        .replace(/\{\{dateEmission\}\}/g, data.dateEmission || '')
-        .replace(/\{\{dateReception\}\}/g, data.dateReception || '')
-        .replace(/\{\{destinataire\}\}/g, data.destinataire || '')
-        .replace(/\{\{aeronefType\}\}/g, data.aeronefType || '')
-        .replace(/\{\{immatriculation\}\}/g, data.immatriculation || '')
-        .replace(/\{\{motif\}\}/g, data.motif || '')
-        .replace(/\{\{operateur\}\}/g, data.operateur || '')
-        .replace(/\{\{route\}\}/g, data.route || '')
-        .replace(/\{\{dateDebutValidite\}\}/g, data.dateDebutValidite || '')
-        .replace(/\{\{dateFinValidite\}\}/g, data.dateFinValidite || '')
-        .replace(/\{\{validiteExtension\}\}/g, data.validiteExtension || '')
-        .replace(/\{\{signataire\}\}/g, data.signataire || '')
-        .replace(/\{\{titreSignataire\}\}/g, data.titreSignataire || '');
+    return text.replace(/\{\{(\w+)\}\}/g, (_, key) => {
+        return data[key] !== undefined && data[key] !== null ? data[key] : '';
+    });
 }
 
 // Dessine un rectangle et y place les textes du modèle
@@ -126,29 +113,29 @@ async function buildPDF(typeCode, model, data) {
     return pdoc;
 }
 
-// Données fictives pour l'aperçu (utilisé dans modeles.html)
-const PREVIEW_DATA = {
-    numero: 'EXEMPLE-001-26',
-    type: 'Type exemple',
-    typeCode: 'XXX',
-    dateEmission: '07/05/2026',
-    dateReception: '08/05/2026',
-    destinataire: 'NOM DESTINATAIRE',
-    aeronefType: 'B737',
-    immatriculation: '5TXXX',
-    motif: 'MOTIF EXEMPLE',
-    operateur: 'OPERATEUR EXEMPLE',
-    route: 'GMNO-LFTM',
-    dateDebutValidite: '07/05/2026',
-    dateFinValidite: '10/05/2026',
-    validiteExtension: '+72H',
-    signataire: 'AHMED BABA AHMED',
-    titreSignataire: 'Directeur Général',
-};
-
 // Pour l'éditeur : génère un aperçu sans cacher (utilise le modèle passé en paramètre)
+// Charge aussi tous les champs personnalisés et leur attribue une valeur d'exemple
 export async function generatePreviewPDF(typeCode, model) {
-    const fakeData = { ...PREVIEW_DATA, typeCode, type: typeCode };
+    let customData = {};
+    try {
+        const snap = await getDoc(doc(db, 'params', 'champs'));
+        if (snap.exists() && snap.data().list) {
+            const champs = snap.data().list;
+            // pour chaque champ, mettre une valeur d'exemple = nom du champ en majuscules
+            Object.values(champs).forEach(c => {
+                customData[c.id] = '[' + c.name.toUpperCase() + ']';
+            });
+        }
+    } catch (e) {}
+
+    const fakeData = {
+        numero: '[NUMERO]',
+        type: typeCode + ' (exemple)',
+        typeCode,
+        dateEmission: '07/05/2026',
+        dateReception: '08/05/2026',
+        ...customData,
+    };
     return await buildPDF(typeCode, model, fakeData);
 }
 
