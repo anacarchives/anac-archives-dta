@@ -42,30 +42,30 @@ body {
     color: var(--text);
     line-height: 1.5;
     -webkit-font-smoothing: antialiased;
-    position: relative;
 }
 
 /* Logo en filigrane au centre de toutes les pages (sauf PDFs et écrans login) */
-body::before {
+.main-content {
+    position: relative;
+}
+.main-content::before {
     content: '';
     position: fixed;
     top: 50%;
-    left: 50%;
+    left: calc(50% + 130px);
     width: 500px;
     height: 333px;
-    margin-left: -250px;
-    margin-top: -166px;
+    transform: translate(-50%, -50%);
     background-image: url('../img/anac-logo.png');
     background-size: contain;
     background-repeat: no-repeat;
     background-position: center;
-    opacity: 0.35;
+    opacity: 0.15;
     filter: blur(1.5px);
     pointer-events: none;
     z-index: 0;
 }
-.app-container, .topbar, .content-wrapper, .login-body { position: relative; z-index: 1; }
-.login-body::before { display: none; }
+.main-content > * { position: relative; z-index: 1; }
 
 /* ──────────────── ÉCRAN DE CHARGEMENT ──────────────── */
 .loading-screen {
