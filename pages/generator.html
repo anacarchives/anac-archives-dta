@@ -150,6 +150,7 @@
             const example = generateNumExample(t.format);
             document.getElementById('fNumero').value = example;
             renderCustomFields(code);
+            updateNumeroFields(code);
         }
 
         function generateNumExample(format) {
@@ -180,35 +181,97 @@
             const reqStar = f.required ? ' *' : '';
             const reqAttr = f.required ? 'required' : '';
             let input = '';
-            switch (f.type) {
-                case 'textarea':
-                    input = `<textarea id="cf_${f.id}" class="form-input" rows="3" ${reqAttr}></textarea>`;
-                    break;
-                case 'number':
-                    input = `<input type="number" id="cf_${f.id}" class="form-input" ${reqAttr}>`;
-                    break;
-                case 'date':
-                    input = `<input type="date" id="cf_${f.id}" class="form-input" ${reqAttr}>`;
-                    break;
-                case 'select':
-                    const opts = f.options || [];
-                    input = `
-                        <div class="combo-wrap" data-id="${f.id}">
-                            <select id="cf_${f.id}" class="form-select sel-mode" ${reqAttr}>
-                                <option value="">—</option>
-                                ${opts.map(o => `<option value="${o}">${o}</option>`).join('')}
-                                <option value="__manual__">— Saisir manuellement —</option>
-                            </select>
-                            <input type="text" id="cf_man_${f.id}" class="form-input man-mode" style="display:none; margin-top:6px;">
-                            <span class="toggle-link" data-id="${f.id}" style="font-size:11px; color:var(--primary); cursor:pointer; text-decoration:underline; margin-top:4px; display:inline-block;">Saisir manuellement</span>
-                        </div>
-                    `;
-                    break;
-                default:
-                    input = `<input type="text" id="cf_${f.id}" class="form-input" ${reqAttr}>`;
+            const hasOptions = (f.options || []).length > 0;
+
+            // détection : champ "numéro d'autorisation"
+            const isNumeroField =
+                f.id === 'numero' || f.id === 'n' ||
+                (f.name && f.name.toLowerCase().includes('numéro')) ||
+                (f.name && f.name.toLowerCase().includes('numero'));
+
+            if (isNumeroField) {
+                // champ verrouillé avec format depuis le type — seul le milieu modifiable
+                input = `
+                    <div class="numero-locked" data-id="${f.id}" style="display:flex; align-items:stretch; gap:0; border:1.5px solid var(--border); border-radius:8px; overflow:hidden; background:white;">
+                        <span class="num-prefix" style="padding:10px 12px; background:#F5F5F5; color:var(--text-light); font-family:monospace; font-weight:700; border-right:1px solid var(--border-light);">—</span>
+                        <input type="text" id="cf_${f.id}_num" class="num-middle" style="flex:1; border:none; padding:10px 12px; font-family:monospace; font-weight:700; text-align:center; outline:none; background:white; color:var(--primary); font-size:15px;" placeholder="000">
+                        <span class="num-suffix" style="padding:10px 12px; background:#F5F5F5; color:var(--text-light); font-family:monospace; font-weight:700; border-left:1px solid var(--border-light);">—</span>
+                        <input type="hidden" id="cf_${f.id}">
+                    </div>
+                    <div style="font-size:11px; color:var(--text-muted); margin-top:4px;" id="numero_hint_${f.id}">Sélectionnez d'abord un type d'autorisation</div>
+                `;
+            } else if (hasOptions && f.type !== 'date' && f.type !== 'number' && f.type !== 'textarea') {
+                const opts = f.options || [];
+                input = `
+                    <div class="combo-wrap" data-id="${f.id}">
+                        <select id="cf_${f.id}" class="form-select sel-mode" ${reqAttr}>
+                            <option value="">—</option>
+                            ${opts.map(o => `<option value="${o}">${o}</option>`).join('')}
+                            <option value="__manual__">— Saisir manuellement —</option>
+                        </select>
+                        <input type="text" id="cf_man_${f.id}" class="form-input man-mode" style="display:none; margin-top:6px;">
+                        <span class="toggle-link" data-id="${f.id}" style="font-size:11px; color:var(--primary); cursor:pointer; text-decoration:underline; margin-top:4px; display:inline-block;">Saisir manuellement</span>
+                    </div>
+                `;
+            } else {
+                switch (f.type) {
+                    case 'textarea':
+                        input = `<textarea id="cf_${f.id}" class="form-input" rows="3" ${reqAttr}></textarea>`;
+                        break;
+                    case 'number':
+                        input = `<input type="number" id="cf_${f.id}" class="form-input" ${reqAttr}>`;
+                        break;
+                    case 'date':
+                        input = `<input type="date" id="cf_${f.id}" class="form-input" ${reqAttr}>`;
+                        break;
+                    default:
+                        input = `<input type="text" id="cf_${f.id}" class="form-input" ${reqAttr}>`;
+                }
             }
             const fullClass = f.type === 'textarea' ? 'full' : '';
             return `<div class="form-group ${fullClass}"><label class="form-label">${f.name}${reqStar}</label>${input}</div>`;
+        }
+
+        // décompose un format ex "SAT-{NUM:3}-{YY}" en {prefix, suffix, numLength}
+        function parseFormat(format) {
+            const yy = String(new Date().getFullYear()).slice(-2);
+            const yyyy = String(new Date().getFullYear());
+            const filled = (format || '').replace(/\{YY\}/g, yy).replace(/\{YYYY\}/g, yyyy);
+            const m = filled.match(/^(.*?)\{NUM(?::(\d+))?\}(.*?)$/);
+            if (!m) return { prefix: filled, suffix: '', numLength: 3 };
+            return { prefix: m[1], suffix: m[3], numLength: parseInt(m[2] || '3') };
+        }
+
+        // met à jour les champs numero verrouillés selon le type sélectionné
+        function updateNumeroFields(typeCode) {
+            const t = TYPES[typeCode];
+            if (!t) return;
+            const { prefix, suffix, numLength } = parseFormat(t.format);
+            document.querySelectorAll('.numero-locked').forEach(box => {
+                const id = box.dataset.id;
+                box.querySelector('.num-prefix').textContent = prefix;
+                box.querySelector('.num-suffix').textContent = suffix;
+                const numInput = box.querySelector('.num-middle');
+                numInput.maxLength = numLength;
+                numInput.placeholder = '0'.repeat(numLength);
+                // pré-remplir avec 001 si vide
+                if (!numInput.value) numInput.value = '1'.padStart(numLength, '0');
+                const hint = document.getElementById(`numero_hint_${id}`);
+                if (hint) hint.textContent = `Format : ${prefix}${'0'.repeat(numLength)}${suffix}`;
+                // mettre à jour le hidden input
+                updateHiddenNumero(id, prefix, suffix);
+                numInput.removeEventListener('input', numInput._handler);
+                numInput._handler = () => updateHiddenNumero(id, prefix, suffix);
+                numInput.addEventListener('input', numInput._handler);
+            });
+        }
+
+        function updateHiddenNumero(id, prefix, suffix) {
+            const numInput = document.querySelector(`.numero-locked[data-id="${id}"] .num-middle`);
+            const hidden = document.getElementById('cf_' + id);
+            if (numInput && hidden) {
+                hidden.value = prefix + numInput.value + suffix;
+            }
         }
 
         // gérer le toggle manuel/select pour les champs select
@@ -261,7 +324,10 @@
 
             for (const f of visible) {
                 let val = '';
-                if (f.type === 'select') {
+                const hasOptions = (f.options || []).length > 0;
+                const isCombo = hasOptions && f.type !== 'date' && f.type !== 'number' && f.type !== 'textarea';
+
+                if (isCombo) {
                     const sel = document.getElementById('cf_' + f.id);
                     const man = document.getElementById('cf_man_' + f.id);
                     if (man && man.style.display !== 'none') {
