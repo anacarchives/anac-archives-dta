@@ -186,12 +186,22 @@ export async function getStats() {
 export function filterAuthorizations(list, filters) {
     return list.filter(a => {
         if (filters.search) {
-            const s = filters.search.toLowerCase();
-            const idx = (a.searchIndex || '').toLowerCase();
-            if (!idx.includes(s)) return false;
+            const s = filters.search.toLowerCase().trim();
+            // chercher dans TOUS les champs textuels du record
+            let found = false;
+            for (const key in a) {
+                const v = a[key];
+                if (v !== null && v !== undefined && typeof v !== 'object') {
+                    if (String(v).toLowerCase().includes(s)) {
+                        found = true;
+                        break;
+                    }
+                }
+            }
+            if (!found) return false;
         }
         if (filters.typeCode && a.typeCode !== filters.typeCode) return false;
-        if (filters.year && a.year != filters.year) return false; // == voulu (string vs int)
+        if (filters.year && a.year != filters.year) return false;
         if (filters.month && a.month != filters.month) return false;
 
         if (filters.operateur) {
