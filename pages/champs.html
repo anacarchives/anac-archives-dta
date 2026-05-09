@@ -18,6 +18,35 @@
             border-radius: 12px;
             padding: 18px;
             box-shadow: var(--shadow-sm);
+            cursor: grab;
+            transition: opacity 0.2s, transform 0.2s;
+        }
+        .champ-card.dragging {
+            opacity: 0.4;
+            cursor: grabbing;
+        }
+        .champ-card.drag-over {
+            border: 2px dashed var(--primary);
+        }
+        .drag-handle {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 24px;
+            height: 24px;
+            color: var(--text-muted);
+            cursor: grab;
+        }
+        .drag-handle:hover { color: var(--primary); }
+        .order-badge {
+            display: inline-block;
+            background: var(--primary);
+            color: white;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 10px;
+            margin-right: 8px;
         }
         .champ-card-header {
             display: flex;
@@ -153,6 +182,10 @@
             </div>
 
             <div class="content-wrapper">
+                <div style="background: #E8F5E9; border:1px solid #A5D6A7; border-radius:8px; padding:12px 16px; margin-top:12px; margin-bottom:8px; font-size:12px; color:#2E7D32;">
+                    <strong>Astuce :</strong> Glissez-déposez les cartes pour définir l'ordre d'affichage des champs dans le formulaire de saisie.
+                </div>
+
                 <div class="champs-grid" id="champsGrid"></div>
 
                 <div class="help-box">
@@ -263,8 +296,9 @@
 
         function renderChamps() {
             const grid = document.getElementById('champsGrid');
-            const ids = Object.keys(champs);
-            if (ids.length === 0) {
+            // trier par order pour respecter l'ordre choisi
+            const list = Object.values(champs).sort((a, b) => (a.order || 0) - (b.order || 0));
+            if (list.length === 0) {
                 grid.innerHTML = `
                     <div class="empty-state" style="grid-column:1/-1;">
                         <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
@@ -273,37 +307,89 @@
                 `;
                 return;
             }
-            grid.innerHTML = ids.map(id => {
-                const c = champs[id];
+            grid.innerHTML = list.map((c, idx) => {
                 const typeLabel = { text:'Texte', textarea:'Texte long', number:'Nombre', date:'Date', select:'Liste' }[c.type] || c.type;
                 const badges = c.scope === 'global'
                     ? '<span class="champ-type-badge global">Global — tous les types</span>'
                     : (c.types || []).map(t => `<span class="champ-type-badge">${t}</span>`).join('');
                 return `
-                    <div class="champ-card">
+                    <div class="champ-card" draggable="true" data-id="${c.id}">
                         <div class="champ-card-header">
-                            <div>
-                                <div class="champ-name">${c.name}</div>
-                                <div class="champ-placeholder">{{${c.id}}}</div>
+                            <div style="display:flex; align-items:center; gap:6px;">
+                                <span class="drag-handle" title="Glisser pour réordonner">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="6" r="1"/><circle cx="15" cy="6" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="9" cy="18" r="1"/><circle cx="15" cy="18" r="1"/></svg>
+                                </span>
+                                <span class="order-badge">${idx + 1}</span>
                             </div>
                         </div>
+                        <div class="champ-name">${c.name}</div>
+                        <div class="champ-placeholder">{{${c.id}}}</div>
                         <div class="champ-meta">
                             <span>Type : <strong>${typeLabel}</strong></span>
                             ${c.required ? '<span style="color:var(--danger);">Obligatoire</span>' : '<span>Optionnel</span>'}
                         </div>
                         <div class="champ-types">${badges}</div>
                         <div class="champ-actions">
-                            <button class="btn-icon" data-action="edit" data-id="${id}">Modifier</button>
-                            <button class="btn-icon danger" data-action="delete" data-id="${id}">Supprimer</button>
+                            <button class="btn-icon" data-action="edit" data-id="${c.id}">Modifier</button>
+                            <button class="btn-icon danger" data-action="delete" data-id="${c.id}">Supprimer</button>
                         </div>
                     </div>
                 `;
             }).join('');
 
             grid.querySelectorAll('[data-action="edit"]').forEach(b =>
-                b.addEventListener('click', () => openEdit(b.dataset.id)));
+                b.addEventListener('click', (e) => { e.stopPropagation(); openEdit(b.dataset.id); }));
             grid.querySelectorAll('[data-action="delete"]').forEach(b =>
-                b.addEventListener('click', () => deleteChamp(b.dataset.id)));
+                b.addEventListener('click', (e) => { e.stopPropagation(); deleteChamp(b.dataset.id); }));
+
+            // drag and drop
+            attachDragHandlers();
+        }
+
+        function attachDragHandlers() {
+            const cards = document.querySelectorAll('.champ-card');
+            let draggedId = null;
+
+            cards.forEach(card => {
+                card.addEventListener('dragstart', (e) => {
+                    draggedId = card.dataset.id;
+                    card.classList.add('dragging');
+                    e.dataTransfer.effectAllowed = 'move';
+                });
+                card.addEventListener('dragend', () => {
+                    card.classList.remove('dragging');
+                    document.querySelectorAll('.champ-card').forEach(c => c.classList.remove('drag-over'));
+                });
+                card.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    if (card.dataset.id !== draggedId) card.classList.add('drag-over');
+                });
+                card.addEventListener('dragleave', () => card.classList.remove('drag-over'));
+                card.addEventListener('drop', async (e) => {
+                    e.preventDefault();
+                    card.classList.remove('drag-over');
+                    if (!draggedId || draggedId === card.dataset.id) return;
+
+                    // réorganiser dans la liste triée
+                    const sorted = Object.values(champs).sort((a, b) => (a.order || 0) - (b.order || 0));
+                    const fromIdx = sorted.findIndex(c => c.id === draggedId);
+                    const toIdx   = sorted.findIndex(c => c.id === card.dataset.id);
+                    if (fromIdx < 0 || toIdx < 0) return;
+
+                    const [moved] = sorted.splice(fromIdx, 1);
+                    sorted.splice(toIdx, 0, moved);
+
+                    // réassigner les ordres
+                    sorted.forEach((c, i) => { champs[c.id].order = i; });
+
+                    try {
+                        await saveChamps();
+                        renderChamps();
+                    } catch (e) {
+                        showToast('Erreur: ' + e.message, 'error');
+                    }
+                });
+            });
         }
 
         function renderTypeCheckboxes(selectedTypes = []) {
@@ -386,12 +472,14 @@
                 return;
             }
 
+            const existingOrder = editingId ? (champs[editingId].order || 0) : Object.keys(champs).length;
             champs[id] = {
                 id, name, type,
                 options: type === 'select' ? opts : [],
                 required: req,
                 scope: global ? 'global' : 'specific',
-                types: global ? [] : selTypes
+                types: global ? [] : selTypes,
+                order: existingOrder
             };
 
             try {
