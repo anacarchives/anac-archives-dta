@@ -165,8 +165,10 @@
 
         function renderCustomFields(typeCode) {
             // garder les champs visibles : globaux + ceux du type sélectionné, triés par ordre
+            // ON CACHE les champs dont l'identifiant ou le nom = "type" (déjà géré par le sélecteur système)
             const visible = Object.values(CHAMPS)
                 .filter(c => c.scope === 'global' || (c.types || []).includes(typeCode))
+                .filter(c => !isTypeField(c))
                 .sort((a, b) => (a.order || 0) - (b.order || 0));
 
             const c = document.getElementById('customFields');
@@ -175,6 +177,14 @@
                 return;
             }
             c.innerHTML = visible.map(f => renderField(f)).join('');
+        }
+
+        // détecte si un champ correspond au "Type d'autorisation" (déjà géré par le sélecteur système)
+        function isTypeField(f) {
+            if (!f) return false;
+            if (f.id === 'type' || f.id === 'typeCode') return true;
+            if (f.name && f.name.trim().toLowerCase() === 'type') return true;
+            return false;
         }
 
         function renderField(f) {
@@ -323,11 +333,25 @@
                 .sort((a, b) => (a.order || 0) - (b.order || 0));
 
             for (const f of visible) {
+                // si c'est un champ "type", on injecte la valeur du sélecteur système
+                if (isTypeField(f)) {
+                    data[f.id] = t.label || '';
+                    continue;
+                }
+
                 let val = '';
                 const hasOptions = (f.options || []).length > 0;
                 const isCombo = hasOptions && f.type !== 'date' && f.type !== 'number' && f.type !== 'textarea';
+                const isNumeroField =
+                    f.id === 'numero' || f.id === 'n' ||
+                    (f.name && f.name.toLowerCase().includes('numéro')) ||
+                    (f.name && f.name.toLowerCase().includes('numero'));
 
-                if (isCombo) {
+                if (isNumeroField) {
+                    // lire depuis le hidden input ou recomposer depuis le champ verrouillé
+                    const hidden = document.getElementById('cf_' + f.id);
+                    val = hidden ? hidden.value.trim() : '';
+                } else if (isCombo) {
                     const sel = document.getElementById('cf_' + f.id);
                     const man = document.getElementById('cf_man_' + f.id);
                     if (man && man.style.display !== 'none') {
@@ -344,8 +368,7 @@
                 data[f.id] = val;
             }
 
-            // si un champ personnalisé a un nom contenant "numéro" ou identifiant "numero"/"n",
-            // on utilise sa valeur comme numero réel pour l'archivage
+            // si un champ personnalisé a "numéro" dans le nom, sa valeur devient le numéro réel
             const numeroCustom = visible.find(f =>
                 f.id === 'numero' || f.id === 'n' ||
                 (f.name && f.name.toLowerCase().includes('numéro')) ||
@@ -355,8 +378,7 @@
                 data.numero = data[numeroCustom.id];
             }
 
-            // si un champ personnalisé a un nom contenant "date d'émission" ou "date emission",
-            // on l'utilise pour le calcul de l'année et le tri
+            // idem pour date d'émission
             const dateEmCustom = visible.find(f =>
                 f.id === 'dateEmission' ||
                 (f.name && f.name.toLowerCase().includes('émission')) ||
@@ -375,6 +397,7 @@
 
             const visible = Object.values(CHAMPS)
                 .filter(c => c.scope === 'global' || (c.types || []).includes(d.typeCode))
+                .filter(c => !isTypeField(c))
                 .sort((a, b) => (a.order || 0) - (b.order || 0));
 
             for (const f of visible) {
