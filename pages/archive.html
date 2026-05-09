@@ -34,10 +34,6 @@
                             <label class="form-label">Type</label>
                             <select id="filterType" class="form-select">
                                 <option value="">Tous</option>
-                                <option value="SAT">SAT</option>
-                                <option value="SUR">SUR</option>
-                                <option value="ATT">ATT</option>
-                                <option value="AUTRE">Autre</option>
                             </select>
                         </div>
                         
@@ -115,6 +111,8 @@
         import { showToast, formatDate, getStatus, getTypeBadgeClass } from '../assets/js/helpers.js';
         import { getAllAuthorizations, getAuthorization, deleteAuthorization, filterAuthorizations, approveAuthorization } from '../assets/js/database.js';
         import { downloadGeneratedPDF } from '../assets/js/pdf-gen.js';
+        import { db } from '../assets/js/firebase-config.js';
+        import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         injectSidebar('archive');
 
@@ -127,8 +125,24 @@
         checkAuth(async (user, userData) => {
             currentAuthUser = user;
             currentUser = userData;
+            await loadTypeFilter();
             await loadData();
         });
+
+        async function loadTypeFilter() {
+            try {
+                const snap = await getDoc(doc(db, 'params', 'types'));
+                if (snap.exists() && snap.data().list) {
+                    const sel = document.getElementById('filterType');
+                    Object.values(snap.data().list).forEach(t => {
+                        const opt = document.createElement('option');
+                        opt.value = t.code;
+                        opt.textContent = t.code;
+                        sel.appendChild(opt);
+                    });
+                }
+            } catch (e) {}
+        }
 
         async function loadData() {
             try {
