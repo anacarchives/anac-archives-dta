@@ -190,12 +190,7 @@
                 if (snap.exists()) {
                     types = snap.data().list || {};
                 } else {
-                    // initialiser avec les types par défaut
-                    types = {
-                        SAT: { code: 'SAT', label: 'Survol et Atterrissage', format: 'SAT-{NUM:3}-{YY}' },
-                        SUR: { code: 'SUR', label: 'Survol', format: 'SUR-{NUM:3}-{YY}' },
-                    };
-                    await saveTypes();
+                    types = {};
                 }
             } catch (e) {
                 console.error(e);
