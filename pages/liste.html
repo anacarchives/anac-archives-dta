@@ -182,6 +182,7 @@
             currentAuthUser = user;
             currentUser = userData;
             await loadTypeFilter();
+            await loadChamps();
             await loadData();
         });
 
@@ -308,34 +309,70 @@
         });
 
         // ─── MODAL ─────────────────────────────────────────────
+        let CHAMPS = {};
+
+        async function loadChamps() {
+            try {
+                const snap = await getDoc(doc(db, 'params', 'champs'));
+                if (snap.exists()) CHAMPS = snap.data().list || {};
+            } catch (e) {}
+        }
+
         async function showDetail(id) {
             const rec = await getAuthorization(id);
             if (!rec) return;
+            if (Object.keys(CHAMPS).length === 0) await loadChamps();
 
-            const valStatus = getStatus(rec.dateDebutValidite, rec.dateFinValidite);
             const approval = rec.statut === 'approuve' ? 'Approuvée' : 'En attente';
 
             document.getElementById('modalTitle').textContent = rec.numero || 'Autorisation';
-            document.getElementById('modalBody').innerHTML = `
+
+            // construire la liste des champs à afficher
+            // d'abord type, puis les champs personnalisés dans l'ordre, puis les méta
+            let detailHtml = `
                 <div class="detail-grid">
-                    <div class="detail-item"><div class="detail-label">N° Autorisation</div><div class="detail-value">${rec.numero || '—'}</div></div>
-                    <div class="detail-item"><div class="detail-label">Type</div><div class="detail-value"><span class="badge ${getTypeBadgeClass(rec.typeCode)}">${rec.typeCode || '—'}</span> ${rec.type || ''}</div></div>
-                    <div class="detail-item"><div class="detail-label">Date émission</div><div class="detail-value">${formatDate(rec.dateEmission)}</div></div>
-                    <div class="detail-item"><div class="detail-label">Date réception</div><div class="detail-value">${formatDate(rec.dateReception)}</div></div>
-                    <div class="detail-item"><div class="detail-label">Opérateur</div><div class="detail-value">${rec.operateur || '—'}</div></div>
-                    <div class="detail-item"><div class="detail-label">Destinataire</div><div class="detail-value">${rec.destinataire || '—'}</div></div>
-                    <div class="detail-item"><div class="detail-label">Aéronef</div><div class="detail-value">${rec.aeronefType || '—'}</div></div>
-                    <div class="detail-item"><div class="detail-label">Immatriculation</div><div class="detail-value">${rec.immatriculation || '—'}</div></div>
-                    <div class="detail-item"><div class="detail-label">Motif</div><div class="detail-value">${rec.motif || '—'}</div></div>
-                    <div class="detail-item full"><div class="detail-label">Route</div><div class="detail-value">${rec.route || '—'}</div></div>
-                    <div class="detail-item"><div class="detail-label">Date début validité</div><div class="detail-value">${formatDate(rec.dateDebutValidite)}</div></div>
-                    <div class="detail-item"><div class="detail-label">Date fin validité</div><div class="detail-value">${formatDate(rec.dateFinValidite)} ${rec.validiteExtension ? `<span class="badge badge-future">${rec.validiteExtension}</span>` : ''}</div></div>
-                    <div class="detail-item"><div class="detail-label">Validité</div><div class="detail-value"><span class="badge ${valStatus.class}">${valStatus.label}</span></div></div>
-                    <div class="detail-item"><div class="detail-label">Approbation</div><div class="detail-value">${approval}</div></div>
-                    <div class="detail-item"><div class="detail-label">Créée par</div><div class="detail-value" style="font-size:13px;">${rec.createdBy || '—'}</div></div>
+                    <div class="detail-item">
+                        <div class="detail-label">N° Autorisation</div>
+                        <div class="detail-value">${rec.numero || '—'}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Type</div>
+                        <div class="detail-value"><span class="badge ${getTypeBadgeClass(rec.typeCode)}">${rec.typeCode || '—'}</span> ${rec.type || ''}</div>
+                    </div>
+            `;
+
+            // champs personnalisés visibles pour ce type, dans l'ordre
+            const customFields = Object.values(CHAMPS)
+                .filter(c => c.scope === 'global' || (c.types || []).includes(rec.typeCode))
+                .sort((a, b) => (a.order || 0) - (b.order || 0));
+
+            for (const f of customFields) {
+                const val = rec[f.id];
+                const display = (val === undefined || val === null || val === '') ? '—' : val;
+                const fullClass = f.type === 'textarea' ? 'full' : '';
+                detailHtml += `
+                    <div class="detail-item ${fullClass}">
+                        <div class="detail-label">${f.name}</div>
+                        <div class="detail-value">${display}</div>
+                    </div>
+                `;
+            }
+
+            // méta (approbation, créé par)
+            detailHtml += `
+                    <div class="detail-item">
+                        <div class="detail-label">Approbation</div>
+                        <div class="detail-value">${approval}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Créée par</div>
+                        <div class="detail-value" style="font-size:13px;">${rec.createdBy || '—'}</div>
+                    </div>
                     ${rec.approvedBy ? `<div class="detail-item"><div class="detail-label">Approuvée par</div><div class="detail-value" style="font-size:13px;">${rec.approvedBy}</div></div>` : ''}
                 </div>
             `;
+
+            document.getElementById('modalBody').innerHTML = detailHtml;
 
             let footer = '';
             footer += `<button class="btn btn-secondary" id="btnPrint">
