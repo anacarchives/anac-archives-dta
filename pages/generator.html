@@ -54,6 +54,10 @@
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
                                 <span id="btnSaveText">Enregistrer</span>
                             </button>
+                            <button type="button" class="btn btn-success" id="btnSaveApprove" style="display:none; width:auto; padding:12px 28px; background:#22C55E; color:white; border:none;">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                                Enregistrer et approuver
+                            </button>
                         </div>
                     </form>
                 </div>
@@ -70,7 +74,7 @@
         import { checkAuth, injectSidebar } from '../assets/js/layout.js';
         import { showToast, fromISODate } from '../assets/js/helpers.js';
         import { generateAuthorizationPDF, downloadGeneratedPDF, getPDFDataURI, getPDFBlob, clearModelsCache } from '../assets/js/pdf-gen.js';
-        import { createAuthorization, getAllUsers } from '../assets/js/database.js';
+        import { createAuthorization, getAllUsers, approveAuthorization } from '../assets/js/database.js';
         import { notifyDirectors } from '../assets/js/notification.js';
         import { db } from '../assets/js/firebase-config.js';
         import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
@@ -78,11 +82,20 @@
         injectSidebar('generator');
 
         let currentUserEmail = '';
-        let TYPES = {};   // { SAT: { code, label, format }, ... }
-        let CHAMPS = {};  // { idChamp: { id, name, type, options, required, scope, types } }
+        let currentAuthUser = null;
+        let currentUserData = null;
+        let TYPES = {};
+        let CHAMPS = {};
 
-        checkAuth(async (user) => {
+        checkAuth(async (user, userData) => {
+            currentAuthUser = user;
+            currentUserData = userData;
             currentUserEmail = user.email || '';
+            // si directeur, montrer le bouton "Enregistrer et approuver"
+            if (userData.role === 'directeur') {
+                const b = document.getElementById('btnSaveApprove');
+                if (b) b.style.display = 'inline-flex';
+            }
             await loadConfig();
             renderForm();
         });
@@ -270,15 +283,15 @@
         });
 
         // ─── ENREGISTRER ───────────────────────────────────────
-        document.getElementById('genForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
+        async function saveAuthorization(autoApprove = false) {
             const d = validate();
             if (!d) return;
 
-            const btn = document.getElementById('btnSave');
+            const btn = autoApprove ? document.getElementById('btnSaveApprove') : document.getElementById('btnSave');
             const btnText = document.getElementById('btnSaveText');
             btn.disabled = true;
-            btnText.textContent = 'Enregistrement...';
+            if (btnText && !autoApprove) btnText.textContent = 'Enregistrement...';
+            if (autoApprove) btn.innerHTML = 'Enregistrement et approbation...';
 
             try {
                 clearModelsCache();
@@ -287,19 +300,34 @@
                 const pdfFile = new File([blob], `${d.numero}.pdf`, { type: 'application/pdf' });
 
                 await downloadGeneratedPDF(d, pdfDoc);
-                await createAuthorization(d, pdfFile);
-                showToast(`${d.numero} archivée — en attente d'approbation`, 'success');
+                const created = await createAuthorization(d, pdfFile);
 
-                // notification email
-                try {
-                    const users = await getAllUsers();
-                    const directors = users.filter(u => u.role === 'directeur' && u.email);
-                    if (directors.length > 0) {
-                        await notifyDirectors(directors, d, currentUserEmail);
-                        showToast(`Email envoyé à ${directors.length} directeur(s)`, 'info');
+                // si directeur et autoApprove, approuver immédiatement
+                if (autoApprove && currentUserData?.role === 'directeur') {
+                    try {
+                        const sigKey = `signature_${currentAuthUser.uid}`;
+                        const sig = localStorage.getItem(sigKey) || null;
+                        await approveAuthorization(created.id, currentAuthUser.uid, currentUserEmail || currentUserData.identifiant || '', sig);
+                        showToast(`${d.numero} archivée et approuvée`, 'success');
+                    } catch (e) {
+                        showToast('Archivée mais erreur approbation: ' + e.message, 'warning');
                     }
-                } catch (e) {
-                    console.warn('Notification:', e.message);
+                } else {
+                    showToast(`${d.numero} archivée — en attente d'approbation`, 'success');
+
+                    // notifier les directeurs (sauf si c'est le directeur lui-même qui crée)
+                    if (currentUserData?.role !== 'directeur') {
+                        try {
+                            const users = await getAllUsers();
+                            const directors = users.filter(u => u.role === 'directeur' && u.email);
+                            if (directors.length > 0) {
+                                await notifyDirectors(directors, d, currentUserEmail);
+                                showToast(`Email envoyé à ${directors.length} directeur(s)`, 'info');
+                            }
+                        } catch (e) {
+                            console.warn('Notification:', e.message);
+                        }
+                    }
                 }
 
                 document.getElementById('genForm').reset();
@@ -309,8 +337,21 @@
                 showToast('Erreur: ' + err.message, 'error');
             } finally {
                 btn.disabled = false;
-                btnText.textContent = 'Enregistrer';
+                if (btnText && !autoApprove) btnText.textContent = 'Enregistrer';
+                if (autoApprove) {
+                    btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Enregistrer et approuver`;
+                }
             }
+        }
+
+        document.getElementById('genForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            saveAuthorization(false);
+        });
+
+        document.getElementById('btnSaveApprove').addEventListener('click', () => {
+            if (!confirm("Enregistrer ET approuver l'autorisation ?")) return;
+            saveAuthorization(true);
         });
     </script>
 </body>
