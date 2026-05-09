@@ -122,7 +122,7 @@
                 return;
             }
 
-            // dropdown des types + bouton enregistrer
+            // formulaire de base : type + dates système (les autres champs viennent des "Champs personnalisés")
             let html = `
                 <div class="form-group">
                     <label class="form-label">Type d'autorisation *</label>
@@ -132,11 +132,6 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">N° Autorisation *</label>
-                    <input type="text" id="fNumero" class="form-input" required>
-                    <div style="font-size:11px; color:var(--text-muted); margin-top:4px;" id="numHint"></div>
-                </div>
-                <div class="form-group">
                     <label class="form-label">Date d'émission *</label>
                     <input type="date" id="fDateEmission" class="form-input" required>
                 </div>
@@ -144,9 +139,9 @@
                     <label class="form-label">Date de réception</label>
                     <input type="date" id="fDateReception" class="form-input">
                 </div>
+                <input type="hidden" id="fNumero">
             `;
 
-            // champs personnalisés (rendus selon le type sélectionné — pour l'instant on affiche les globaux)
             html += '<div id="customFields" class="form-grid" style="grid-column:1/-1; padding:0; gap:0;"></div>';
 
             document.getElementById('formFields').innerHTML = html;
@@ -157,17 +152,12 @@
             const code = document.getElementById('fType').value;
             const t = TYPES[code];
             if (!t) {
-                document.getElementById('numHint').textContent = '';
                 document.getElementById('customFields').innerHTML = '';
                 return;
             }
-            // suggérer un numéro selon le format
+            // pré-remplir le numéro système (caché) avec le format suggéré
             const example = generateNumExample(t.format);
-            document.getElementById('numHint').textContent = `Format suggéré : ${example}`;
-            // si le numéro est vide, le pré-remplir
-            const numInput = document.getElementById('fNumero');
-            if (!numInput.value) numInput.value = example;
-            // afficher les champs personnalisés
+            document.getElementById('fNumero').value = example;
             renderCustomFields(code);
         }
 
@@ -182,10 +172,10 @@
         }
 
         function renderCustomFields(typeCode) {
-            // garder les champs visibles : globaux + ceux du type sélectionné
-            const visible = Object.values(CHAMPS).filter(c =>
-                c.scope === 'global' || (c.types || []).includes(typeCode)
-            );
+            // garder les champs visibles : globaux + ceux du type sélectionné, triés par ordre
+            const visible = Object.values(CHAMPS)
+                .filter(c => c.scope === 'global' || (c.types || []).includes(typeCode))
+                .sort((a, b) => (a.order || 0) - (b.order || 0));
 
             const c = document.getElementById('customFields');
             if (visible.length === 0) {
@@ -234,10 +224,10 @@
                 dateReception: fromISODate(document.getElementById('fDateReception').value),
             };
 
-            // ajouter tous les champs personnalisés
-            const visible = Object.values(CHAMPS).filter(c =>
-                c.scope === 'global' || (c.types || []).includes(code)
-            );
+            const visible = Object.values(CHAMPS)
+                .filter(c => c.scope === 'global' || (c.types || []).includes(code))
+                .sort((a, b) => (a.order || 0) - (b.order || 0));
+
             for (const f of visible) {
                 const el = document.getElementById('cf_' + f.id);
                 if (!el) continue;
@@ -245,19 +235,30 @@
                 if (f.type === 'date' && val) val = fromISODate(val);
                 data[f.id] = val;
             }
+
+            // si un champ personnalisé a un nom contenant "numéro" ou identifiant "numero"/"n",
+            // on utilise sa valeur comme numero réel pour l'archivage
+            const numeroCustom = visible.find(f =>
+                f.id === 'numero' || f.id === 'n' ||
+                (f.name && f.name.toLowerCase().includes('numéro')) ||
+                (f.name && f.name.toLowerCase().includes('numero'))
+            );
+            if (numeroCustom && data[numeroCustom.id]) {
+                data.numero = data[numeroCustom.id];
+            }
+
             return data;
         }
 
         function validate() {
             const d = getFormData();
             if (!d.typeCode) { showToast('Sélectionnez un type', 'warning'); return null; }
-            if (!d.numero) { showToast('N° Autorisation requis', 'warning'); return null; }
             if (!d.dateEmission) { showToast("Date d'émission requise", 'warning'); return null; }
 
-            // valider les champs personnalisés obligatoires
-            const visible = Object.values(CHAMPS).filter(c =>
-                c.scope === 'global' || (c.types || []).includes(d.typeCode)
-            );
+            const visible = Object.values(CHAMPS)
+                .filter(c => c.scope === 'global' || (c.types || []).includes(d.typeCode))
+                .sort((a, b) => (a.order || 0) - (b.order || 0));
+
             for (const f of visible) {
                 if (f.required && !d[f.id]) {
                     showToast(`Champ requis : ${f.name}`, 'warning');
