@@ -122,7 +122,7 @@
                 return;
             }
 
-            // formulaire de base : type + dates système (les autres champs viennent des "Champs personnalisés")
+            // seul le Type d'autorisation est gardé en hardcodé (obligatoire pour choisir le modèle)
             let html = `
                 <div class="form-group">
                     <label class="form-label">Type d'autorisation *</label>
@@ -130,14 +130,6 @@
                         <option value="">—</option>
                         ${codes.map(c => `<option value="${c}">${TYPES[c].code} — ${TYPES[c].label}</option>`).join('')}
                     </select>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Date d'émission *</label>
-                    <input type="date" id="fDateEmission" class="form-input" required>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Date de réception</label>
-                    <input type="date" id="fDateReception" class="form-input">
                 </div>
                 <input type="hidden" id="fNumero">
             `;
@@ -155,7 +147,6 @@
                 document.getElementById('customFields').innerHTML = '';
                 return;
             }
-            // pré-remplir le numéro système (caché) avec le format suggéré
             const example = generateNumExample(t.format);
             document.getElementById('fNumero').value = example;
             renderCustomFields(code);
@@ -217,11 +208,9 @@
             const t = TYPES[code] || {};
 
             const data = {
-                numero:        document.getElementById('fNumero').value.trim(),
-                typeCode:      code,
-                type:          t.label || '',
-                dateEmission:  fromISODate(document.getElementById('fDateEmission').value),
-                dateReception: fromISODate(document.getElementById('fDateReception').value),
+                numero:   document.getElementById('fNumero').value.trim(),
+                typeCode: code,
+                type:     t.label || '',
             };
 
             const visible = Object.values(CHAMPS)
@@ -247,13 +236,23 @@
                 data.numero = data[numeroCustom.id];
             }
 
+            // si un champ personnalisé a un nom contenant "date d'émission" ou "date emission",
+            // on l'utilise pour le calcul de l'année et le tri
+            const dateEmCustom = visible.find(f =>
+                f.id === 'dateEmission' ||
+                (f.name && f.name.toLowerCase().includes('émission')) ||
+                (f.name && f.name.toLowerCase().includes('emission'))
+            );
+            if (dateEmCustom && data[dateEmCustom.id]) {
+                data.dateEmission = data[dateEmCustom.id];
+            }
+
             return data;
         }
 
         function validate() {
             const d = getFormData();
             if (!d.typeCode) { showToast('Sélectionnez un type', 'warning'); return null; }
-            if (!d.dateEmission) { showToast("Date d'émission requise", 'warning'); return null; }
 
             const visible = Object.values(CHAMPS)
                 .filter(c => c.scope === 'global' || (c.types || []).includes(d.typeCode))
