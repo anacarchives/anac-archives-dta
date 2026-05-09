@@ -6,6 +6,26 @@
     <title>Champs personnalisés - ANAC Archives DTA</title>
     <link rel="stylesheet" href="../assets/css/style.css">
     <style>
+        .type-filter-btn {
+            padding: 7px 16px;
+            border-radius: 20px;
+            border: 1.5px solid var(--border);
+            background: white;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            color: var(--text-light);
+            transition: all 0.15s;
+        }
+        .type-filter-btn:hover { border-color: var(--primary); color: var(--primary); }
+        .type-filter-btn.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .champ-card.hidden { display: none; }
+
         .champs-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
@@ -182,8 +202,13 @@
             </div>
 
             <div class="content-wrapper">
-                <div style="background: #E8F5E9; border:1px solid #A5D6A7; border-radius:8px; padding:12px 16px; margin-top:12px; margin-bottom:8px; font-size:12px; color:#2E7D32;">
+                <div style="background: #E8F5E9; border:1px solid #A5D6A7; border-radius:8px; padding:12px 16px; margin-top:12px; margin-bottom:12px; font-size:12px; color:#2E7D32;">
                     <strong>Astuce :</strong> Glissez-déposez les cartes pour définir l'ordre d'affichage des champs dans le formulaire de saisie.
+                </div>
+
+                <!-- Filtre par type -->
+                <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px;" id="typeFilterBar">
+                    <button class="type-filter-btn active" data-type="">Tous</button>
                 </div>
 
                 <div class="champs-grid" id="champsGrid"></div>
@@ -277,8 +302,45 @@
                 return;
             }
             await loadAll();
+            renderTypeFilters();
             renderChamps();
         });
+
+        let activeTypeFilter = ''; // '' = tous
+
+        function renderTypeFilters() {
+            const bar = document.getElementById('typeFilterBar');
+            // bouton "Tous" toujours présent
+            let html = `<button class="type-filter-btn ${activeTypeFilter === '' ? 'active' : ''}" data-type="">Tous</button>`;
+            // un bouton par type
+            Object.values(types).forEach(t => {
+                html += `<button class="type-filter-btn ${activeTypeFilter === t.code ? 'active' : ''}" data-type="${t.code}">${t.code} — ${t.label}</button>`;
+            });
+            bar.innerHTML = html;
+            bar.querySelectorAll('.type-filter-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    activeTypeFilter = btn.dataset.type;
+                    bar.querySelectorAll('.type-filter-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    applyTypeFilter();
+                });
+            });
+        }
+
+        function applyTypeFilter() {
+            const cards = document.querySelectorAll('.champ-card');
+            cards.forEach(card => {
+                const scope = card.dataset.scope;
+                const cardTypes = (card.dataset.types || '').split(',').filter(Boolean);
+                if (activeTypeFilter === '') {
+                    card.classList.remove('hidden');
+                } else {
+                    // afficher si global OU si le type est dans la liste
+                    const visible = scope === 'global' || cardTypes.includes(activeTypeFilter);
+                    card.classList.toggle('hidden', !visible);
+                }
+            });
+        }
 
         async function loadAll() {
             try {
@@ -313,7 +375,7 @@
                     ? '<span class="champ-type-badge global">Global — tous les types</span>'
                     : (c.types || []).map(t => `<span class="champ-type-badge">${t}</span>`).join('');
                 return `
-                    <div class="champ-card" draggable="true" data-id="${c.id}">
+                    <div class="champ-card" draggable="true" data-id="${c.id}" data-scope="${c.scope || 'specific'}" data-types="${(c.types || []).join(',')}">
                         <div class="champ-card-header">
                             <div style="display:flex; align-items:center; gap:6px;">
                                 <span class="drag-handle" title="Glisser pour réordonner">
@@ -344,6 +406,9 @@
 
             // drag and drop
             attachDragHandlers();
+
+            // appliquer le filtre actif
+            applyTypeFilter();
         }
 
         function attachDragHandlers() {
