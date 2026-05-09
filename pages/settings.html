@@ -178,10 +178,17 @@
                         <strong>Comment ça marche :</strong> Cochez ci-dessous les champs auxquels vous voulez ajouter des valeurs prédéfinies. Lors de la saisie, ces valeurs apparaîtront comme suggestions dans une liste déroulante avec toujours l'option de saisir manuellement.
                     </div>
 
-                    <!-- cases à cocher pour activer les champs -->
+                    <!-- cases à cocher pour activer les champs (valeurs prédéfinies) -->
                     <div class="selector-card">
                         <div class="selector-title">Champs avec valeurs prédéfinies</div>
                         <div class="checkbox-grid" id="checkboxesContainer"></div>
+                    </div>
+
+                    <!-- cases à cocher pour les colonnes du tableau Liste -->
+                    <div class="selector-card">
+                        <div class="selector-title">Colonnes affichées dans la Liste des autorisations</div>
+                        <p style="font-size:12px; color:var(--text-muted); margin: -8px 0 12px;">Cochez les champs à afficher comme colonnes (les colonnes N° Autorisation, Type et Approbation sont toujours visibles).</p>
+                        <div class="checkbox-grid" id="listColsContainer"></div>
                     </div>
 
                     <!-- sections d'ajout de valeurs (uniquement champs cochés) -->
@@ -202,6 +209,7 @@
 
         let CHAMPS = {};
         let enabledFields = []; // ids des champs avec valeurs prédéfinies activées
+        let listColumns = [];   // ids des champs affichés comme colonnes dans la Liste
         let currentUserUid = null;
         let currentRole = null;
 
@@ -214,6 +222,7 @@
             } else {
                 await loadAll();
                 renderCheckboxes();
+                renderListColsCheckboxes();
                 renderSections();
             }
         });
@@ -225,11 +234,11 @@
                     const data = snap.data();
                     CHAMPS = data.list || {};
                     enabledFields = data.enabledFields || [];
+                    listColumns = data.listColumns || [];
                 }
             } catch (e) {
                 console.error(e);
             }
-            // si aucune sélection, activer par défaut tous les champs qui ont déjà des options
             if (enabledFields.length === 0) {
                 enabledFields = Object.values(CHAMPS)
                     .filter(c => (c.options || []).length > 0)
@@ -240,7 +249,49 @@
         async function saveAll() {
             await setDoc(doc(db, 'params', 'champs'), {
                 list: CHAMPS,
-                enabledFields: enabledFields
+                enabledFields: enabledFields,
+                listColumns: listColumns
+            });
+        }
+
+        function renderListColsCheckboxes() {
+            const container = document.getElementById('listColsContainer');
+            const list = Object.values(CHAMPS).sort((a, b) => (a.order || 0) - (b.order || 0));
+
+            if (list.length === 0) {
+                container.innerHTML = '<div class="empty-msg" style="grid-column:1/-1;">Aucun champ.</div>';
+                return;
+            }
+
+            container.innerHTML = list.map(c => {
+                const checked = listColumns.includes(c.id);
+                return `
+                    <label class="check-item ${checked ? 'checked' : ''}" data-id="${c.id}" data-target="listcol">
+                        <input type="checkbox" ${checked ? 'checked' : ''}>
+                        <span class="check-name">${c.name}</span>
+                        <span class="check-id">{{${c.id}}}</span>
+                    </label>
+                `;
+            }).join('');
+
+            container.querySelectorAll('.check-item').forEach(el => {
+                el.addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    const id = el.dataset.id;
+                    const idx = listColumns.indexOf(id);
+                    if (idx >= 0) {
+                        listColumns.splice(idx, 1);
+                    } else {
+                        listColumns.push(id);
+                    }
+                    el.classList.toggle('checked');
+                    el.querySelector('input').checked = listColumns.includes(id);
+                    try {
+                        await saveAll();
+                    } catch (err) {
+                        showToast('Erreur: ' + err.message, 'error');
+                    }
+                });
             });
         }
 
