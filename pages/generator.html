@@ -191,10 +191,18 @@
                     input = `<input type="date" id="cf_${f.id}" class="form-input" ${reqAttr}>`;
                     break;
                 case 'select':
-                    input = `<select id="cf_${f.id}" class="form-select" ${reqAttr}>
-                        <option value="">—</option>
-                        ${(f.options || []).map(o => `<option value="${o}">${o}</option>`).join('')}
-                    </select>`;
+                    const opts = f.options || [];
+                    input = `
+                        <div class="combo-wrap" data-id="${f.id}">
+                            <select id="cf_${f.id}" class="form-select sel-mode" ${reqAttr}>
+                                <option value="">—</option>
+                                ${opts.map(o => `<option value="${o}">${o}</option>`).join('')}
+                                <option value="__manual__">— Saisir manuellement —</option>
+                            </select>
+                            <input type="text" id="cf_man_${f.id}" class="form-input man-mode" style="display:none; margin-top:6px;">
+                            <span class="toggle-link" data-id="${f.id}" style="font-size:11px; color:var(--primary); cursor:pointer; text-decoration:underline; margin-top:4px; display:inline-block;">Saisir manuellement</span>
+                        </div>
+                    `;
                     break;
                 default:
                     input = `<input type="text" id="cf_${f.id}" class="form-input" ${reqAttr}>`;
@@ -202,6 +210,40 @@
             const fullClass = f.type === 'textarea' ? 'full' : '';
             return `<div class="form-group ${fullClass}"><label class="form-label">${f.name}${reqStar}</label>${input}</div>`;
         }
+
+        // gérer le toggle manuel/select pour les champs select
+        document.addEventListener('click', (e) => {
+            if (e.target.classList.contains('toggle-link')) {
+                const id = e.target.dataset.id;
+                const sel = document.getElementById('cf_' + id);
+                const man = document.getElementById('cf_man_' + id);
+                if (!sel || !man) return;
+                const isManual = man.style.display !== 'none';
+                if (isManual) {
+                    man.style.display = 'none'; sel.style.display = '';
+                    e.target.textContent = 'Saisir manuellement';
+                } else {
+                    sel.style.display = 'none'; man.style.display = '';
+                    e.target.textContent = 'Choisir dans la liste';
+                    man.focus();
+                }
+            }
+        });
+
+        document.addEventListener('change', (e) => {
+            if (e.target.classList.contains('sel-mode') && e.target.value === '__manual__') {
+                const id = e.target.id.replace('cf_', '');
+                const sel = e.target;
+                const man = document.getElementById('cf_man_' + id);
+                const link = document.querySelector(`.toggle-link[data-id="${id}"]`);
+                if (man) {
+                    sel.style.display = 'none';
+                    man.style.display = '';
+                    if (link) link.textContent = 'Choisir dans la liste';
+                    man.focus();
+                }
+            }
+        });
 
         function getFormData() {
             const code = document.getElementById('fType').value;
@@ -218,10 +260,21 @@
                 .sort((a, b) => (a.order || 0) - (b.order || 0));
 
             for (const f of visible) {
-                const el = document.getElementById('cf_' + f.id);
-                if (!el) continue;
-                let val = el.value.trim();
-                if (f.type === 'date' && val) val = fromISODate(val);
+                let val = '';
+                if (f.type === 'select') {
+                    const sel = document.getElementById('cf_' + f.id);
+                    const man = document.getElementById('cf_man_' + f.id);
+                    if (man && man.style.display !== 'none') {
+                        val = man.value.trim();
+                    } else if (sel) {
+                        val = sel.value === '__manual__' ? '' : sel.value;
+                    }
+                } else {
+                    const el = document.getElementById('cf_' + f.id);
+                    if (!el) continue;
+                    val = el.value.trim();
+                    if (f.type === 'date' && val) val = fromISODate(val);
+                }
                 data[f.id] = val;
             }
 
