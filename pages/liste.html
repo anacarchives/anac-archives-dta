@@ -126,16 +126,15 @@
                 <div class="liste-table">
                     <table>
                         <thead>
-                            <tr>
+                            <tr id="tableHead">
                                 <th>N° Autorisation</th>
                                 <th>Type</th>
-                                <th>Date d'émission</th>
                                 <th>Approbation</th>
                                 <th></th>
                             </tr>
                         </thead>
                         <tbody id="resultsBody">
-                            <tr><td colspan="5" style="text-align:center; padding:60px; color:var(--text-muted);">Chargement...</td></tr>
+                            <tr><td colspan="4" style="text-align:center; padding:60px; color:var(--text-muted);">Chargement...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -174,6 +173,7 @@
         let currentAuthUser = null;
         let currentPage = 1;
         const PER_PAGE = 20;
+        let listColumns = []; // ids des champs à afficher comme colonnes
 
         checkAuth(async (user, userData) => {
             currentAuthUser = user;
@@ -243,8 +243,24 @@
         function renderTable(results) {
             document.getElementById('resultsCount').innerHTML = `<strong>${results.length}</strong> autorisation(s)`;
 
+            // construire les en-têtes dynamiquement avec les colonnes choisies
+            const customCols = listColumns
+                .map(id => CHAMPS[id])
+                .filter(c => c)
+                .sort((a, b) => (a.order || 0) - (b.order || 0));
+
+            const totalCols = 3 + customCols.length + 1; // numero + type + custom + approbation + voir
+            const head = document.getElementById('tableHead');
+            head.innerHTML = `
+                <th>N° Autorisation</th>
+                <th>Type</th>
+                ${customCols.map(c => `<th>${c.name}</th>`).join('')}
+                <th>Approbation</th>
+                <th></th>
+            `;
+
             if (results.length === 0) {
-                document.getElementById('resultsBody').innerHTML = '<tr><td colspan="5" style="text-align:center; padding:60px; color:var(--text-muted);">Aucune autorisation</td></tr>';
+                document.getElementById('resultsBody').innerHTML = `<tr><td colspan="${totalCols}" style="text-align:center; padding:60px; color:var(--text-muted);">Aucune autorisation</td></tr>`;
                 document.getElementById('pagination').innerHTML = '';
                 return;
             }
@@ -257,10 +273,15 @@
             document.getElementById('resultsBody').innerHTML = pageResults.map(a => {
                 const label = a.statut === 'approuve' ? 'Approuvée' : 'En attente';
                 const cls   = a.statut === 'approuve' ? 'badge-active' : 'badge-soon';
+                const customCells = customCols.map(c => {
+                    const val = a[c.id];
+                    const display = (val === undefined || val === null || val === '') ? '—' : val;
+                    return `<td>${display}</td>`;
+                }).join('');
                 return `<tr data-id="${a.id}">
                     <td><strong>${a.numero || '—'}</strong></td>
                     <td><span class="badge ${getTypeBadgeClass(a.typeCode)}">${a.typeCode || '—'}</span></td>
-                    <td style="font-size:13px; color:var(--text-light);">${formatDate(a.dateEmission)}</td>
+                    ${customCells}
                     <td><span class="badge ${cls}">${label}</span></td>
                     <td><button class="btn btn-secondary btn-sm" data-action="view" data-id="${a.id}">Voir</button></td>
                 </tr>`;
@@ -308,7 +329,11 @@
         async function loadChamps() {
             try {
                 const snap = await getDoc(doc(db, 'params', 'champs'));
-                if (snap.exists()) CHAMPS = snap.data().list || {};
+                if (snap.exists()) {
+                    const data = snap.data();
+                    CHAMPS = data.list || {};
+                    listColumns = data.listColumns || [];
+                }
             } catch (e) {}
         }
 
