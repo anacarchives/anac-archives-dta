@@ -33,9 +33,6 @@
                             <label class="form-label">Type</label>
                             <select id="filterType" class="form-select">
                                 <option value="">Tous les types</option>
-                                <option value="SAT">SAT</option>
-                                <option value="SUR">SUR</option>
-                                <option value="ATT">ATT</option>
                             </select>
                         </div>
                         <div class="form-group">
@@ -103,16 +100,33 @@
         import { checkAuth, injectSidebar } from '../assets/js/layout.js';
         import { showToast, parseDate, formatDate } from '../assets/js/helpers.js';
         import { getAllAuthorizations } from '../assets/js/database.js';
+        import { db } from '../assets/js/firebase-config.js';
+        import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         injectSidebar('export');
 
         let allData = [];
         let filteredData = [];
 
-        // on attend que l'auth soit OK avant de fetch (sinon Firestore refuse)
         checkAuth(async () => {
+            await loadTypeFilter();
             await loadData();
         });
+
+        async function loadTypeFilter() {
+            try {
+                const snap = await getDoc(doc(db, 'params', 'types'));
+                if (snap.exists() && snap.data().list) {
+                    const sel = document.getElementById('filterType');
+                    Object.values(snap.data().list).forEach(t => {
+                        const opt = document.createElement('option');
+                        opt.value = t.code;
+                        opt.textContent = t.code;
+                        sel.appendChild(opt);
+                    });
+                }
+            } catch (e) {}
+        }
 
         async function loadData() {
             try {
