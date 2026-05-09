@@ -421,14 +421,21 @@
                             <input type="number" id="eFontSize" class="form-input" value="${t.fontSize || 8}" min="5" max="30" step="0.5">
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Style</label>
-                            <select id="eFont" class="form-select">
-                                <option value="bold" ${t.font === 'bold' ? 'selected' : ''}>Gras</option>
-                                <option value="bolditalic" ${t.font === 'bolditalic' ? 'selected' : ''}>Gras Italique</option>
-                                <option value="italic" ${t.font === 'italic' ? 'selected' : ''}>Italique</option>
-                                <option value="normal" ${t.font === 'normal' ? 'selected' : ''}>Normal</option>
+                            <label class="form-label">Police</label>
+                            <select id="eFontFamily" class="form-select">
+                                <option value="helvetica" ${(t.fontFamily || 'helvetica') === 'helvetica' ? 'selected' : ''}>Helvetica (Sans-serif)</option>
+                                <option value="times" ${(t.fontFamily) === 'times' ? 'selected' : ''}>Times (Serif)</option>
+                                <option value="courier" ${(t.fontFamily) === 'courier' ? 'selected' : ''}>Courier (Monospace)</option>
                             </select>
                         </div>
+                    </div>
+                    <div style="display:flex; gap:16px; margin-top:8px;">
+                        <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:13px;">
+                            <input type="checkbox" id="eBold" ${getBold(t) ? 'checked' : ''}> Gras
+                        </label>
+                        <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:13px;">
+                            <input type="checkbox" id="eItalic" ${getItalic(t) ? 'checked' : ''}> Italique
+                        </label>
                     </div>
                 </div>
 
@@ -448,10 +455,22 @@
             `;
 
             // appliquer en temps réel
-            ['eTexte', 'eFontSize', 'eFont', 'eX', 'eY'].forEach(id => {
-                document.getElementById(id).addEventListener('input', applyEdit);
-                document.getElementById(id).addEventListener('change', applyEdit);
+            ['eTexte', 'eFontSize', 'eFontFamily', 'eBold', 'eItalic', 'eX', 'eY'].forEach(id => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                el.addEventListener('input', applyEdit);
+                el.addEventListener('change', applyEdit);
             });
+        }
+
+        // helpers pour décomposer/recomposer le style police
+        function getBold(t)   { return (t.font || 'bold').includes('bold'); }
+        function getItalic(t) { return (t.font || 'bold').includes('italic'); }
+        function buildFontStyle(bold, italic) {
+            if (bold && italic) return 'bolditalic';
+            if (bold) return 'bold';
+            if (italic) return 'italic';
+            return 'normal';
         }
 
         function applyEdit() {
@@ -459,7 +478,10 @@
             const t = allModels[currentType][currentRect][currentTextIdx];
             t.texte    = document.getElementById('eTexte').value;
             t.fontSize = parseFloat(document.getElementById('eFontSize').value) || 8;
-            t.font     = document.getElementById('eFont').value;
+            t.fontFamily = document.getElementById('eFontFamily').value || 'helvetica';
+            const bold   = document.getElementById('eBold').checked;
+            const italic = document.getElementById('eItalic').checked;
+            t.font     = buildFontStyle(bold, italic);
             t.x        = parseFloat(document.getElementById('eX').value) || 0;
             t.y        = parseFloat(document.getElementById('eY').value) || 0;
             renderTextsList();
@@ -471,7 +493,7 @@
         }
 
         document.getElementById('btnAddText').addEventListener('click', () => {
-            const newText = { texte: 'Nouveau texte', x: 3, y: 5, fontSize: 8, font: 'bold' };
+            const newText = { texte: 'Nouveau texte', x: 3, y: 5, fontSize: 8, font: 'bold', fontFamily: 'helvetica' };
             allModels[currentType][currentRect].push(newText);
             const newIdx = allModels[currentType][currentRect].length - 1;
             renderRectsList();
