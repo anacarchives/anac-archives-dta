@@ -22,6 +22,79 @@ const R4_H = 43;
 const R6_H = 52;
 
 let cachedModels = null;
+let cinzelLoaded = false;
+let cinzelBase64 = null;
+let cinzelBoldBase64 = null;
+
+// Charge la police Cinzel depuis Google Fonts via le CDN jsdelivr
+async function loadCinzel(pdoc) {
+    if (cinzelBase64) {
+        // déjà téléchargée, juste l'enregistrer dans cette instance jsPDF
+        try {
+            pdoc.addFileToVFS('Cinzel-Regular.ttf', cinzelBase64);
+            pdoc.addFont('Cinzel-Regular.ttf', 'cinzel', 'normal');
+            if (cinzelBoldBase64) {
+                pdoc.addFileToVFS('Cinzel-Bold.ttf', cinzelBoldBase64);
+                pdoc.addFont('Cinzel-Bold.ttf', 'cinzel', 'bold');
+            }
+            cinzelLoaded = true;
+        } catch (e) { console.warn('Cinzel apply:', e); }
+        return;
+    }
+    try {
+        // jsdelivr proxy vers Google Fonts pour les fichiers TTF
+        const regularUrl = 'https://cdn.jsdelivr.net/npm/@fontsource/cinzel@5.0.18/files/cinzel-latin-400-normal.woff';
+        const boldUrl    = 'https://cdn.jsdelivr.net/npm/@fontsource/cinzel@5.0.18/files/cinzel-latin-700-normal.woff';
+
+        // jsPDF préfère TTF — on tente d'abord
+        const tryTtfReg = 'https://cdn.jsdelivr.net/npm/@fontsource/cinzel@5.0.18/files/cinzel-latin-400-normal.ttf';
+        const tryTtfBold = 'https://cdn.jsdelivr.net/npm/@fontsource/cinzel@5.0.18/files/cinzel-latin-700-normal.ttf';
+
+        const regularBuf = await fetch(tryTtfReg).then(r => {
+            if (!r.ok) throw new Error('Regular non dispo');
+            return r.arrayBuffer();
+        });
+        cinzelBase64 = arrayBufferToBase64(regularBuf);
+        pdoc.addFileToVFS('Cinzel-Regular.ttf', cinzelBase64);
+        pdoc.addFont('Cinzel-Regular.ttf', 'cinzel', 'normal');
+
+        const boldBuf = await fetch(tryTtfBold).then(r => {
+            if (!r.ok) throw new Error('Bold non dispo');
+            return r.arrayBuffer();
+        });
+        cinzelBoldBase64 = arrayBufferToBase64(boldBuf);
+        pdoc.addFileToVFS('Cinzel-Bold.ttf', cinzelBoldBase64);
+        pdoc.addFont('Cinzel-Bold.ttf', 'cinzel', 'bold');
+
+        cinzelLoaded = true;
+    } catch (e) {
+        console.warn('Cinzel non chargée, fallback Times:', e.message);
+        cinzelLoaded = false;
+    }
+}
+
+function usesCinzel(model) {
+    if (!model) return false;
+    for (const key of Object.keys(model)) {
+        const arr = model[key];
+        if (Array.isArray(arr)) {
+            for (const t of arr) {
+                if (t && (t.fontFamily || '').toLowerCase() === 'cinzel') return true;
+            }
+        }
+    }
+    return false;
+}
+
+function arrayBufferToBase64(buf) {
+    let bin = '';
+    const bytes = new Uint8Array(buf);
+    const chunkSize = 0x8000;
+    for (let i = 0; i < bytes.length; i += chunkSize) {
+        bin += String.fromCharCode.apply(null, bytes.subarray(i, i + chunkSize));
+    }
+    return btoa(bin);
+}
 
 async function getModels() {
     if (cachedModels) return cachedModels;
@@ -44,9 +117,19 @@ function applyFont(pdoc, font, size, family) {
         'normal':     'normal',
     };
     const fam = (family || 'helvetica').toLowerCase();
-    // jsPDF supporte: helvetica, times, courier
+    let style = styleMap[font] || 'bold';
+
+    if (fam === 'cinzel' && cinzelLoaded) {
+        // Cinzel ne supporte que normal et bold
+        if (style === 'bolditalic' || style === 'italic') style = 'bold';
+        try {
+            pdoc.setFont('cinzel', style).setFontSize(size);
+            return;
+        } catch (e) {
+            // fallback Times si erreur
+        }
+    }
     const validFamily = ['helvetica', 'times', 'courier'].includes(fam) ? fam : 'helvetica';
-    const style = styleMap[font] || 'bold';
     pdoc.setFont(validFamily, style).setFontSize(size);
 }
 
@@ -77,6 +160,11 @@ function drawRect(pdoc, x, y, w, h, texts, data) {
 async function buildPDF(typeCode, model, data) {
     const pdoc = new jsPDF({ unit: 'mm', format: 'a4' });
     pdoc.setLineWidth(0.4);
+
+    // si un texte utilise Cinzel, charger la police d'abord
+    if (model && usesCinzel(model)) {
+        await loadCinzel(pdoc);
+    }
 
     let y = 3;
 
