@@ -86,6 +86,30 @@ function usesCinzel(model) {
     return false;
 }
 
+// précharger les images de manière à ce que applyImageTheme fonctionne sync
+async function prepareImages(model) {
+    const promises = [];
+    for (const key of Object.keys(model)) {
+        const arr = model[key];
+        if (!Array.isArray(arr)) continue;
+        for (const t of arr) {
+            if (t && t.kind === 'image' && t.dataUrl && (t.theme === 'grayscale' || t.theme === 'watermark')) {
+                promises.push(new Promise((resolve) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        // déclencher le cache
+                        applyImageTheme(t.dataUrl, t.theme);
+                        resolve();
+                    };
+                    img.onerror = () => resolve();
+                    img.src = t.dataUrl;
+                }));
+            }
+        }
+    }
+    await Promise.all(promises);
+}
+
 function arrayBufferToBase64(buf) {
     let bin = '';
     const bytes = new Uint8Array(buf);
@@ -148,12 +172,80 @@ function drawRect(pdoc, x, y, w, h, texts, data) {
     if (!texts || !Array.isArray(texts)) return;
     const TW = w - 6;
     for (const t of texts) {
+        if (t.kind === 'image' && t.dataUrl) {
+            try {
+                const ix = x + (t.x || 0);
+                const iy = y + (t.y || 0);
+                const iw = t.width || 30;
+                const ih = t.height || 30;
+                const opacity = (t.opacity !== undefined) ? t.opacity : 1;
+                const theme = t.theme || 'normal';
+
+                // appliquer le thème via canvas si nécessaire
+                let imgData = t.dataUrl;
+                if (theme === 'grayscale' || theme === 'watermark') {
+                    imgData = applyImageTheme(t.dataUrl, theme);
+                }
+
+                if (opacity < 1) {
+                    pdoc.saveGraphicsState();
+                    pdoc.setGState(new pdoc.GState({ opacity: opacity }));
+                    pdoc.addImage(imgData, 'PNG', ix, iy, iw, ih);
+                    pdoc.restoreGraphicsState();
+                } else {
+                    pdoc.addImage(imgData, 'PNG', ix, iy, iw, ih);
+                }
+            } catch (e) {
+                console.warn('Image error:', e);
+            }
+            continue;
+        }
         if (!t.texte) continue;
         applyFont(pdoc, t.font || 'bold', t.fontSize || 8, t.fontFamily || 'helvetica');
         const filled = fillPlaceholders(t.texte, data);
         const lines = pdoc.splitTextToSize(filled, TW);
         pdoc.text(lines, x + (t.x || 0), y + (t.y || 5));
     }
+}
+
+// applique un thème (grayscale, watermark) à une image dataUrl
+const _imgThemeCache = {};
+function applyImageTheme(dataUrl, theme) {
+    const cacheKey = dataUrl.substring(0, 100) + '__' + theme;
+    if (_imgThemeCache[cacheKey]) return _imgThemeCache[cacheKey];
+
+    const img = new Image();
+    img.src = dataUrl;
+    if (!img.complete) {
+        // si l'image n'est pas chargée, retourner l'original (sera traité au prochain rendu)
+        return dataUrl;
+    }
+
+    const canvas = document.createElement('canvas');
+    canvas.width = img.naturalWidth || img.width;
+    canvas.height = img.naturalHeight || img.height;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0);
+
+    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const d = imgData.data;
+    if (theme === 'grayscale') {
+        for (let i = 0; i < d.length; i += 4) {
+            const avg = (d[i] + d[i+1] + d[i+2]) / 3;
+            d[i] = d[i+1] = d[i+2] = avg;
+        }
+    } else if (theme === 'watermark') {
+        // très clair / délavé
+        for (let i = 0; i < d.length; i += 4) {
+            const avg = (d[i] + d[i+1] + d[i+2]) / 3;
+            const v = Math.min(255, avg * 0.4 + 180);
+            d[i] = d[i+1] = d[i+2] = v;
+        }
+    }
+    ctx.putImageData(imgData, 0, 0);
+    const result = canvas.toDataURL('image/png');
+    _imgThemeCache[cacheKey] = result;
+    return result;
 }
 
 // génère le PDF basé sur le modèle stocké
@@ -165,6 +257,9 @@ async function buildPDF(typeCode, model, data) {
     if (model && usesCinzel(model)) {
         await loadCinzel(pdoc);
     }
+
+    // précharger les images thématisées (grayscale/watermark)
+    if (model) await prepareImages(model);
 
     let y = 3;
 
