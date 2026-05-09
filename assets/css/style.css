@@ -59,7 +59,7 @@ body::before {
     background-size: contain;
     background-repeat: no-repeat;
     background-position: center;
-    opacity: 0.15;
+    opacity: 0.35;
     filter: blur(1.5px);
     pointer-events: none;
     z-index: 0;
