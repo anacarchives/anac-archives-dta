@@ -11,8 +11,9 @@
             display: flex;
             gap: 10px;
             align-items: center;
+            flex-wrap: wrap;
             background: white;
-            padding: 12px 16px;
+            padding: 14px 16px;
             border-radius: 10px;
             border: 1px solid var(--border-light);
             margin-bottom: 18px;
@@ -21,24 +22,27 @@
         .compact-filters .search-wrap {
             position: relative;
             flex: 1;
-            max-width: 320px;
+            min-width: 280px;
         }
         .compact-filters .search-wrap svg {
             position: absolute;
-            left: 12px;
+            left: 14px;
             top: 50%;
             transform: translateY(-50%);
             color: var(--text-muted);
             pointer-events: none;
         }
         .compact-filters .search-wrap input {
-            padding-left: 36px;
-            height: 38px;
+            width: 100%;
+            padding: 0 14px 0 42px;
+            height: 44px;
+            font-size: 14px;
         }
         .compact-filters select {
-            height: 38px;
+            height: 44px;
             padding: 0 12px;
-            min-width: 130px;
+            min-width: 140px;
+            font-size: 13px;
         }
         .compact-filters .reset-btn {
             margin-left: auto;
@@ -106,13 +110,14 @@
                 <!-- barre filtres compacte -->
                 <div class="compact-filters">
                     <div class="search-wrap">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                         <input type="text" id="searchInput" class="form-input" placeholder="Rechercher...">
                     </div>
                     <select id="filterType" class="form-select">
                         <option value="">Tous types</option>
                     </select>
                     <select id="filterYear" class="form-select"><option value="">Toutes années</option></select>
+                    <select id="filterOperateur" class="form-select"><option value="">Tous opérateurs</option></select>
                     <select id="filterStatus" class="form-select">
                         <option value="">Tous statuts</option>
                         <option value="en_attente">En attente</option>
@@ -202,13 +207,13 @@
         async function loadData() {
             try {
                 allRecords = await getAllAuthorizations({ limit: 1000 });
-                // tri par plus récent
                 allRecords.sort((a, b) => {
                     const da = a.createdAt?.seconds || 0;
                     const db = b.createdAt?.seconds || 0;
                     return db - da;
                 });
                 buildYearFilter();
+                buildOperateurFilter();
                 applyFilters();
             } catch (e) {
                 console.error('Erreur load:', e);
@@ -222,18 +227,36 @@
             sel.innerHTML = '<option value="">Toutes années</option>' + years.map(y => `<option value="${y}">${y}</option>`).join('');
         }
 
+        function buildOperateurFilter() {
+            // chercher un champ "opérateur" dans CHAMPS, ou utiliser n'importe quel champ avec "operateur" dans son nom
+            const opField = Object.values(CHAMPS).find(c =>
+                c.id === 'operateur' || c.id === 'op' ||
+                (c.name && c.name.toLowerCase().includes('opérateur')) ||
+                (c.name && c.name.toLowerCase().includes('operateur'))
+            );
+            const sel = document.getElementById('filterOperateur');
+            if (!opField) {
+                sel.style.display = 'none';
+                return;
+            }
+            sel.dataset.fieldId = opField.id;
+            const operateurs = [...new Set(allRecords.map(r => r[opField.id]).filter(Boolean))].sort();
+            sel.innerHTML = `<option value="">Tous opérateurs</option>` + operateurs.map(o => `<option value="${o}">${o}</option>`).join('');
+        }
+
         function applyFilters() {
             const search = document.getElementById('searchInput').value.toLowerCase();
             const type = document.getElementById('filterType').value;
             const year = document.getElementById('filterYear').value;
+            const operateur = document.getElementById('filterOperateur').value;
+            const opFieldId = document.getElementById('filterOperateur').dataset.fieldId;
             const status = document.getElementById('filterStatus').value;
 
-            // l'archive prend les approuvées — la liste montre tout par défaut
-            // mais si on filtre sur "approuvées", on les voit ici aussi
             let results = allRecords;
             if (search) results = results.filter(r => (r.searchIndex || '').toLowerCase().includes(search));
             if (type) results = results.filter(r => r.typeCode === type);
             if (year) results = results.filter(r => String(r.year) === String(year));
+            if (operateur && opFieldId) results = results.filter(r => r[opFieldId] === operateur);
             if (status === 'approuve') results = results.filter(r => r.statut === 'approuve');
             if (status === 'en_attente') results = results.filter(r => r.statut !== 'approuve');
 
@@ -313,11 +336,13 @@
         document.getElementById('searchInput').addEventListener('input', () => { currentPage = 1; applyFilters(); });
         document.getElementById('filterType').addEventListener('change', () => { currentPage = 1; applyFilters(); });
         document.getElementById('filterYear').addEventListener('change', () => { currentPage = 1; applyFilters(); });
+        document.getElementById('filterOperateur').addEventListener('change', () => { currentPage = 1; applyFilters(); });
         document.getElementById('filterStatus').addEventListener('change', () => { currentPage = 1; applyFilters(); });
         document.getElementById('btnReset').addEventListener('click', () => {
             document.getElementById('searchInput').value = '';
             document.getElementById('filterType').value = '';
             document.getElementById('filterYear').value = '';
+            document.getElementById('filterOperateur').value = '';
             document.getElementById('filterStatus').value = '';
             currentPage = 1;
             applyFilters();
