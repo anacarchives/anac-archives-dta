@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Champs personnalisés - ANAC Archives DTA</title>
+    <link rel="stylesheet" href="../assets/css/style.css">
+    <style>
+        .champs-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+            gap: 16px;
+            margin-top: 16px;
+        }
+        .champ-card {
+            background: white;
+            border: 1px solid var(--border-light);
+            border-radius: 12px;
+            padding: 18px;
+            box-shadow: var(--shadow-sm);
+        }
+        .champ-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 10px;
+        }
+        .champ-name {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 4px;
+        }
+        .champ-placeholder {
+            display: inline-block;
+            padding: 4px 10px;
+            background: var(--bg);
+            border: 1px solid var(--border-light);
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 11px;
+            color: var(--primary);
+            font-weight: 600;
+            margin: 6px 0;
+        }
+        .champ-meta {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin: 4px 0;
+            display: flex;
+            gap: 12px;
+        }
+        .champ-types {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+            margin-top: 8px;
+        }
+        .champ-type-badge {
+            padding: 2px 8px;
+            background: #EFF3FB;
+            color: var(--primary);
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: 600;
+        }
+        .champ-type-badge.global {
+            background: #E8F5E9;
+            color: #2E7D32;
+        }
+
+        .champ-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+            justify-content: flex-end;
+        }
+        .btn-icon {
+            background: none;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 6px 10px;
+            cursor: pointer;
+            font-size: 12px;
+            color: var(--text-light);
+            transition: all 0.15s;
+        }
+        .btn-icon:hover { color: var(--primary); border-color: var(--primary); }
+        .btn-icon.danger:hover { color: var(--danger); border-color: var(--danger); }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-muted);
+        }
+
+        .checkbox-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 8px;
+        }
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.15s;
+            user-select: none;
+        }
+        .checkbox-item:hover { border-color: var(--primary); }
+        .checkbox-item.checked {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+        .checkbox-item input { display: none; }
+
+        .help-box {
+            background: #E3F2FD;
+            border: 1px solid #90CAF9;
+            border-radius: 8px;
+            padding: 14px 16px;
+            margin-top: 16px;
+            font-size: 12px;
+            color: #1565C0;
+        }
+        .help-box code {
+            background: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 11px;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <main class="main-content">
+            <div class="topbar">
+                <div>
+                    <div class="page-title">Champs personnalisés</div>
+                    <div class="page-subtitle">Créez des champs pour le formulaire de saisie</div>
+                </div>
+                <button class="btn btn-primary" id="btnNew" style="width:auto; padding:10px 24px;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    Nouveau champ
+                </button>
+            </div>
+
+            <div class="content-wrapper">
+                <div class="champs-grid" id="champsGrid"></div>
+
+                <div class="help-box">
+                    <strong>Comment utiliser ?</strong> Chaque champ a un identifiant (placeholder) que tu peux insérer dans la page <strong>Modèles</strong> entre doubles accolades.<br>
+                    <strong>Exemple :</strong> Si tu crées un champ "Nom du défunt" avec l'identifiant <code>nomDefunt</code>, écris <code>{{nomDefunt}}</code> dans le modèle pour afficher la valeur saisie.
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal création/édition -->
+    <div class="modal-overlay" id="formModal">
+        <div class="modal" style="max-width:560px;">
+            <div class="modal-header">
+                <div class="modal-title" id="modalTitle">Nouveau champ</div>
+                <button class="modal-close" id="modalClose">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Nom du champ *</label>
+                    <input type="text" id="fName" class="form-input">
+                    <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">Ex: "Nom du défunt", "Numéro de contrat"</div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Identifiant (placeholder) *</label>
+                    <input type="text" id="fId" class="form-input" style="font-family:monospace;">
+                    <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">
+                        Utilisable comme <code style="background:var(--bg); padding:2px 6px; border-radius:4px;" id="idPreview">{{...}}</code>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Type de champ *</label>
+                    <select id="fType" class="form-select">
+                        <option value="text">Texte</option>
+                        <option value="textarea">Texte long</option>
+                        <option value="number">Nombre</option>
+                        <option value="date">Date</option>
+                        <option value="select">Liste déroulante</option>
+                    </select>
+                </div>
+                <div class="form-group" id="optionsGroup" style="display:none;">
+                    <label class="form-label">Options (séparées par virgule)</label>
+                    <input type="text" id="fOptions" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                        <input type="checkbox" id="fRequired"> Champ obligatoire
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Visibilité *</label>
+                    <div class="checkbox-group">
+                        <label class="checkbox-item" data-scope="global">
+                            <input type="checkbox" id="fGlobal"> Tous les types (global)
+                        </label>
+                    </div>
+                    <div style="font-size:11px; color:var(--text-muted); margin-top:8px;">— ou cochez les types spécifiques :</div>
+                    <div class="checkbox-group" id="fTypes"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="btnCancel" style="width:auto; padding:10px 18px;">Annuler</button>
+                <button class="btn btn-primary" id="btnSave" style="width:auto; padding:10px 24px;">Enregistrer</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { checkAuth, injectSidebar } from '../assets/js/layout.js';
+        import { showToast } from '../assets/js/helpers.js';
+        import { db } from '../assets/js/firebase-config.js';
+        import { doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        injectSidebar('champs');
+
+        let champs = {};   // { idChamp: { id, name, type, options, required, scope, types } }
+        let types  = {};   // chargé depuis params/types
+        let editingId = null;
+
+        const CHAMPS_DOC = doc(db, 'params', 'champs');
+        const TYPES_DOC  = doc(db, 'params', 'types');
+
+        checkAuth(async (user, userData) => {
+            if (userData.role !== 'admin') {
+                showToast('Accès admin uniquement', 'warning');
+                setTimeout(() => window.location.href = 'dashboard.html', 1500);
+                return;
+            }
+            await loadAll();
+            renderChamps();
+        });
+
+        async function loadAll() {
+            try {
+                const [cs, ts] = await Promise.all([getDoc(CHAMPS_DOC), getDoc(TYPES_DOC)]);
+                if (cs.exists()) champs = cs.data().list || {};
+                if (ts.exists()) types  = ts.data().list || {};
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        async function saveChamps() {
+            await setDoc(CHAMPS_DOC, { list: champs });
+        }
+
+        function renderChamps() {
+            const grid = document.getElementById('champsGrid');
+            const ids = Object.keys(champs);
+            if (ids.length === 0) {
+                grid.innerHTML = `
+                    <div class="empty-state" style="grid-column:1/-1;">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                        <p>Aucun champ. Cliquez "Nouveau champ" pour commencer.</p>
+                    </div>
+                `;
+                return;
+            }
+            grid.innerHTML = ids.map(id => {
+                const c = champs[id];
+                const typeLabel = { text:'Texte', textarea:'Texte long', number:'Nombre', date:'Date', select:'Liste' }[c.type] || c.type;
+                const badges = c.scope === 'global'
+                    ? '<span class="champ-type-badge global">Global — tous les types</span>'
+                    : (c.types || []).map(t => `<span class="champ-type-badge">${t}</span>`).join('');
+                return `
+                    <div class="champ-card">
+                        <div class="champ-card-header">
+                            <div>
+                                <div class="champ-name">${c.name}</div>
+                                <div class="champ-placeholder">{{${c.id}}}</div>
+                            </div>
+                        </div>
+                        <div class="champ-meta">
+                            <span>Type : <strong>${typeLabel}</strong></span>
+                            ${c.required ? '<span style="color:var(--danger);">Obligatoire</span>' : '<span>Optionnel</span>'}
+                        </div>
+                        <div class="champ-types">${badges}</div>
+                        <div class="champ-actions">
+                            <button class="btn-icon" data-action="edit" data-id="${id}">Modifier</button>
+                            <button class="btn-icon danger" data-action="delete" data-id="${id}">Supprimer</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            grid.querySelectorAll('[data-action="edit"]').forEach(b =>
+                b.addEventListener('click', () => openEdit(b.dataset.id)));
+            grid.querySelectorAll('[data-action="delete"]').forEach(b =>
+                b.addEventListener('click', () => deleteChamp(b.dataset.id)));
+        }
+
+        function renderTypeCheckboxes(selectedTypes = []) {
+            const codes = Object.keys(types);
+            document.getElementById('fTypes').innerHTML = codes.length === 0
+                ? '<div style="font-size:12px; color:var(--text-muted);">Aucun type créé. Allez dans "Types d\'autorisation".</div>'
+                : codes.map(c => `
+                    <label class="checkbox-item ${selectedTypes.includes(c) ? 'checked' : ''}">
+                        <input type="checkbox" value="${c}" ${selectedTypes.includes(c) ? 'checked' : ''}> ${c}
+                    </label>
+                `).join('');
+
+            document.querySelectorAll('#fTypes .checkbox-item').forEach(el => {
+                el.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const cb = el.querySelector('input');
+                    cb.checked = !cb.checked;
+                    el.classList.toggle('checked', cb.checked);
+                });
+            });
+        }
+
+        function openNew() {
+            editingId = null;
+            document.getElementById('modalTitle').textContent = 'Nouveau champ';
+            document.getElementById('fName').value = '';
+            document.getElementById('fId').value = '';
+            document.getElementById('fType').value = 'text';
+            document.getElementById('fOptions').value = '';
+            document.getElementById('fRequired').checked = false;
+            document.getElementById('fGlobal').checked = false;
+            document.querySelector('[data-scope="global"]').classList.remove('checked');
+            document.getElementById('idPreview').textContent = '{{...}}';
+            document.getElementById('optionsGroup').style.display = 'none';
+            document.getElementById('fId').disabled = false;
+            renderTypeCheckboxes([]);
+            document.getElementById('formModal').classList.add('show');
+        }
+
+        function openEdit(id) {
+            editingId = id;
+            const c = champs[id];
+            document.getElementById('modalTitle').textContent = `Modifier ${c.name}`;
+            document.getElementById('fName').value = c.name;
+            document.getElementById('fId').value = c.id;
+            document.getElementById('fType').value = c.type || 'text';
+            document.getElementById('fOptions').value = (c.options || []).join(', ');
+            document.getElementById('fRequired').checked = !!c.required;
+            const isGlobal = c.scope === 'global';
+            document.getElementById('fGlobal').checked = isGlobal;
+            document.querySelector('[data-scope="global"]').classList.toggle('checked', isGlobal);
+            document.getElementById('idPreview').textContent = `{{${c.id}}}`;
+            document.getElementById('optionsGroup').style.display = c.type === 'select' ? 'block' : 'none';
+            document.getElementById('fId').disabled = true;
+            renderTypeCheckboxes(c.types || []);
+            document.getElementById('formModal').classList.add('show');
+        }
+
+        function closeModal() {
+            document.getElementById('formModal').classList.remove('show');
+        }
+
+        async function saveChamp() {
+            const name = document.getElementById('fName').value.trim();
+            const id   = document.getElementById('fId').value.trim();
+            const type = document.getElementById('fType').value;
+            const opts = document.getElementById('fOptions').value.split(',').map(s => s.trim()).filter(Boolean);
+            const req  = document.getElementById('fRequired').checked;
+            const global = document.getElementById('fGlobal').checked;
+            const selTypes = [...document.querySelectorAll('#fTypes input:checked')].map(i => i.value);
+
+            if (!name || !id) { showToast('Nom et identifiant requis', 'warning'); return; }
+            if (!/^[a-zA-Z][a-zA-Z0-9_]*$/.test(id)) {
+                showToast("L'identifiant doit commencer par une lettre et ne contenir que lettres, chiffres et _", 'warning');
+                return;
+            }
+            if (!editingId && champs[id]) { showToast('Cet identifiant existe déjà', 'warning'); return; }
+            if (!global && selTypes.length === 0) {
+                showToast('Cochez "Global" ou sélectionnez au moins un type', 'warning');
+                return;
+            }
+
+            champs[id] = {
+                id, name, type,
+                options: type === 'select' ? opts : [],
+                required: req,
+                scope: global ? 'global' : 'specific',
+                types: global ? [] : selTypes
+            };
+
+            try {
+                await saveChamps();
+                showToast('Champ enregistré', 'success');
+                closeModal();
+                renderChamps();
+            } catch (e) {
+                showToast('Erreur: ' + e.message, 'error');
+            }
+        }
+
+        async function deleteChamp(id) {
+            if (!confirm(`Supprimer le champ ${champs[id].name} ?`)) return;
+            delete champs[id];
+            try {
+                await saveChamps();
+                showToast('Champ supprimé', 'success');
+                renderChamps();
+            } catch (e) {
+                showToast('Erreur: ' + e.message, 'error');
+            }
+        }
+
+        document.getElementById('btnNew').addEventListener('click', openNew);
+        document.getElementById('modalClose').addEventListener('click', closeModal);
+        document.getElementById('btnCancel').addEventListener('click', closeModal);
+        document.getElementById('btnSave').addEventListener('click', saveChamp);
+
+        // helpers
+        document.getElementById('fName').addEventListener('input', (e) => {
+            // auto-suggérer un id si pas encore en édition
+            if (!editingId && !document.getElementById('fId').value) {
+                const auto = e.target.value.toLowerCase()
+                    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+                    .replace(/[^a-z0-9 ]/g, '')
+                    .split(' ').filter(Boolean)
+                    .map((w, i) => i === 0 ? w : w[0].toUpperCase() + w.slice(1))
+                    .join('');
+                document.getElementById('fId').value = auto;
+                document.getElementById('idPreview').textContent = `{{${auto}}}`;
+            }
+        });
+        document.getElementById('fId').addEventListener('input', (e) => {
+            document.getElementById('idPreview').textContent = `{{${e.target.value || '...'}}}`;
+        });
+        document.getElementById('fType').addEventListener('change', (e) => {
+            document.getElementById('optionsGroup').style.display = e.target.value === 'select' ? 'block' : 'none';
+        });
+        document.querySelector('[data-scope="global"]').addEventListener('click', (e) => {
+            const cb = document.getElementById('fGlobal');
+            // ne pas double-toggle si on a cliqué directement sur la checkbox
+            if (e.target.tagName !== 'INPUT') {
+                e.preventDefault();
+                cb.checked = !cb.checked;
+            }
+            document.querySelector('[data-scope="global"]').classList.toggle('checked', cb.checked);
+        });
+    </script>
+</body>
+</html>
