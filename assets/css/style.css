@@ -42,7 +42,30 @@ body {
     color: var(--text);
     line-height: 1.5;
     -webkit-font-smoothing: antialiased;
+    position: relative;
 }
+
+/* Logo en filigrane au centre de toutes les pages (sauf PDFs et écrans login) */
+body::before {
+    content: '';
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    width: 500px;
+    height: 333px;
+    margin-left: -250px;
+    margin-top: -166px;
+    background-image: url('../img/ANAC-logo.png');
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    opacity: 0.15;
+    filter: blur(1.5px);
+    pointer-events: none;
+    z-index: 0;
+}
+.app-container, .topbar, .content-wrapper, .login-body { position: relative; z-index: 1; }
+.login-body::before { display: none; }
 
 /* ──────────────── ÉCRAN DE CHARGEMENT ──────────────── */
 .loading-screen {
