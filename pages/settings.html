@@ -130,7 +130,7 @@
                 <!-- Champs personnalisés type "select" -->
                 <div class="no-directeur" id="paramsSection">
                     <div class="info-box">
-                        <strong>Comment ça marche :</strong> Pour chaque champ de type "Liste déroulante" créé dans <strong>Champs personnalisés</strong>, vous pouvez ici ajouter des valeurs fréquentes. Lors de la saisie d'une autorisation, l'utilisateur pourra choisir une de ces valeurs ou saisir une nouvelle valeur manuellement.
+                        <strong>Comment ça marche :</strong> Pour chaque champ créé dans <strong>Champs personnalisés</strong>, vous pouvez ajouter ici des valeurs fréquentes. Lors de la saisie, ces valeurs apparaîtront comme suggestions dans une liste déroulante avec toujours l'option de saisir manuellement une nouvelle valeur.
                     </div>
                     <div id="sectionsContainer"></div>
                 </div>
@@ -174,47 +174,50 @@
 
         function renderSections() {
             const container = document.getElementById('sectionsContainer');
-            // garder seulement les champs de type "select"
-            const selects = Object.values(CHAMPS)
-                .filter(c => c.type === 'select')
+            // tous les champs personnalisés, triés par ordre
+            const list = Object.values(CHAMPS)
                 .sort((a, b) => (a.order || 0) - (b.order || 0));
 
-            if (selects.length === 0) {
+            if (list.length === 0) {
                 container.innerHTML = `
                     <div class="field-section">
                         <div class="empty-msg">
-                            Aucun champ de type "Liste déroulante". Créez-en dans <a href="champs.html">Champs personnalisés</a>.
+                            Aucun champ. Créez-en dans <a href="champs.html">Champs personnalisés</a>.
                         </div>
                     </div>
                 `;
                 return;
             }
 
-            container.innerHTML = selects.map(c => `
-                <div class="field-section" data-id="${c.id}">
-                    <div class="field-section-header">
-                        <div>
-                            <span class="field-section-title">${c.name}</span>
-                            <span class="field-section-id">{{${c.id}}}</span>
+            container.innerHTML = list.map(c => {
+                const typeLabel = { text:'Texte', textarea:'Texte long', number:'Nombre', date:'Date', select:'Liste' }[c.type] || c.type;
+                return `
+                    <div class="field-section" data-id="${c.id}">
+                        <div class="field-section-header">
+                            <div>
+                                <span class="field-section-title">${c.name}</span>
+                                <span class="field-section-id">{{${c.id}}}</span>
+                                <span style="font-size:11px; color:var(--text-muted); margin-left:8px;">${typeLabel}</span>
+                            </div>
+                        </div>
+                        <div class="values-list" id="vals_${c.id}">
+                            ${(c.options || []).length === 0
+                                ? '<div class="empty-msg" style="width:100%;">Aucune valeur prédéfinie. Ajoutez-en une ci-dessous.</div>'
+                                : (c.options || []).map(opt => `
+                                    <span class="value-chip">
+                                        ${opt}
+                                        <button data-id="${c.id}" data-val="${opt}" title="Supprimer">×</button>
+                                    </span>
+                                `).join('')
+                            }
+                        </div>
+                        <div class="add-value-row">
+                            <input type="text" class="form-input" placeholder="Nouvelle valeur..." id="add_${c.id}">
+                            <button class="btn btn-primary" data-id="${c.id}" style="width:auto; padding:8px 16px;" data-action="add">Ajouter</button>
                         </div>
                     </div>
-                    <div class="values-list" id="vals_${c.id}">
-                        ${(c.options || []).length === 0
-                            ? '<div class="empty-msg" style="width:100%;">Aucune valeur. Ajoutez-en une ci-dessous.</div>'
-                            : (c.options || []).map(opt => `
-                                <span class="value-chip">
-                                    ${opt}
-                                    <button data-id="${c.id}" data-val="${opt}" title="Supprimer">×</button>
-                                </span>
-                            `).join('')
-                        }
-                    </div>
-                    <div class="add-value-row">
-                        <input type="text" class="form-input" placeholder="Nouvelle valeur..." id="add_${c.id}">
-                        <button class="btn btn-primary" data-id="${c.id}" style="width:auto; padding:8px 16px;" data-action="add">Ajouter</button>
-                    </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
 
             container.querySelectorAll('[data-action="add"]').forEach(b => {
                 b.addEventListener('click', () => addValue(b.dataset.id));
