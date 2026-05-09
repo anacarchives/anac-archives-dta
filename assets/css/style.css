@@ -55,7 +55,7 @@ body::before {
     height: 333px;
     margin-left: -250px;
     margin-top: -166px;
-    background-image: url('../img/ANAC-logo.png');
+    background-image: url('../img/anac-logo.png');
     background-size: contain;
     background-repeat: no-repeat;
     background-position: center;
