@@ -96,6 +96,51 @@
             cursor: crosshair;
             touch-action: none;
         }
+
+        .selector-card {
+            background: white;
+            border: 1px solid var(--border-light);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow-sm);
+        }
+        .selector-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 12px;
+        }
+        .checkbox-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 8px;
+        }
+        .check-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 14px;
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.15s;
+            user-select: none;
+            font-size: 13px;
+        }
+        .check-item:hover { border-color: var(--primary); }
+        .check-item.checked {
+            background: #EFF3FB;
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+        .check-item input { display: none; }
+        .check-item .check-name { font-weight: 600; flex: 1; }
+        .check-item .check-id {
+            font-family: monospace;
+            font-size: 10px;
+            color: var(--text-muted);
+        }
     </style>
 </head>
 <body>
@@ -104,7 +149,7 @@
             <div class="topbar">
                 <div>
                     <div class="page-title">Paramètres</div>
-                    <div class="page-subtitle">Valeurs prédéfinies pour les listes déroulantes</div>
+                    <div class="page-subtitle">Valeurs prédéfinies pour les champs</div>
                 </div>
             </div>
 
@@ -127,11 +172,19 @@
                     </div>
                 </div>
 
-                <!-- Champs personnalisés type "select" -->
+                <!-- Sélection des champs + valeurs -->
                 <div class="no-directeur" id="paramsSection">
                     <div class="info-box">
-                        <strong>Comment ça marche :</strong> Pour chaque champ créé dans <strong>Champs personnalisés</strong>, vous pouvez ajouter ici des valeurs fréquentes. Lors de la saisie, ces valeurs apparaîtront comme suggestions dans une liste déroulante avec toujours l'option de saisir manuellement une nouvelle valeur.
+                        <strong>Comment ça marche :</strong> Cochez ci-dessous les champs auxquels vous voulez ajouter des valeurs prédéfinies. Lors de la saisie, ces valeurs apparaîtront comme suggestions dans une liste déroulante avec toujours l'option de saisir manuellement.
                     </div>
+
+                    <!-- cases à cocher pour activer les champs -->
+                    <div class="selector-card">
+                        <div class="selector-title">Champs avec valeurs prédéfinies</div>
+                        <div class="checkbox-grid" id="checkboxesContainer"></div>
+                    </div>
+
+                    <!-- sections d'ajout de valeurs (uniquement champs cochés) -->
                     <div id="sectionsContainer"></div>
                 </div>
 
@@ -148,6 +201,7 @@
         injectSidebar('settings');
 
         let CHAMPS = {};
+        let enabledFields = []; // ids des champs avec valeurs prédéfinies activées
         let currentUserUid = null;
         let currentRole = null;
 
@@ -158,31 +212,92 @@
                 document.getElementById('sigSection').style.display = 'block';
                 initSignaturePad();
             } else {
-                await loadChamps();
+                await loadAll();
+                renderCheckboxes();
                 renderSections();
             }
         });
 
-        async function loadChamps() {
+        async function loadAll() {
             try {
                 const snap = await getDoc(doc(db, 'params', 'champs'));
-                if (snap.exists()) CHAMPS = snap.data().list || {};
+                if (snap.exists()) {
+                    const data = snap.data();
+                    CHAMPS = data.list || {};
+                    enabledFields = data.enabledFields || [];
+                }
             } catch (e) {
                 console.error(e);
             }
+            // si aucune sélection, activer par défaut tous les champs qui ont déjà des options
+            if (enabledFields.length === 0) {
+                enabledFields = Object.values(CHAMPS)
+                    .filter(c => (c.options || []).length > 0)
+                    .map(c => c.id);
+            }
+        }
+
+        async function saveAll() {
+            await setDoc(doc(db, 'params', 'champs'), {
+                list: CHAMPS,
+                enabledFields: enabledFields
+            });
+        }
+
+        function renderCheckboxes() {
+            const container = document.getElementById('checkboxesContainer');
+            const list = Object.values(CHAMPS).sort((a, b) => (a.order || 0) - (b.order || 0));
+
+            if (list.length === 0) {
+                container.innerHTML = '<div class="empty-msg" style="grid-column:1/-1;">Aucun champ. Créez-en dans <a href="champs.html">Champs personnalisés</a>.</div>';
+                return;
+            }
+
+            container.innerHTML = list.map(c => {
+                const checked = enabledFields.includes(c.id);
+                return `
+                    <label class="check-item ${checked ? 'checked' : ''}" data-id="${c.id}">
+                        <input type="checkbox" ${checked ? 'checked' : ''}>
+                        <span class="check-name">${c.name}</span>
+                        <span class="check-id">{{${c.id}}}</span>
+                    </label>
+                `;
+            }).join('');
+
+            container.querySelectorAll('.check-item').forEach(el => {
+                el.addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    const id = el.dataset.id;
+                    const idx = enabledFields.indexOf(id);
+                    if (idx >= 0) {
+                        enabledFields.splice(idx, 1);
+                    } else {
+                        enabledFields.push(id);
+                    }
+                    el.classList.toggle('checked');
+                    el.querySelector('input').checked = enabledFields.includes(id);
+                    try {
+                        await saveAll();
+                        renderSections();
+                    } catch (err) {
+                        showToast('Erreur: ' + err.message, 'error');
+                    }
+                });
+            });
         }
 
         function renderSections() {
             const container = document.getElementById('sectionsContainer');
-            // tous les champs personnalisés, triés par ordre
+            // afficher uniquement les champs cochés
             const list = Object.values(CHAMPS)
+                .filter(c => enabledFields.includes(c.id))
                 .sort((a, b) => (a.order || 0) - (b.order || 0));
 
             if (list.length === 0) {
                 container.innerHTML = `
                     <div class="field-section">
                         <div class="empty-msg">
-                            Aucun champ. Créez-en dans <a href="champs.html">Champs personnalisés</a>.
+                            Aucun champ activé. Cochez ci-dessus les champs auxquels vous voulez ajouter des valeurs prédéfinies.
                         </div>
                     </div>
                 `;
@@ -229,8 +344,7 @@
                 input.addEventListener('keydown', (e) => {
                     if (e.key === 'Enter') {
                         e.preventDefault();
-                        const id = input.id.replace('add_', '');
-                        addValue(id);
+                        addValue(input.id.replace('add_', ''));
                     }
                 });
             });
@@ -249,7 +363,7 @@
             }
             champ.options.push(val);
             try {
-                await setDoc(doc(db, 'params', 'champs'), { list: CHAMPS });
+                await saveAll();
                 input.value = '';
                 renderSections();
                 showToast('Valeur ajoutée', 'success');
@@ -263,7 +377,7 @@
             if (!champ || !champ.options) return;
             champ.options = champ.options.filter(o => o !== val);
             try {
-                await setDoc(doc(db, 'params', 'champs'), { list: CHAMPS });
+                await saveAll();
                 renderSections();
                 showToast('Valeur supprimée', 'success');
             } catch (e) {
@@ -280,7 +394,6 @@
             ctx.lineCap = 'round';
             ctx.lineJoin = 'round';
 
-            // charger signature existante
             const saved = localStorage.getItem(`signature_${currentUserUid}`);
             if (saved) {
                 const img = new Image();
@@ -299,21 +412,11 @@
                 const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
                 return { x: x * scaleX, y: y * scaleY };
             }
-
-            function start(e) {
-                e.preventDefault();
-                drawing = true;
-                const p = getPos(e);
-                lastX = p.x; lastY = p.y;
-            }
+            function start(e) { e.preventDefault(); drawing = true; const p = getPos(e); lastX = p.x; lastY = p.y; }
             function draw(e) {
-                if (!drawing) return;
-                e.preventDefault();
+                if (!drawing) return; e.preventDefault();
                 const p = getPos(e);
-                ctx.beginPath();
-                ctx.moveTo(lastX, lastY);
-                ctx.lineTo(p.x, p.y);
-                ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(lastX, lastY); ctx.lineTo(p.x, p.y); ctx.stroke();
                 lastX = p.x; lastY = p.y;
             }
             function stop() { drawing = false; }
