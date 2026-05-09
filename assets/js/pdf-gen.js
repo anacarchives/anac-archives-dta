@@ -36,15 +36,18 @@ async function getModels() {
 
 export function clearModelsCache() { cachedModels = null; }
 
-function applyFont(pdoc, font, size) {
-    const map = {
-        'bold':       ['helvetica', 'bold'],
-        'bolditalic': ['helvetica', 'bolditalic'],
-        'italic':     ['helvetica', 'italic'],
-        'normal':     ['helvetica', 'normal'],
+function applyFont(pdoc, font, size, family) {
+    const styleMap = {
+        'bold':       'bold',
+        'bolditalic': 'bolditalic',
+        'italic':     'italic',
+        'normal':     'normal',
     };
-    const [f, s] = map[font] || ['helvetica', 'bold'];
-    pdoc.setFont(f, s).setFontSize(size);
+    const fam = (family || 'helvetica').toLowerCase();
+    // jsPDF supporte: helvetica, times, courier
+    const validFamily = ['helvetica', 'times', 'courier'].includes(fam) ? fam : 'helvetica';
+    const style = styleMap[font] || 'bold';
+    pdoc.setFont(validFamily, style).setFontSize(size);
 }
 
 // remplace TOUS les placeholders {{xxx}} par data[xxx]
@@ -60,10 +63,10 @@ function fillPlaceholders(text, data) {
 function drawRect(pdoc, x, y, w, h, texts, data) {
     pdoc.rect(x, y, w, h);
     if (!texts || !Array.isArray(texts)) return;
-    const TW = w - 6; // largeur de texte avec padding 3mm
+    const TW = w - 6;
     for (const t of texts) {
         if (!t.texte) continue;
-        applyFont(pdoc, t.font || 'bold', t.fontSize || 8);
+        applyFont(pdoc, t.font || 'bold', t.fontSize || 8, t.fontFamily || 'helvetica');
         const filled = fillPlaceholders(t.texte, data);
         const lines = pdoc.splitTextToSize(filled, TW);
         pdoc.text(lines, x + (t.x || 0), y + (t.y || 5));
