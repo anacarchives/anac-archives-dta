@@ -6,23 +6,24 @@
     <title>Liste des autorisations - ANAC Archives DTA</title>
     <link rel="stylesheet" href="../assets/css/style.css">
     <style>
-        /* barre de filtres compacte en haut */
+        /* barre de filtres compacte sur une seule ligne */
         .compact-filters {
             display: flex;
             gap: 10px;
             align-items: center;
-            flex-wrap: wrap;
+            flex-wrap: nowrap;
             background: white;
             padding: 14px 16px;
             border-radius: 10px;
             border: 1px solid var(--border-light);
             margin-bottom: 18px;
             box-shadow: var(--shadow-sm);
+            overflow-x: auto;
         }
         .compact-filters .search-wrap {
             position: relative;
             flex: 1;
-            min-width: 280px;
+            min-width: 240px;
         }
         .compact-filters .search-wrap svg {
             position: absolute;
@@ -32,20 +33,24 @@
             color: var(--text-muted);
             pointer-events: none;
         }
-        .compact-filters .search-wrap input {
+        .compact-filters .search-wrap input.form-input {
             width: 100%;
             padding: 0 14px 0 42px;
             height: 44px;
             font-size: 14px;
+            margin: 0;
         }
-        .compact-filters select {
+        .compact-filters select.form-select {
             height: 44px;
-            padding: 0 12px;
-            min-width: 140px;
+            padding: 0 32px 0 12px;
+            width: auto;
+            min-width: 130px;
+            max-width: 170px;
             font-size: 13px;
+            margin: 0;
+            flex-shrink: 0;
         }
         .compact-filters .reset-btn {
-            margin-left: auto;
             font-size: 13px;
             color: var(--text-light);
             background: none;
@@ -245,7 +250,7 @@
         }
 
         function applyFilters() {
-            const search = document.getElementById('searchInput').value.toLowerCase();
+            const search = document.getElementById('searchInput').value.toLowerCase().trim();
             const type = document.getElementById('filterType').value;
             const year = document.getElementById('filterYear').value;
             const operateur = document.getElementById('filterOperateur').value;
@@ -253,7 +258,22 @@
             const status = document.getElementById('filterStatus').value;
 
             let results = allRecords;
-            if (search) results = results.filter(r => (r.searchIndex || '').toLowerCase().includes(search));
+
+            // recherche dans TOUS les champs (numero, type, et tous les champs personnalisés)
+            if (search) {
+                results = results.filter(r => {
+                    // concaténer toutes les valeurs textuelles du record
+                    const allValues = [];
+                    for (const key in r) {
+                        const v = r[key];
+                        if (v !== null && v !== undefined && typeof v !== 'object') {
+                            allValues.push(String(v).toLowerCase());
+                        }
+                    }
+                    return allValues.some(v => v.includes(search));
+                });
+            }
+
             if (type) results = results.filter(r => r.typeCode === type);
             if (year) results = results.filter(r => String(r.year) === String(year));
             if (operateur && opFieldId) results = results.filter(r => r[opFieldId] === operateur);
