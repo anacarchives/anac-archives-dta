@@ -636,11 +636,18 @@
                             <input type="number" id="eY" class="form-input" value="${t.y || 0}" step="0.5">
                         </div>
                     </div>
+                    <div class="form-group" style="margin-top:10px;">
+                        <label class="form-label">Largeur max (mm) — vide = largeur du rectangle</label>
+                        <input type="number" id="eMaxWidth" class="form-input" value="${t.maxWidth || ''}" step="1" min="5" placeholder="ex: 50">
+                        <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">
+                            Si le texte dépasse cette largeur, il passe automatiquement à la ligne suivante.
+                        </div>
+                    </div>
                 </div>
             `;
 
             // appliquer en temps réel
-            ['eTexte', 'eFontSize', 'eFontFamily', 'eBold', 'eItalic', 'eX', 'eY'].forEach(id => {
+            ['eTexte', 'eFontSize', 'eFontFamily', 'eBold', 'eItalic', 'eX', 'eY', 'eMaxWidth'].forEach(id => {
                 const el = document.getElementById(id);
                 if (!el) return;
                 el.addEventListener('input', applyEdit);
@@ -678,6 +685,12 @@
                 t.font     = buildFontStyle(bold, italic);
                 t.x        = parseFloat(document.getElementById('eX').value) || 0;
                 t.y        = parseFloat(document.getElementById('eY').value) || 0;
+                const mw   = parseFloat(document.getElementById('eMaxWidth').value);
+                if (!isNaN(mw) && mw > 0) {
+                    t.maxWidth = mw;
+                } else {
+                    delete t.maxWidth;
+                }
             }
             renderTextsList();
             queuePreview();
