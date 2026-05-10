@@ -271,14 +271,19 @@
             }
         }
 
-        // 5 rectangles éditables (R1 réservé pour entête papier)
+        // 6 rectangles éditables (R1 maintenant éditable aussi)
         const RECTS = [
-            { id: 'R2', label: 'Rectangle 2', info: 'Titre / Numéro / Type' },
-            { id: 'R3', label: 'Rectangle 3', info: 'Info ANAC / Destinataire' },
-            { id: 'R4', label: 'Rectangle 4', info: 'Visa / Aéronef' },
-            { id: 'R5', label: 'Rectangle 5', info: 'Motif / Dates / Conditions' },
-            { id: 'R6', label: 'Rectangle 6', info: 'Signature' },
+            { id: 'R1', label: 'Rectangle 1', info: 'En-tête', defaultHeight: 45 },
+            { id: 'R2', label: 'Rectangle 2', info: 'Titre / Numéro / Type', defaultHeight: 34 },
+            { id: 'R3', label: 'Rectangle 3', info: 'Info ANAC / Destinataire', defaultHeight: 33 },
+            { id: 'R4', label: 'Rectangle 4', info: 'Visa / Aéronef', defaultHeight: 43 },
+            { id: 'R5', label: 'Rectangle 5', info: 'Motif / Dates / Conditions', defaultHeight: 0 }, // 0 = auto/restant
+            { id: 'R6', label: 'Rectangle 6', info: 'Signature', defaultHeight: 52 },
         ];
+
+        const PAGE_HEIGHT = 297; // A4
+        const PAGE_TOP_MARGIN = 3;
+        const PAGE_BOTTOM_MARGIN = 3;
 
         let currentType = 'SAT';
         let currentRect = null;
@@ -309,10 +314,35 @@
             } catch (e) {}
             TYPES.forEach(t => {
                 if (!allModels[t.code]) allModels[t.code] = {};
+                if (!allModels[t.code]._heights) allModels[t.code]._heights = {};
                 RECTS.forEach(r => {
                     if (!allModels[t.code][r.id]) allModels[t.code][r.id] = [];
+                    if (allModels[t.code]._heights[r.id] === undefined) {
+                        allModels[t.code]._heights[r.id] = r.defaultHeight;
+                    }
                 });
             });
+        }
+
+        // retourne la hauteur d'un rectangle pour le type courant
+        function getRectHeight(typeCode, rectId) {
+            const h = allModels[typeCode]?._heights?.[rectId];
+            return (h !== undefined) ? h : (RECTS.find(r => r.id === rectId)?.defaultHeight || 0);
+        }
+
+        function setRectHeight(typeCode, rectId, value) {
+            if (!allModels[typeCode]._heights) allModels[typeCode]._heights = {};
+            allModels[typeCode]._heights[rectId] = value;
+        }
+
+        // calcule la hauteur effective de R5 (auto = page - autres rectangles)
+        function getR5EffectiveHeight(typeCode) {
+            const total = PAGE_HEIGHT - PAGE_TOP_MARGIN - PAGE_BOTTOM_MARGIN;
+            let used = 0;
+            RECTS.forEach(r => {
+                if (r.id !== 'R5') used += getRectHeight(typeCode, r.id);
+            });
+            return Math.max(10, total - used); // minimum 10mm
         }
 
         async function saveModels() {
@@ -350,11 +380,16 @@
 
         function renderRectsList() {
             document.getElementById('rectsList').innerHTML = RECTS.map(r => {
-                const count = (allModels[currentType][r.id] || []).length;
+                const items = allModels[currentType][r.id] || [];
+                const count = items.length;
+                const h = r.id === 'R5' ? getR5EffectiveHeight(currentType) : getRectHeight(currentType, r.id);
+                const heightLabel = r.id === 'R5'
+                    ? `${h.toFixed(0)}mm (auto)`
+                    : `${h.toFixed(0)}mm`;
                 return `
                     <button class="rect-button ${r.id === currentRect ? 'active' : ''}" data-rect="${r.id}">
-                        <div class="rect-name">${r.label}</div>
-                        <div class="rect-info">${r.info} — ${count} texte${count > 1 ? 's' : ''}</div>
+                        <div class="rect-name">${r.label} <span style="font-size:11px; color:var(--text-muted); font-weight:400;">— ${heightLabel}</span></div>
+                        <div class="rect-info">${r.info} — ${count} élément${count > 1 ? 's' : ''}</div>
                     </button>
                 `;
             }).join('');
@@ -369,7 +404,65 @@
             renderRectsList();
             renderTextsList();
             document.getElementById('textsList').style.display = 'block';
-            showEmptyEditor();
+            showRectEditor();
+        }
+
+        // Affiche un éditeur pour la hauteur du rectangle (quand aucun texte sélectionné)
+        function showRectEditor() {
+            if (!currentRect) { showEmptyEditor(); return; }
+            const r = RECTS.find(x => x.id === currentRect);
+            const isR5 = currentRect === 'R5';
+            const h = isR5 ? getR5EffectiveHeight(currentType) : getRectHeight(currentType, currentRect);
+
+            document.getElementById('editPanel').innerHTML = `
+                <div style="font-size:14px; font-weight:700; color:var(--primary); margin-bottom:14px;">
+                    ${r.label} — ${r.info}
+                </div>
+
+                <div class="edit-section">
+                    <div class="edit-section-title">Hauteur du rectangle</div>
+                    ${isR5
+                        ? `<div style="font-size:13px; padding:10px; background:#FFF3E0; border-radius:6px; color:#E65100;">
+                              R5 s'ajuste automatiquement à la place restante : <strong>${h.toFixed(1)} mm</strong>.
+                              Modifiez les hauteurs des autres rectangles pour changer celle-ci.
+                           </div>`
+                        : `<div class="form-group">
+                              <label class="form-label">Hauteur (mm)</label>
+                              <input type="number" id="eRectHeight" class="form-input" value="${h}" min="5" max="280" step="1">
+                              <div style="font-size:11px; color:var(--text-muted); margin-top:6px;">
+                                  R5 (zone restante) sera automatiquement ajustée. Total page = 297mm.
+                              </div>
+                           </div>`
+                    }
+                </div>
+
+                <div class="edit-section">
+                    <div style="font-size:12px; color:var(--text-muted); padding:10px; background:#F5F7FA; border-radius:6px;">
+                        Sélectionnez un texte ou une image dans la liste pour le modifier, ou utilisez les boutons "+ Ajouter" pour ajouter du contenu à ce rectangle.
+                    </div>
+                </div>
+            `;
+
+            const inp = document.getElementById('eRectHeight');
+            if (inp) {
+                inp.addEventListener('input', () => {
+                    const v = parseFloat(inp.value);
+                    if (isNaN(v) || v < 5) return;
+                    // vérifier que ça ne fait pas déborder
+                    const total = PAGE_HEIGHT - PAGE_TOP_MARGIN - PAGE_BOTTOM_MARGIN;
+                    let other = 0;
+                    RECTS.forEach(rr => {
+                        if (rr.id !== currentRect && rr.id !== 'R5') other += getRectHeight(currentType, rr.id);
+                    });
+                    if (v + other > total - 10) {
+                        showToast('Hauteur trop grande, R5 doit garder au moins 10mm', 'warning');
+                        return;
+                    }
+                    setRectHeight(currentType, currentRect, v);
+                    renderRectsList();
+                    queuePreview();
+                });
+            }
         }
 
         function renderTextsList() {
@@ -591,7 +684,11 @@
         }
 
         function showEmptyEditor() {
-            document.getElementById('editPanel').innerHTML = '<div class="edit-empty">Sélectionnez un élément à modifier</div>';
+            if (currentRect) {
+                showRectEditor();
+            } else {
+                document.getElementById('editPanel').innerHTML = '<div class="edit-empty">Sélectionnez un rectangle pour commencer</div>';
+            }
         }
 
         document.getElementById('btnAddText').addEventListener('click', () => {
