@@ -14,12 +14,22 @@ const M_L    = 3;
 const M_R    = PAGE_W - 3;
 const CW     = M_R - M_L;
 
-// Hauteurs fixes des rectangles
-const R1_H = 45;
-const R2_H = 34;
-const R3_H = 33;
-const R4_H = 43;
-const R6_H = 52;
+// Hauteurs par défaut des rectangles (peuvent être surchargées dans le modèle via _heights)
+const DEFAULT_HEIGHTS = {
+    R1: 45,
+    R2: 34,
+    R3: 33,
+    R4: 43,
+    R6: 52,
+};
+
+// récupère la hauteur d'un rectangle pour le modèle courant
+function getH(model, rectId) {
+    if (model && model._heights && model._heights[rectId] !== undefined) {
+        return model._heights[rectId];
+    }
+    return DEFAULT_HEIGHTS[rectId] || 0;
+}
 
 let cachedModels = null;
 let cinzelLoaded = false;
@@ -286,19 +296,23 @@ async function buildPDF(typeCode, model, data) {
 
     let y = 3;
 
-    // R1 — entête (toujours vide)
-    pdoc.rect(M_L, y, CW, R1_H);
+    // R1 — maintenant éditable comme les autres rectangles
+    const R1_H = getH(model, 'R1');
+    drawRect(pdoc, M_L, y, CW, R1_H, model?.R1, data);
     y += R1_H;
 
     // R2
+    const R2_H = getH(model, 'R2');
     drawRect(pdoc, M_L, y, CW, R2_H, model?.R2, data);
     y += R2_H;
 
     // R3
+    const R3_H = getH(model, 'R3');
     drawRect(pdoc, M_L, y, CW, R3_H, model?.R3, data);
     y += R3_H;
 
     // R4
+    const R4_H = getH(model, 'R4');
     drawRect(pdoc, M_L, y, CW, R4_H, model?.R4, data);
 
     // signature directeur sur R4 si fournie (toujours visible peu importe le modèle)
@@ -310,13 +324,16 @@ async function buildPDF(typeCode, model, data) {
 
     y += R4_H;
 
-    // R5 — hauteur calculée pour aller jusqu'à R6
-    const R5_H = PAGE_H - 3 - y - R6_H;
+    // R6 fixe par le bas
+    const R6_H = getH(model, 'R6');
+
+    // R5 = ce qui reste entre y et le début de R6 (minimum 10mm pour ne pas casser la mise en page)
+    const R5_H = Math.max(10, PAGE_H - 3 - y - R6_H);
     drawRect(pdoc, M_L, y, CW, R5_H, model?.R5, data);
     y += R5_H;
 
     // R6 — descend jusqu'à 3mm du bas
-    const r6Final = PAGE_H - 3 - y;
+    const r6Final = Math.max(10, PAGE_H - 3 - y);
     drawRect(pdoc, M_L, y, CW, r6Final, model?.R6, data);
 
     return pdoc;
