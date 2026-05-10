@@ -219,7 +219,9 @@ function drawRect(pdoc, x, y, w, h, texts, data) {
         if (!t.texte) continue;
         applyFont(pdoc, t.font || 'bold', t.fontSize || 8, t.fontFamily || 'helvetica');
         const filled = fillPlaceholders(t.texte, data);
-        const lines = pdoc.splitTextToSize(filled, TW);
+        // utiliser la largeur max définie sur le texte si présente, sinon la largeur du rectangle
+        const wrapWidth = (t.maxWidth && t.maxWidth > 0) ? t.maxWidth : TW;
+        const lines = pdoc.splitTextToSize(filled, wrapWidth);
         pdoc.text(lines, x + (t.x || 0), y + (t.y || 5));
     }
 }
