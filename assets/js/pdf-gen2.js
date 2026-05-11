@@ -96,36 +96,6 @@ function usesCinzel(model) {
     return false;
 }
 
-// précharge toutes les images du modèle, applique les thèmes, met en cache
-async function prepareImages(model) {
-    const promises = [];
-    for (const key of Object.keys(model)) {
-        const arr = model[key];
-        if (!Array.isArray(arr)) continue;
-        for (const t of arr) {
-            if (t && t.kind === 'image') {
-                const src = t.url || t.dataUrl;
-                if (!src) continue;
-                const theme = t.theme || 'normal';
-                const cacheKey = src + '__' + theme;
-                if (_imgCache[cacheKey]) continue;
-
-                promises.push((async () => {
-                    try {
-                        // charger l'image en dataUrl (gère URL Storage et data: déjà encodée)
-                        const baseDataUrl = src.startsWith('data:') ? src : await loadImageAsDataUrl(src);
-                        const themed = applyThemeToDataUrl(baseDataUrl, theme);
-                        _imgCache[cacheKey] = themed;
-                    } catch (e) {
-                        console.warn('Image preload failed:', e.message);
-                    }
-                })());
-            }
-        }
-    }
-    await Promise.all(promises);
-}
-
 function arrayBufferToBase64(buf) {
     let bin = '';
     const bytes = new Uint8Array(buf);
