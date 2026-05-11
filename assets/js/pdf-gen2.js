@@ -34,27 +34,27 @@ function getH(model, rectId) {
 let cachedModels = null;
 
 // ─── Polices personnalisées ────────────────────────────
-// Définition des polices supportées avec URLs Google Fonts directes
+// URLs jsdelivr qui servent directement les TTF (plus fiables que Google Fonts)
 const CUSTOM_FONTS = {
     cinzel: {
-        regular: 'https://fonts.gstatic.com/s/cinzel/v23/8vIU7ww63mVu7gtR-kwKxNvkNOjw-tbnTYrvDE5ZdqU.ttf',
-        bold:    'https://fonts.gstatic.com/s/cinzel/v23/8vIK7ww63mVu7gtR-kwKxNvkNOjw-rGoyatIDg.ttf',
+        regular: 'https://cdn.jsdelivr.net/gh/google/fonts/ofl/cinzel/Cinzel%5Bwght%5D.ttf',
+        bold:    null, // la version variable contient bold
     },
     roboto: {
-        regular: 'https://fonts.gstatic.com/s/roboto/v30/KFOmCnqEu92Fr1Mu4mxKKTU1Kg.ttf',
-        bold:    'https://fonts.gstatic.com/s/roboto/v30/KFOlCnqEu92Fr1MmWUlfBBc4.ttf',
+        regular: 'https://cdn.jsdelivr.net/gh/google/fonts/apache/roboto/static/Roboto-Regular.ttf',
+        bold:    'https://cdn.jsdelivr.net/gh/google/fonts/apache/roboto/static/Roboto-Bold.ttf',
     },
     playfair: {
-        regular: 'https://fonts.gstatic.com/s/playfairdisplay/v37/nuFvD-vYSZviVYUb_rj3ij__anPXJzDwcbmjWBN2PKdFvUDQ.ttf',
-        bold:    'https://fonts.gstatic.com/s/playfairdisplay/v37/nuFvD-vYSZviVYUb_rj3ij__anPXJzDwcbmjWBN2PKd5vEDQ.ttf',
+        regular: 'https://cdn.jsdelivr.net/gh/google/fonts/ofl/playfairdisplay/PlayfairDisplay%5Bwght%5D.ttf',
+        bold:    null,
     },
     merriweather: {
-        regular: 'https://fonts.gstatic.com/s/merriweather/v30/u-440qyriQwlOrhSvowK_l5-fCZJ.ttf',
-        bold:    'https://fonts.gstatic.com/s/merriweather/v30/u-4n0qyriQwlOrhSvowK_l52xwNZWMf6.ttf',
+        regular: 'https://cdn.jsdelivr.net/gh/google/fonts/ofl/merriweather/Merriweather-Regular.ttf',
+        bold:    'https://cdn.jsdelivr.net/gh/google/fonts/ofl/merriweather/Merriweather-Bold.ttf',
     },
     notoarabic: {
-        regular: 'https://fonts.gstatic.com/s/notosansarabic/v18/nwpxtLGrOAZMl5nJ_wfgRg3DrWFZWsnVBJ_sS6tlqHHFlhQ5l3sQWIHPqzCfyG2vu3CBFQLaig.ttf',
-        bold:    'https://fonts.gstatic.com/s/notosansarabic/v18/nwpxtLGrOAZMl5nJ_wfgRg3DrWFZWsnVBJ_sS6tlqHHFlhQ5l3sQWIHPqzCfyHWvu3CBFQLaig.ttf',
+        regular: 'https://cdn.jsdelivr.net/gh/google/fonts/ofl/notosansarabic/NotoSansArabic%5Bwdth%2Cwght%5D.ttf',
+        bold:    null,
     },
 };
 
@@ -101,6 +101,9 @@ async function loadCustomFont(pdoc, fontKey) {
                 pdoc.addFileToVFS(`${fontKey}-bold.ttf`, state.boldB64);
                 pdoc.addFont(`${fontKey}-bold.ttf`, fontKey, 'bold');
             } catch (e) { /* pas grave, on garde regular */ }
+        } else {
+            // police variable — utiliser regular pour bold aussi
+            pdoc.addFont(`${fontKey}-regular.ttf`, fontKey, 'bold');
         }
         state.loaded = true;
         return true;
@@ -366,6 +369,10 @@ async function buildPDF(typeCode, model, data) {
                 pdoc.setGState(new pdoc.GState({ opacity: op }));
                 pdoc.addImage(imgData, 'PNG', bx, by, bw, bh);
                 pdoc.restoreGraphicsState();
+                // FORCER le reset complet de l'opacité (sécurité)
+                try {
+                    pdoc.setGState(new pdoc.GState({ opacity: 1 }));
+                } catch (e) {}
             } else {
                 pdoc.addImage(imgData, 'PNG', bx, by, bw, bh);
             }
