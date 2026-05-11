@@ -377,6 +377,17 @@ export async function getPreviewDataURI(typeCode, model) {
     return pdoc.output('datauristring');
 }
 
+// alternative plus sûre que data: — utilise un Blob URL local
+let _lastPreviewBlobUrl = null;
+export async function getPreviewBlobURL(typeCode, model) {
+    const pdoc = await generatePreviewPDF(typeCode, model);
+    const blob = pdoc.output('blob');
+    // libérer le précédent pour éviter les fuites mémoire
+    if (_lastPreviewBlobUrl) URL.revokeObjectURL(_lastPreviewBlobUrl);
+    _lastPreviewBlobUrl = URL.createObjectURL(blob);
+    return _lastPreviewBlobUrl;
+}
+
 // Pour la création d'autorisation : charge le modèle depuis Firestore
 export async function generateAuthorizationPDF(data) {
     const models = await getModels();
