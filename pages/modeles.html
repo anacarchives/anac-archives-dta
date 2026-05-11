@@ -252,7 +252,7 @@
         import { db, storage } from '../assets/js/firebase-config.js';
         import { doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         import { ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
-        import { generatePreviewPDF, getPreviewDataURI, clearModelsCache, clearImgCache } from '../assets/js/pdf-gen2.js';
+        import { generatePreviewPDF, getPreviewDataURI, getPreviewBlobURL, clearModelsCache, clearImgCache } from '../assets/js/pdf-gen2.js';
 
         injectSidebar('modeles');
 
@@ -823,8 +823,8 @@
 
         async function updatePreview() {
             try {
-                const dataUri = await getPreviewDataURI(currentType, allModels[currentType]);
-                document.getElementById('pdfPreview').src = dataUri;
+                const url = await getPreviewBlobURL(currentType, allModels[currentType]);
+                document.getElementById('pdfPreview').src = url;
             } catch (e) {
                 console.error('Aperçu:', e);
             }
