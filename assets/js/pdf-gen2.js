@@ -256,6 +256,9 @@ async function prepareImages(model) {
     }
     await Promise.all(promises);
 }
+
+// applique un thème (grayscale, watermark) à une dataUrl déjà chargée
+function applyThemeToDataUrl(dataUrl, theme) {
     if (theme === 'normal' || !theme) return dataUrl;
 
     const img = new Image();
