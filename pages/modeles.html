@@ -205,6 +205,20 @@
 
             <div class="content-wrapper">
 
+                <!-- Section commune : R1 + arrière-plan -->
+                <div class="common-section" style="background:#FFF8E1; border:1px solid #FFD54F; border-radius:10px; padding:12px 16px; margin-bottom:16px;">
+                    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+                        <div>
+                            <div style="font-size:13px; font-weight:700; color:#E65100;">Configuration commune à tous les types</div>
+                            <div style="font-size:11px; color:#6D4C41; margin-top:2px;">En-tête (R1) et image d'arrière-plan partagés entre tous les types d'autorisation</div>
+                        </div>
+                        <div style="display:flex; gap:8px;">
+                            <button class="btn-common" id="btnEditCommonR1" style="padding:8px 14px; background:#FF8F00; color:white; border:none; border-radius:6px; cursor:pointer; font-size:12px; font-weight:600;">Configurer en-tête R1</button>
+                            <button class="btn-common" id="btnEditCommonBg" style="padding:8px 14px; background:#FF8F00; color:white; border:none; border-radius:6px; cursor:pointer; font-size:12px; font-weight:600;">Configurer arrière-plan</button>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Sélecteur de type -->
                 <div class="type-tabs" id="typeTabs"></div>
 
@@ -271,15 +285,17 @@
             }
         }
 
-        // 6 rectangles éditables (R1 maintenant éditable aussi)
+        // Rectangles éditables PAR TYPE (R1 est désormais commun à tous)
         const RECTS = [
-            { id: 'R1', label: 'Rectangle 1', info: 'En-tête', defaultHeight: 45 },
             { id: 'R2', label: 'Rectangle 2', info: 'Titre / Numéro / Type', defaultHeight: 34 },
             { id: 'R3', label: 'Rectangle 3', info: 'Info ANAC / Destinataire', defaultHeight: 33 },
             { id: 'R4', label: 'Rectangle 4', info: 'Visa / Aéronef', defaultHeight: 43 },
-            { id: 'R5', label: 'Rectangle 5', info: 'Motif / Dates / Conditions', defaultHeight: 0 }, // 0 = auto/restant
+            { id: 'R5', label: 'Rectangle 5', info: 'Motif / Dates / Conditions', defaultHeight: 0 },
             { id: 'R6', label: 'Rectangle 6', info: 'Signature', defaultHeight: 52 },
         ];
+
+        // Hauteur de R1 (commune à tous)
+        const R1_DEFAULT_HEIGHT = 45;
 
         const PAGE_HEIGHT = 297; // A4
         const PAGE_TOP_MARGIN = 3;
@@ -301,6 +317,7 @@
             await loadTypes();
             await loadModels();
             renderTypeTabs();
+            setupCommonButtons();
             if (TYPES.length > 0) {
                 selectType(TYPES[0].code);
             }
@@ -312,6 +329,13 @@
                 const snap = await getDoc(doc(db, 'params', 'modeles'));
                 if (snap.exists()) allModels = snap.data();
             } catch (e) {}
+
+            // initialiser la structure commune (partagée entre tous les types)
+            if (!allModels._common) allModels._common = {};
+            if (!allModels._common.R1) allModels._common.R1 = [];          // textes/images dans R1
+            if (allModels._common.R1Height === undefined) allModels._common.R1Height = R1_DEFAULT_HEIGHT;
+            if (!allModels._common.background) allModels._common.background = null; // { url, storagePath, x, y, width, height, opacity }
+
             TYPES.forEach(t => {
                 if (!allModels[t.code]) allModels[t.code] = {};
                 if (!allModels[t.code]._heights) allModels[t.code]._heights = {};
@@ -365,7 +389,286 @@
             });
         }
 
-        function selectType(code) {
+        // ─── MODE COMMUN (R1 + Arrière-plan) ────────────────
+        let commonMode = null; // 'R1' ou 'background' ou null
+        let commonCurrentTextIdx = null;
+
+        function setupCommonButtons() {
+            document.getElementById('btnEditCommonR1').addEventListener('click', () => {
+                commonMode = 'R1';
+                commonCurrentTextIdx = null;
+                document.querySelectorAll('.type-tab').forEach(b => b.classList.remove('active'));
+                renderCommonR1Editor();
+            });
+            document.getElementById('btnEditCommonBg').addEventListener('click', () => {
+                commonMode = 'background';
+                commonCurrentTextIdx = null;
+                document.querySelectorAll('.type-tab').forEach(b => b.classList.remove('active'));
+                renderCommonBgEditor();
+            });
+        }
+
+        function renderCommonR1Editor() {
+            const items = allModels._common.R1 || [];
+            const h = allModels._common.R1Height || R1_DEFAULT_HEIGHT;
+            document.getElementById('rectsList').innerHTML = `
+                <button class="rect-button active">
+                    <div class="rect-name">En-tête R1 — ${h}mm <span style="font-size:10px; color:#FF8F00;">[COMMUN]</span></div>
+                    <div class="rect-info">Partagé entre tous les types — ${items.length} élément(s)</div>
+                </button>`;
+            document.getElementById('textsList').style.display = 'block';
+            renderCommonTextsList();
+            showCommonR1RectEditor();
+            queuePreview();
+        }
+
+        function renderCommonTextsList() {
+            const items = allModels._common.R1 || [];
+            document.getElementById('textsItems').innerHTML = items.length === 0
+                ? '<div style="text-align:center; padding:14px; color:var(--text-muted); font-size:12px;">Aucun élément.</div>'
+                : items.map((t, i) => {
+                    const isImg = t.kind === 'image';
+                    const label = isImg ? '🖼️ Image' : (t.texte || '(vide)');
+                    return `<div class="text-item ${i === commonCurrentTextIdx ? 'active' : ''}" data-idx="${i}"><div class="text-item-content">${label}</div><button class="text-item-delete" data-idx="${i}">×</button></div>`;
+                }).join('');
+            document.querySelectorAll('#textsItems .text-item').forEach(el => {
+                el.addEventListener('click', (e) => {
+                    if (e.target.classList.contains('text-item-delete')) return;
+                    commonCurrentTextIdx = parseInt(el.dataset.idx);
+                    renderCommonTextsList();
+                    renderCommonTextEditor();
+                });
+            });
+            document.querySelectorAll('#textsItems .text-item-delete').forEach(b => {
+                b.addEventListener('click', (e) => { e.stopPropagation(); deleteCommonText(parseInt(b.dataset.idx)); });
+            });
+        }
+
+        function showCommonR1RectEditor() {
+            const h = allModels._common.R1Height || R1_DEFAULT_HEIGHT;
+            document.getElementById('editPanel').innerHTML = `
+                <div style="font-size:14px; font-weight:700; color:#E65100; margin-bottom:14px;">En-tête R1 commun</div>
+                <div class="edit-section">
+                    <div class="edit-section-title">Hauteur (mm)</div>
+                    <input type="number" id="eR1Height" class="form-input" value="${h}" min="5" max="100" step="1">
+                </div>
+                <div class="edit-section">
+                    <div style="font-size:12px; color:var(--text-muted); padding:10px; background:#FFF8E1; border-radius:6px;">
+                        En-tête commun à tous les types. Ajoutez texte (arabe supporté) ou image.
+                    </div>
+                </div>`;
+            document.getElementById('eR1Height').addEventListener('input', (e) => {
+                const v = parseFloat(e.target.value);
+                if (!isNaN(v) && v >= 5) { allModels._common.R1Height = v; renderCommonR1Editor(); }
+            });
+        }
+
+        function renderCommonTextEditor() {
+            if (commonCurrentTextIdx === null) { showCommonR1RectEditor(); return; }
+            const t = allModels._common.R1[commonCurrentTextIdx];
+            const isImage = t.kind === 'image';
+            if (isImage) {
+                document.getElementById('editPanel').innerHTML = `
+                    <div style="font-size:14px; font-weight:700; color:#E65100; margin-bottom:14px;">R1 commun — Image</div>
+                    <div class="edit-section">
+                        <div class="edit-section-title">Image</div>
+                        <div style="background:#F8F9FB; border:1px dashed var(--border); border-radius:6px; padding:10px; text-align:center; margin-bottom:10px;">
+                            ${(t.url || t.dataUrl) ? `<img src="${t.url || t.dataUrl}" style="max-width:100%; max-height:120px;">` : '<div style="color:var(--text-muted);">Aucune</div>'}
+                        </div>
+                        <button class="btn-add-text" id="btnReplaceCommonImg" style="margin:0;">Remplacer</button>
+                    </div>
+                    <div class="edit-section">
+                        <div class="edit-section-title">Taille (mm)</div>
+                        <div class="edit-row">
+                            <div class="form-group"><label class="form-label">Largeur</label><input type="number" id="eWidth" class="form-input" value="${t.width || 30}" step="0.5"></div>
+                            <div class="form-group"><label class="form-label">Hauteur</label><input type="number" id="eHeight" class="form-input" value="${t.height || 30}" step="0.5"></div>
+                        </div>
+                    </div>
+                    <div class="edit-section">
+                        <div class="edit-section-title">Opacité — <span id="opVal">${(t.opacity ?? 1).toFixed(2)}</span></div>
+                        <input type="range" id="eOpacity" min="0.05" max="1" step="0.05" value="${t.opacity ?? 1}" style="width:100%;">
+                    </div>
+                    <div class="edit-section">
+                        <div class="edit-section-title">Position (mm)</div>
+                        <div class="edit-row">
+                            <div class="form-group"><label class="form-label">X</label><input type="number" id="eX" class="form-input" value="${t.x || 0}" step="0.5"></div>
+                            <div class="form-group"><label class="form-label">Y</label><input type="number" id="eY" class="form-input" value="${t.y || 0}" step="0.5"></div>
+                        </div>
+                    </div>`;
+                ['eWidth','eHeight','eOpacity','eX','eY'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.addEventListener('input', applyCommonEdit);
+                });
+                document.getElementById('eOpacity').addEventListener('input', (e) => {
+                    document.getElementById('opVal').textContent = parseFloat(e.target.value).toFixed(2);
+                });
+                document.getElementById('btnReplaceCommonImg').addEventListener('click', () => {
+                    const inp = document.getElementById('fileImageInput');
+                    inp.dataset.replaceIdx = commonCurrentTextIdx;
+                    inp.dataset.target = 'commonR1';
+                    inp.click();
+                });
+                return;
+            }
+            document.getElementById('editPanel').innerHTML = `
+                <div style="font-size:14px; font-weight:700; color:#E65100; margin-bottom:14px;">R1 commun — Texte</div>
+                <div class="edit-section">
+                    <div class="edit-section-title">Texte (arabe supporté)</div>
+                    <textarea id="eTexte" class="form-input" rows="4" style="width:100%; resize:vertical; direction:auto;">${t.texte || ''}</textarea>
+                </div>
+                <div class="edit-section">
+                    <div class="edit-section-title">Typographie</div>
+                    <div class="edit-row">
+                        <div class="form-group"><label class="form-label">Taille</label><input type="number" id="eFontSize" class="form-input" value="${t.fontSize || 10}" min="5" max="50" step="0.5"></div>
+                        <div class="form-group">
+                            <label class="form-label">Police</label>
+                            <select id="eFontFamily" class="form-select">
+                                <option value="helvetica" ${(t.fontFamily || 'helvetica') === 'helvetica' ? 'selected' : ''}>Helvetica</option>
+                                <option value="times" ${t.fontFamily === 'times' ? 'selected' : ''}>Times</option>
+                                <option value="courier" ${t.fontFamily === 'courier' ? 'selected' : ''}>Courier</option>
+                                <option value="cinzel" ${t.fontFamily === 'cinzel' ? 'selected' : ''}>Cinzel (décoratif)</option>
+                                <option value="roboto" ${t.fontFamily === 'roboto' ? 'selected' : ''}>Roboto (moderne)</option>
+                                <option value="playfair" ${t.fontFamily === 'playfair' ? 'selected' : ''}>Playfair (élégante)</option>
+                                <option value="merriweather" ${t.fontFamily === 'merriweather' ? 'selected' : ''}>Merriweather (lisible)</option>
+                                <option value="notoarabic" ${t.fontFamily === 'notoarabic' ? 'selected' : ''}>Noto Sans Arabic (arabe)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:16px; margin-top:8px;">
+                        <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:13px;"><input type="checkbox" id="eBold" ${getBold(t) ? 'checked' : ''}> Gras</label>
+                        <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:13px;"><input type="checkbox" id="eItalic" ${getItalic(t) ? 'checked' : ''}> Italique</label>
+                    </div>
+                </div>
+                <div class="edit-section">
+                    <div class="edit-section-title">Position (mm)</div>
+                    <div class="edit-row">
+                        <div class="form-group"><label class="form-label">X</label><input type="number" id="eX" class="form-input" value="${t.x || 0}" step="0.5"></div>
+                        <div class="form-group"><label class="form-label">Y</label><input type="number" id="eY" class="form-input" value="${t.y || 0}" step="0.5"></div>
+                    </div>
+                    <div class="form-group" style="margin-top:10px;">
+                        <label class="form-label">Largeur max (mm)</label>
+                        <input type="number" id="eMaxWidth" class="form-input" value="${t.maxWidth || ''}" step="1" placeholder="vide = auto">
+                    </div>
+                </div>`;
+            ['eTexte','eFontSize','eFontFamily','eBold','eItalic','eX','eY','eMaxWidth'].forEach(id => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                el.addEventListener('input', applyCommonEdit);
+                el.addEventListener('change', applyCommonEdit);
+            });
+        }
+
+        function applyCommonEdit() {
+            if (commonMode === 'R1' && commonCurrentTextIdx !== null) {
+                const t = allModels._common.R1[commonCurrentTextIdx];
+                if (t.kind === 'image') {
+                    t.x = parseFloat(document.getElementById('eX').value) || 0;
+                    t.y = parseFloat(document.getElementById('eY').value) || 0;
+                    t.width = parseFloat(document.getElementById('eWidth').value) || 30;
+                    t.height = parseFloat(document.getElementById('eHeight').value) || 30;
+                    t.opacity = parseFloat(document.getElementById('eOpacity').value) || 1;
+                } else {
+                    t.texte = document.getElementById('eTexte').value;
+                    t.fontSize = parseFloat(document.getElementById('eFontSize').value) || 8;
+                    t.fontFamily = document.getElementById('eFontFamily').value || 'helvetica';
+                    const bold = document.getElementById('eBold').checked;
+                    const italic = document.getElementById('eItalic').checked;
+                    t.font = buildFontStyle(bold, italic);
+                    t.x = parseFloat(document.getElementById('eX').value) || 0;
+                    t.y = parseFloat(document.getElementById('eY').value) || 0;
+                    const mw = parseFloat(document.getElementById('eMaxWidth').value);
+                    if (!isNaN(mw) && mw > 0) t.maxWidth = mw; else delete t.maxWidth;
+                }
+                renderCommonTextsList();
+                queuePreview();
+            } else if (commonMode === 'background') {
+                const bg = allModels._common.background;
+                if (!bg) return;
+                bg.x = parseFloat(document.getElementById('eBgX').value) || 0;
+                bg.y = parseFloat(document.getElementById('eBgY').value) || 0;
+                bg.width = parseFloat(document.getElementById('eBgWidth').value) || 100;
+                bg.height = parseFloat(document.getElementById('eBgHeight').value) || 100;
+                bg.opacity = parseFloat(document.getElementById('eBgOpacity').value) || 0.15;
+                queuePreview();
+            }
+        }
+
+        async function deleteCommonText(idx) {
+            const t = allModels._common.R1[idx];
+            const isImg = t.kind === 'image';
+            if (!confirm(isImg ? 'Supprimer cette image ?' : 'Supprimer ce texte ?')) return;
+            if (isImg && t.storagePath) {
+                try { await deleteObject(storageRef(storage, t.storagePath)); } catch (e) {}
+            }
+            allModels._common.R1.splice(idx, 1);
+            if (commonCurrentTextIdx === idx) commonCurrentTextIdx = null;
+            else if (commonCurrentTextIdx > idx) commonCurrentTextIdx--;
+            renderCommonR1Editor();
+        }
+
+        function renderCommonBgEditor() {
+            const bg = allModels._common.background;
+            document.getElementById('rectsList').innerHTML = `
+                <button class="rect-button active">
+                    <div class="rect-name">Arrière-plan <span style="font-size:10px; color:#FF8F00;">[COMMUN]</span></div>
+                    <div class="rect-info">${bg ? 'Image configurée' : 'Aucune image'}</div>
+                </button>`;
+            document.getElementById('textsList').style.display = 'none';
+            document.getElementById('editPanel').innerHTML = `
+                <div style="font-size:14px; font-weight:700; color:#E65100; margin-bottom:14px;">Arrière-plan commun</div>
+                <div class="edit-section">
+                    <div class="edit-section-title">Image</div>
+                    <div style="background:#F8F9FB; border:1px dashed var(--border); border-radius:6px; padding:10px; text-align:center; margin-bottom:10px;">
+                        ${bg?.url ? `<img src="${bg.url}" style="max-width:100%; max-height:150px;">` : '<div style="color:var(--text-muted);">Aucune image</div>'}
+                    </div>
+                    <button class="btn-add-text" id="btnUploadBg" style="margin:0;">${bg?.url ? "Remplacer" : "Uploader une image"}</button>
+                    ${bg?.url ? '<button class="btn-add-text" id="btnRemoveBg" style="margin-top:6px; background:#fee; color:#c00;">Supprimer</button>' : ''}
+                </div>
+                ${bg?.url ? `
+                <div class="edit-section">
+                    <div class="edit-section-title">Position (mm depuis coin haut-gauche de la page)</div>
+                    <div class="edit-row">
+                        <div class="form-group"><label class="form-label">X</label><input type="number" id="eBgX" class="form-input" value="${bg.x || 0}" step="1"></div>
+                        <div class="form-group"><label class="form-label">Y</label><input type="number" id="eBgY" class="form-input" value="${bg.y || 0}" step="1"></div>
+                    </div>
+                </div>
+                <div class="edit-section">
+                    <div class="edit-section-title">Taille (mm)</div>
+                    <div class="edit-row">
+                        <div class="form-group"><label class="form-label">Largeur</label><input type="number" id="eBgWidth" class="form-input" value="${bg.width || 100}" step="1"></div>
+                        <div class="form-group"><label class="form-label">Hauteur</label><input type="number" id="eBgHeight" class="form-input" value="${bg.height || 100}" step="1"></div>
+                    </div>
+                </div>
+                <div class="edit-section">
+                    <div class="edit-section-title">Opacité — <span id="bgOpVal">${(bg.opacity ?? 0.15).toFixed(2)}</span></div>
+                    <input type="range" id="eBgOpacity" min="0.05" max="1" step="0.05" value="${bg.opacity ?? 0.15}" style="width:100%;">
+                </div>` : ''}`;
+            document.getElementById('btnUploadBg').addEventListener('click', () => {
+                const inp = document.getElementById('fileImageInput');
+                inp.dataset.replaceIdx = '';
+                inp.dataset.target = 'background';
+                inp.click();
+            });
+            if (bg?.url) {
+                document.getElementById('btnRemoveBg').addEventListener('click', async () => {
+                    if (!confirm("Supprimer l'arrière-plan ?")) return;
+                    if (bg.storagePath) { try { await deleteObject(storageRef(storage, bg.storagePath)); } catch (e) {} }
+                    allModels._common.background = null;
+                    renderCommonBgEditor();
+                    queuePreview();
+                });
+                ['eBgX','eBgY','eBgWidth','eBgHeight','eBgOpacity'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.addEventListener('input', applyCommonEdit);
+                });
+                document.getElementById('eBgOpacity').addEventListener('input', (e) => {
+                    document.getElementById('bgOpVal').textContent = parseFloat(e.target.value).toFixed(2);
+                });
+            }
+            queuePreview();
+        }
+
+                function selectType(code) {
             currentType = code;
             currentRect = null;
             currentTextIdx = null;
@@ -725,7 +1028,6 @@
             const file = e.target.files[0];
             if (!file) return;
 
-            // limite 5MB raisonnable
             if (file.size > 5 * 1024 * 1024) {
                 showToast('Image trop grosse (max 5 MB)', 'warning');
                 e.target.value = '';
@@ -735,45 +1037,72 @@
             try {
                 showToast('Upload en cours...', 'info');
                 const replaceIdx = e.target.dataset.replaceIdx;
+                const target = e.target.dataset.target || 'rect';
 
-                // upload vers Firebase Storage
                 const ext = (file.name.split('.').pop() || 'png').toLowerCase();
-                const fileName = `models/${currentType}/${currentRect}_${Date.now()}.${ext}`;
+                const pathPrefix = (target === 'background') ? `models/_common/background`
+                                  : (target === 'commonR1')   ? `models/_common/R1`
+                                  : `models/${currentType}/${currentRect}`;
+                const fileName = `${pathPrefix}_${Date.now()}.${ext}`;
                 const ref = storageRef(storage, fileName);
                 await uploadBytes(ref, file);
                 const url = await getDownloadURL(ref);
                 clearModelsCache();
-                clearImgCache(); // vider le cache images pour forcer rechargement
+                clearImgCache();
 
-                if (replaceIdx !== '' && replaceIdx !== undefined) {
-                    // remplacement de l'image existante
-                    const idx = parseInt(replaceIdx);
-                    const item = allModels[currentType][currentRect][idx];
-                    // supprimer l'ancienne si c'était dans Storage
-                    if (item.storagePath) {
-                        try { await deleteObject(storageRef(storage, item.storagePath)); } catch (e) {}
+                if (target === 'background') {
+                    // remplacer/créer l'arrière-plan commun
+                    const oldBg = allModels._common.background;
+                    if (oldBg && oldBg.storagePath) {
+                        try { await deleteObject(storageRef(storage, oldBg.storagePath)); } catch (e) {}
                     }
-                    item.url = url;
-                    item.storagePath = fileName;
-                    delete item.dataUrl; // nettoyer l'ancien base64 si présent
-                    selectText(idx);
-                } else {
-                    const newImage = {
-                        kind: 'image',
-                        url: url,
-                        storagePath: fileName,
-                        x: 5,
-                        y: 5,
-                        width: 30,
-                        height: 30,
-                        opacity: 1,
-                        theme: 'normal'
+                    allModels._common.background = {
+                        url, storagePath: fileName,
+                        x: 0, y: 0, width: 210, height: 297, opacity: 0.15
                     };
-                    allModels[currentType][currentRect].push(newImage);
-                    const newIdx = allModels[currentType][currentRect].length - 1;
-                    renderRectsList();
-                    renderTextsList();
-                    selectText(newIdx);
+                    renderCommonBgEditor();
+                } else if (target === 'commonR1') {
+                    if (replaceIdx !== '' && replaceIdx !== undefined) {
+                        const idx = parseInt(replaceIdx);
+                        const item = allModels._common.R1[idx];
+                        if (item.storagePath) {
+                            try { await deleteObject(storageRef(storage, item.storagePath)); } catch (e) {}
+                        }
+                        item.url = url;
+                        item.storagePath = fileName;
+                        delete item.dataUrl;
+                        commonCurrentTextIdx = idx;
+                    } else {
+                        allModels._common.R1.push({
+                            kind: 'image', url, storagePath: fileName,
+                            x: 5, y: 5, width: 30, height: 30, opacity: 1, theme: 'normal'
+                        });
+                        commonCurrentTextIdx = allModels._common.R1.length - 1;
+                    }
+                    renderCommonR1Editor();
+                } else {
+                    // upload classique dans un rectangle d'un type
+                    if (replaceIdx !== '' && replaceIdx !== undefined) {
+                        const idx = parseInt(replaceIdx);
+                        const item = allModels[currentType][currentRect][idx];
+                        if (item.storagePath) {
+                            try { await deleteObject(storageRef(storage, item.storagePath)); } catch (e) {}
+                        }
+                        item.url = url;
+                        item.storagePath = fileName;
+                        delete item.dataUrl;
+                        selectText(idx);
+                    } else {
+                        const newImage = {
+                            kind: 'image', url, storagePath: fileName,
+                            x: 5, y: 5, width: 30, height: 30, opacity: 1, theme: 'normal'
+                        };
+                        allModels[currentType][currentRect].push(newImage);
+                        const newIdx = allModels[currentType][currentRect].length - 1;
+                        renderRectsList();
+                        renderTextsList();
+                        selectText(newIdx);
+                    }
                 }
                 queuePreview();
                 showToast('Image téléversée', 'success');
@@ -823,7 +1152,10 @@
 
         async function updatePreview() {
             try {
-                const url = await getPreviewBlobURL(currentType, allModels[currentType]);
+                // utiliser le type courant ou le premier type si on est en mode commun
+                const typeForPreview = currentType || TYPES[0]?.code;
+                if (!typeForPreview) return;
+                const url = await getPreviewBlobURL(typeForPreview, allModels[typeForPreview], allModels);
                 document.getElementById('pdfPreview').src = url;
             } catch (e) {
                 console.error('Aperçu:', e);
