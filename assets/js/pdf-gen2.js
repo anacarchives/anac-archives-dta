@@ -209,18 +209,13 @@ function drawRect(pdoc, x, y, w, h, texts, data) {
                 const opacity = (t.opacity !== undefined) ? t.opacity : 1;
                 const theme = t.theme || 'normal';
 
-                // chercher dans le cache avec la clé correcte
-                const cacheKey = (t.storagePath || src.substring(0, 80)) + '__' + theme;
-                const imgData = _imgCache[cacheKey] || _imgCache[(t.storagePath || src.substring(0, 80)) + '__normal'] || src;
+                // chercher la version pré-cuite (avec opacité dans l'alpha)
+                const baseKey = (t.storagePath || src.substring(0, 80));
+                const cacheKey = baseKey + '__' + theme + '__op' + opacity.toFixed(2);
+                const imgData = _imgCache[cacheKey] || _imgCache[baseKey + '__normal'] || src;
 
-                if (opacity < 1) {
-                    pdoc.saveGraphicsState();
-                    pdoc.setGState(new pdoc.GState({ opacity: opacity }));
-                    pdoc.addImage(imgData, 'PNG', ix, iy, iw, ih);
-                    pdoc.restoreGraphicsState();
-                } else {
-                    pdoc.addImage(imgData, 'PNG', ix, iy, iw, ih);
-                }
+                // plus besoin de setGState — l'opacité est cuite dans l'image
+                pdoc.addImage(imgData, 'PNG', ix, iy, iw, ih);
             } catch (e) {
                 console.warn('Image render error:', e.message);
             }
@@ -265,7 +260,7 @@ function loadImageAsDataUrl(src) {
 async function prepareImages(model) {
     const promises = [];
     for (const key of Object.keys(model)) {
-        if (key.startsWith('_')) continue; // ignorer _heights etc.
+        if (key.startsWith('_')) continue;
         const arr = model[key];
         if (!Array.isArray(arr)) continue;
         for (const t of arr) {
@@ -273,17 +268,22 @@ async function prepareImages(model) {
             const src = t.url || t.dataUrl;
             if (!src) continue;
             const theme = t.theme || 'normal';
-            const cacheKey = (t.storagePath || src.substring(0, 80)) + '__' + theme;
+            const opacity = (t.opacity !== undefined) ? t.opacity : 1;
+            // clé de cache inclut l'opacité aussi pour avoir une version pré-cuite
+            const cacheKey = (t.storagePath || src.substring(0, 80)) + '__' + theme + '__op' + opacity.toFixed(2);
 
             promises.push((async () => {
                 try {
-                    // toujours charger depuis URL (storage ou data:)
                     const baseDataUrl = src.startsWith('data:')
                         ? src
                         : await loadImageAsDataUrl(src);
-                    const themed = applyThemeToDataUrl(baseDataUrl, theme);
-                    _imgCache[cacheKey] = themed;
-                    // aussi stocker la version normale pour le drawRect
+                    let processed = applyThemeToDataUrl(baseDataUrl, theme);
+                    // si opacité < 1, on cuit l'alpha dans l'image (évite le bug setGState)
+                    if (opacity < 1) {
+                        processed = await bakeOpacityIntoImage(processed, opacity);
+                    }
+                    _imgCache[cacheKey] = processed;
+                    // version normale pour fallback
                     const normalKey = (t.storagePath || src.substring(0, 80)) + '__normal';
                     if (!_imgCache[normalKey]) _imgCache[normalKey] = baseDataUrl;
                 } catch (e) {
@@ -293,6 +293,26 @@ async function prepareImages(model) {
         }
     }
     await Promise.all(promises);
+}
+
+// crée une version d'image avec opacité "cuite" dedans (alpha channel modifié)
+// — évite d'avoir à manipuler l'opacité globale de jsPDF (qui peut bugger)
+function bakeOpacityIntoImage(dataUrl, opacity) {
+    return new Promise((resolve) => {
+        if (opacity >= 1) { resolve(dataUrl); return; }
+        const img = new Image();
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.naturalWidth || img.width;
+            canvas.height = img.naturalHeight || img.height;
+            const ctx = canvas.getContext('2d');
+            ctx.globalAlpha = opacity;
+            ctx.drawImage(img, 0, 0);
+            resolve(canvas.toDataURL('image/png'));
+        };
+        img.onerror = () => resolve(dataUrl);
+        img.src = dataUrl;
+    });
 }
 
 // applique un thème (grayscale, watermark) à une dataUrl déjà chargée
@@ -349,7 +369,6 @@ async function buildPDF(typeCode, model, data) {
     if (model) await prepareImages(model);
     if (commonR1.length) await prepareImages({ R1: commonR1 });
     if (background && (background.url || background.dataUrl)) {
-        // précharger l'arrière-plan : on simule un objet image
         await prepareImages({ bg: [{ ...background, kind: 'image', theme: 'normal' }] });
     }
 
@@ -357,25 +376,17 @@ async function buildPDF(typeCode, model, data) {
     if (background && (background.url || background.dataUrl)) {
         try {
             const src = background.url || background.dataUrl;
-            const cacheKey = (background.storagePath || src.substring(0, 80)) + '__normal';
-            const imgData = _imgCache[cacheKey] || src;
             const op = (background.opacity !== undefined) ? background.opacity : 0.15;
+            const baseKey = (background.storagePath || src.substring(0, 80));
+            const cacheKey = baseKey + '__normal__op' + op.toFixed(2);
+            const imgData = _imgCache[cacheKey] || _imgCache[baseKey + '__normal'] || src;
             const bx = background.x || 0;
             const by = background.y || 0;
             const bw = background.width || 210;
             const bh = background.height || 297;
-            if (op < 1) {
-                pdoc.saveGraphicsState();
-                pdoc.setGState(new pdoc.GState({ opacity: op }));
-                pdoc.addImage(imgData, 'PNG', bx, by, bw, bh);
-                pdoc.restoreGraphicsState();
-                // FORCER le reset complet de l'opacité (sécurité)
-                try {
-                    pdoc.setGState(new pdoc.GState({ opacity: 1 }));
-                } catch (e) {}
-            } else {
-                pdoc.addImage(imgData, 'PNG', bx, by, bw, bh);
-            }
+
+            // plus besoin de setGState — l'opacité est déjà cuite dans l'image
+            pdoc.addImage(imgData, 'PNG', bx, by, bw, bh);
         } catch (e) { console.warn('Background render:', e.message); }
     }
 
