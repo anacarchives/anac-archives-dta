@@ -1009,18 +1009,36 @@
 
         document.getElementById('btnAddText').addEventListener('click', () => {
             const newText = { texte: 'Nouveau texte', x: 3, y: 5, fontSize: 8, font: 'bold', fontFamily: 'helvetica' };
-            allModels[currentType][currentRect].push(newText);
-            const newIdx = allModels[currentType][currentRect].length - 1;
-            renderRectsList();
-            renderTextsList();
-            selectText(newIdx);
+            if (commonMode === 'R1') {
+                // ajout dans R1 commun
+                allModels._common.R1.push(newText);
+                commonCurrentTextIdx = allModels._common.R1.length - 1;
+                renderCommonR1Editor();
+                renderCommonTextEditor();
+            } else if (commonMode === 'background') {
+                showToast("L'arrière-plan ne contient que l'image, pas de texte", 'info');
+                return;
+            } else {
+                allModels[currentType][currentRect].push(newText);
+                const newIdx = allModels[currentType][currentRect].length - 1;
+                renderRectsList();
+                renderTextsList();
+                selectText(newIdx);
+            }
             queuePreview();
         });
 
         // ── AJOUTER UNE IMAGE ──
         document.getElementById('btnAddImage').addEventListener('click', () => {
             const inp = document.getElementById('fileImageInput');
-            inp.dataset.replaceIdx = ''; // mode ajout (pas remplacement)
+            inp.dataset.replaceIdx = '';
+            if (commonMode === 'R1') {
+                inp.dataset.target = 'commonR1';
+            } else if (commonMode === 'background') {
+                inp.dataset.target = 'background';
+            } else {
+                inp.dataset.target = 'rect';
+            }
             inp.click();
         });
 
