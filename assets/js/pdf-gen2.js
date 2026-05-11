@@ -32,68 +32,103 @@ function getH(model, rectId) {
 }
 
 let cachedModels = null;
-let cinzelLoaded = false;
-let cinzelBase64 = null;
-let cinzelBoldBase64 = null;
 
-// Charge la police Cinzel depuis Google Fonts via le CDN jsdelivr
-async function loadCinzel(pdoc) {
-    if (cinzelBase64) {
-        // déjà téléchargée, juste l'enregistrer dans cette instance jsPDF
+// ─── Polices personnalisées ────────────────────────────
+// Définition des polices supportées avec URLs Google Fonts directes
+const CUSTOM_FONTS = {
+    cinzel: {
+        regular: 'https://fonts.gstatic.com/s/cinzel/v23/8vIU7ww63mVu7gtR-kwKxNvkNOjw-tbnTYrvDE5ZdqU.ttf',
+        bold:    'https://fonts.gstatic.com/s/cinzel/v23/8vIK7ww63mVu7gtR-kwKxNvkNOjw-rGoyatIDg.ttf',
+    },
+    roboto: {
+        regular: 'https://fonts.gstatic.com/s/roboto/v30/KFOmCnqEu92Fr1Mu4mxKKTU1Kg.ttf',
+        bold:    'https://fonts.gstatic.com/s/roboto/v30/KFOlCnqEu92Fr1MmWUlfBBc4.ttf',
+    },
+    playfair: {
+        regular: 'https://fonts.gstatic.com/s/playfairdisplay/v37/nuFvD-vYSZviVYUb_rj3ij__anPXJzDwcbmjWBN2PKdFvUDQ.ttf',
+        bold:    'https://fonts.gstatic.com/s/playfairdisplay/v37/nuFvD-vYSZviVYUb_rj3ij__anPXJzDwcbmjWBN2PKd5vEDQ.ttf',
+    },
+    merriweather: {
+        regular: 'https://fonts.gstatic.com/s/merriweather/v30/u-440qyriQwlOrhSvowK_l5-fCZJ.ttf',
+        bold:    'https://fonts.gstatic.com/s/merriweather/v30/u-4n0qyriQwlOrhSvowK_l52xwNZWMf6.ttf',
+    },
+    notoarabic: {
+        regular: 'https://fonts.gstatic.com/s/notosansarabic/v18/nwpxtLGrOAZMl5nJ_wfgRg3DrWFZWsnVBJ_sS6tlqHHFlhQ5l3sQWIHPqzCfyG2vu3CBFQLaig.ttf',
+        bold:    'https://fonts.gstatic.com/s/notosansarabic/v18/nwpxtLGrOAZMl5nJ_wfgRg3DrWFZWsnVBJ_sS6tlqHHFlhQ5l3sQWIHPqzCfyHWvu3CBFQLaig.ttf',
+    },
+};
+
+const _fontState = {}; // { fontKey: { loaded: bool, regularB64, boldB64 } }
+
+async function loadCustomFont(pdoc, fontKey) {
+    const def = CUSTOM_FONTS[fontKey];
+    if (!def) return false;
+
+    if (!_fontState[fontKey]) _fontState[fontKey] = { loaded: false, regularB64: null, boldB64: null };
+    const state = _fontState[fontKey];
+
+    // déjà chargée en base64 — juste l'attacher au PDF
+    if (state.regularB64) {
         try {
-            pdoc.addFileToVFS('Cinzel-Regular.ttf', cinzelBase64);
-            pdoc.addFont('Cinzel-Regular.ttf', 'cinzel', 'normal');
-            if (cinzelBoldBase64) {
-                pdoc.addFileToVFS('Cinzel-Bold.ttf', cinzelBoldBase64);
-                pdoc.addFont('Cinzel-Bold.ttf', 'cinzel', 'bold');
+            pdoc.addFileToVFS(`${fontKey}-regular.ttf`, state.regularB64);
+            pdoc.addFont(`${fontKey}-regular.ttf`, fontKey, 'normal');
+            if (state.boldB64) {
+                pdoc.addFileToVFS(`${fontKey}-bold.ttf`, state.boldB64);
+                pdoc.addFont(`${fontKey}-bold.ttf`, fontKey, 'bold');
             }
-            cinzelLoaded = true;
-        } catch (e) { console.warn('Cinzel apply:', e); }
-        return;
+            state.loaded = true;
+            return true;
+        } catch (e) { console.warn(`${fontKey} apply:`, e); return false; }
     }
+
+    // télécharger
     try {
-        // jsdelivr proxy vers Google Fonts pour les fichiers TTF
-        const regularUrl = 'https://cdn.jsdelivr.net/npm/@fontsource/cinzel@5.0.18/files/cinzel-latin-400-normal.woff';
-        const boldUrl    = 'https://cdn.jsdelivr.net/npm/@fontsource/cinzel@5.0.18/files/cinzel-latin-700-normal.woff';
-
-        // jsPDF préfère TTF — on tente d'abord
-        const tryTtfReg = 'https://cdn.jsdelivr.net/npm/@fontsource/cinzel@5.0.18/files/cinzel-latin-400-normal.ttf';
-        const tryTtfBold = 'https://cdn.jsdelivr.net/npm/@fontsource/cinzel@5.0.18/files/cinzel-latin-700-normal.ttf';
-
-        const regularBuf = await fetch(tryTtfReg).then(r => {
-            if (!r.ok) throw new Error('Regular non dispo');
+        const regBuf = await fetch(def.regular).then(r => {
+            if (!r.ok) throw new Error('regular ' + r.status);
             return r.arrayBuffer();
         });
-        cinzelBase64 = arrayBufferToBase64(regularBuf);
-        pdoc.addFileToVFS('Cinzel-Regular.ttf', cinzelBase64);
-        pdoc.addFont('Cinzel-Regular.ttf', 'cinzel', 'normal');
+        state.regularB64 = arrayBufferToBase64(regBuf);
+        pdoc.addFileToVFS(`${fontKey}-regular.ttf`, state.regularB64);
+        pdoc.addFont(`${fontKey}-regular.ttf`, fontKey, 'normal');
 
-        const boldBuf = await fetch(tryTtfBold).then(r => {
-            if (!r.ok) throw new Error('Bold non dispo');
-            return r.arrayBuffer();
-        });
-        cinzelBoldBase64 = arrayBufferToBase64(boldBuf);
-        pdoc.addFileToVFS('Cinzel-Bold.ttf', cinzelBoldBase64);
-        pdoc.addFont('Cinzel-Bold.ttf', 'cinzel', 'bold');
-
-        cinzelLoaded = true;
+        if (def.bold) {
+            try {
+                const boldBuf = await fetch(def.bold).then(r => {
+                    if (!r.ok) throw new Error('bold ' + r.status);
+                    return r.arrayBuffer();
+                });
+                state.boldB64 = arrayBufferToBase64(boldBuf);
+                pdoc.addFileToVFS(`${fontKey}-bold.ttf`, state.boldB64);
+                pdoc.addFont(`${fontKey}-bold.ttf`, fontKey, 'bold');
+            } catch (e) { /* pas grave, on garde regular */ }
+        }
+        state.loaded = true;
+        return true;
     } catch (e) {
-        console.warn('Cinzel non chargée, fallback Times:', e.message);
-        cinzelLoaded = false;
+        console.warn(`Police ${fontKey} non chargée, fallback Times:`, e.message);
+        state.loaded = false;
+        return false;
     }
 }
 
-function usesCinzel(model) {
-    if (!model) return false;
-    for (const key of Object.keys(model)) {
-        const arr = model[key];
-        if (Array.isArray(arr)) {
-            for (const t of arr) {
-                if (t && (t.fontFamily || '').toLowerCase() === 'cinzel') return true;
+// scanne tous les textes d'un modèle (+R1 commun) et collecte les polices utilisées
+function getUsedCustomFonts(model, commonR1) {
+    const set = new Set();
+    const check = (arr) => {
+        if (!Array.isArray(arr)) return;
+        for (const t of arr) {
+            if (t && !t.kind && t.fontFamily && CUSTOM_FONTS[t.fontFamily]) {
+                set.add(t.fontFamily);
             }
         }
+    };
+    if (model) {
+        for (const key of Object.keys(model)) {
+            if (!key.startsWith('_')) check(model[key]);
+        }
     }
-    return false;
+    if (commonR1) check(commonR1);
+    return Array.from(set);
 }
 
 function arrayBufferToBase64(buf) {
@@ -130,14 +165,15 @@ function applyFont(pdoc, font, size, family) {
     const fam = (family || 'helvetica').toLowerCase();
     let style = styleMap[font] || 'bold';
 
-    if (fam === 'cinzel' && cinzelLoaded) {
-        // Cinzel ne supporte que normal et bold
+    // polices personnalisées (Cinzel, Roboto, Playfair, Merriweather, Noto Arabic)
+    if (CUSTOM_FONTS[fam] && _fontState[fam]?.loaded) {
+        // ces polices supportent uniquement normal et bold
         if (style === 'bolditalic' || style === 'italic') style = 'bold';
         try {
-            pdoc.setFont('cinzel', style).setFontSize(size);
+            pdoc.setFont(fam, style).setFontSize(size);
             return;
         } catch (e) {
-            // fallback Times si erreur
+            // fallback ci-dessous
         }
     }
     const validFamily = ['helvetica', 'times', 'courier'].includes(fam) ? fam : 'helvetica';
@@ -293,20 +329,51 @@ async function buildPDF(typeCode, model, data) {
     const pdoc = new jsPDF({ unit: 'mm', format: 'a4' });
     pdoc.setLineWidth(0.4);
 
-    // si un texte utilise Cinzel, charger la police d'abord
-    if (model && usesCinzel(model)) {
-        await loadCinzel(pdoc);
+    // récupérer la section commune (R1 + arrière-plan)
+    const allModels = await getModels();
+    const common = allModels._common || {};
+    const commonR1 = common.R1 || [];
+    const commonR1Height = common.R1Height || 45;
+    const background = common.background || null;
+
+    // charger toutes les polices personnalisées utilisées (Cinzel, Noto Arabic, etc.)
+    const usedFonts = getUsedCustomFonts(model, commonR1);
+    for (const f of usedFonts) {
+        await loadCustomFont(pdoc, f);
     }
 
-    // précharger les images thématisées (grayscale/watermark)
+    // précharger toutes les images (rectangles, R1 commun, arrière-plan)
     if (model) await prepareImages(model);
+    if (commonR1.length) await prepareImages({ R1: commonR1 });
+    if (background) await prepareImages({ bg: [background] });
+
+    // 1) Dessiner l'arrière-plan EN PREMIER (sous tout le reste)
+    if (background && (background.url || background.dataUrl)) {
+        try {
+            const src = background.url || background.dataUrl;
+            const cacheKey = (background.storagePath || src.substring(0, 80)) + '__normal';
+            const imgData = _imgCache[cacheKey] || src;
+            const op = (background.opacity !== undefined) ? background.opacity : 0.15;
+            const bx = background.x || 0;
+            const by = background.y || 0;
+            const bw = background.width || 210;
+            const bh = background.height || 297;
+            if (op < 1) {
+                pdoc.saveGraphicsState();
+                pdoc.setGState(new pdoc.GState({ opacity: op }));
+                pdoc.addImage(imgData, 'PNG', bx, by, bw, bh);
+                pdoc.restoreGraphicsState();
+            } else {
+                pdoc.addImage(imgData, 'PNG', bx, by, bw, bh);
+            }
+        } catch (e) { console.warn('Background render:', e.message); }
+    }
 
     let y = 3;
 
-    // R1 — maintenant éditable comme les autres rectangles
-    const R1_H = getH(model, 'R1');
-    drawRect(pdoc, M_L, y, CW, R1_H, model?.R1, data);
-    y += R1_H;
+    // 2) R1 — commun à tous les types (depuis _common.R1)
+    drawRect(pdoc, M_L, y, CW, commonR1Height, commonR1, data);
+    y += commonR1Height;
 
     // R2
     const R2_H = getH(model, 'R2');
@@ -322,7 +389,7 @@ async function buildPDF(typeCode, model, data) {
     const R4_H = getH(model, 'R4');
     drawRect(pdoc, M_L, y, CW, R4_H, model?.R4, data);
 
-    // signature directeur sur R4 si fournie (toujours visible peu importe le modèle)
+    // signature directeur sur R4
     if (data && data.signatureUrl) {
         try {
             pdoc.addImage(data.signatureUrl, 'PNG', M_L + CW * 0.70 + 16, y - 1, 36, 10);
@@ -334,7 +401,7 @@ async function buildPDF(typeCode, model, data) {
     // R6 fixe par le bas
     const R6_H = getH(model, 'R6');
 
-    // R5 = ce qui reste entre y et le début de R6 (minimum 10mm pour ne pas casser la mise en page)
+    // R5 = ce qui reste entre y et le début de R6
     const R5_H = Math.max(10, PAGE_H - 3 - y - R6_H);
     drawRect(pdoc, M_L, y, CW, R5_H, model?.R5, data);
     y += R5_H;
@@ -347,14 +414,13 @@ async function buildPDF(typeCode, model, data) {
 }
 
 // Pour l'éditeur : génère un aperçu sans cacher (utilise le modèle passé en paramètre)
-// Charge aussi tous les champs personnalisés et leur attribue une valeur d'exemple
-export async function generatePreviewPDF(typeCode, model) {
+// allModelsOverride permet de passer le _common à jour (édition en cours non sauvegardée)
+export async function generatePreviewPDF(typeCode, model, allModelsOverride = null) {
     let customData = {};
     try {
         const snap = await getDoc(doc(db, 'params', 'champs'));
         if (snap.exists() && snap.data().list) {
             const champs = snap.data().list;
-            // pour chaque champ, mettre une valeur d'exemple = nom du champ en majuscules
             Object.values(champs).forEach(c => {
                 customData[c.id] = '[' + c.name.toUpperCase() + ']';
             });
@@ -369,20 +435,25 @@ export async function generatePreviewPDF(typeCode, model) {
         dateReception: '08/05/2026',
         ...customData,
     };
+
+    // si allModelsOverride fourni → écraser le cache pour ce build
+    if (allModelsOverride) {
+        cachedModels = allModelsOverride;
+    }
+
     return await buildPDF(typeCode, model, fakeData);
 }
 
-export async function getPreviewDataURI(typeCode, model) {
-    const pdoc = await generatePreviewPDF(typeCode, model);
+export async function getPreviewDataURI(typeCode, model, allModelsOverride = null) {
+    const pdoc = await generatePreviewPDF(typeCode, model, allModelsOverride);
     return pdoc.output('datauristring');
 }
 
 // alternative plus sûre que data: — utilise un Blob URL local
 let _lastPreviewBlobUrl = null;
-export async function getPreviewBlobURL(typeCode, model) {
-    const pdoc = await generatePreviewPDF(typeCode, model);
+export async function getPreviewBlobURL(typeCode, model, allModelsOverride = null) {
+    const pdoc = await generatePreviewPDF(typeCode, model, allModelsOverride);
     const blob = pdoc.output('blob');
-    // libérer le précédent pour éviter les fuites mémoire
     if (_lastPreviewBlobUrl) URL.revokeObjectURL(_lastPreviewBlobUrl);
     _lastPreviewBlobUrl = URL.createObjectURL(blob);
     return _lastPreviewBlobUrl;
