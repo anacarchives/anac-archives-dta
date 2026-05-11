@@ -218,8 +218,7 @@ function loadImageAsDataUrl(src) {
             }
         };
         img.onerror = (e) => reject(new Error('Image load failed: ' + src));
-        // forcer le rechargement sans cache pour Firebase Storage
-        img.src = src + (src.includes('?') ? '&' : '?') + '_t=' + Date.now();
+        img.src = src;
     });
 }
 
