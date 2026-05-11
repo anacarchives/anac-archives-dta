@@ -148,6 +148,7 @@ async function getModels() {
 }
 
 export function clearModelsCache() { cachedModels = null; }
+export function clearImgCache() { Object.keys(_imgCache).forEach(k => delete _imgCache[k]); }
 
 function applyFont(pdoc, font, size, family) {
     const styleMap = {
@@ -199,9 +200,9 @@ function drawRect(pdoc, x, y, w, h, texts, data) {
                 const opacity = (t.opacity !== undefined) ? t.opacity : 1;
                 const theme = t.theme || 'normal';
 
-                // utiliser l'image préparée depuis le cache (stockée par dataURL en cache)
-                const cacheKey = src + '__' + theme;
-                let imgData = _imgCache[cacheKey] || src;
+                // chercher dans le cache avec la clé correcte
+                const cacheKey = (t.storagePath || src.substring(0, 80)) + '__' + theme;
+                const imgData = _imgCache[cacheKey] || _imgCache[(t.storagePath || src.substring(0, 80)) + '__normal'] || src;
 
                 if (opacity < 1) {
                     pdoc.saveGraphicsState();
@@ -212,7 +213,7 @@ function drawRect(pdoc, x, y, w, h, texts, data) {
                     pdoc.addImage(imgData, 'PNG', ix, iy, iw, ih);
                 }
             } catch (e) {
-                console.warn('Image error:', e);
+                console.warn('Image render error:', e.message);
             }
             continue;
         }
@@ -233,11 +234,11 @@ const _imgCache = {};
 function loadImageAsDataUrl(src) {
     return new Promise((resolve, reject) => {
         const img = new Image();
-        img.crossOrigin = 'anonymous'; // nécessaire pour les images Storage
+        img.crossOrigin = 'anonymous';
         img.onload = () => {
             const canvas = document.createElement('canvas');
-            canvas.width = img.naturalWidth || img.width;
-            canvas.height = img.naturalHeight || img.height;
+            canvas.width = img.naturalWidth || img.width || 100;
+            canvas.height = img.naturalHeight || img.height || 100;
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0);
             try {
@@ -246,13 +247,45 @@ function loadImageAsDataUrl(src) {
                 reject(e);
             }
         };
-        img.onerror = () => reject(new Error('Image load failed: ' + src));
-        img.src = src;
+        img.onerror = (e) => reject(new Error('Image load failed: ' + src));
+        // forcer le rechargement sans cache pour Firebase Storage
+        img.src = src + (src.includes('?') ? '&' : '?') + '_t=' + Date.now();
     });
 }
 
-// applique un thème (grayscale, watermark) à une dataUrl déjà chargée
-function applyThemeToDataUrl(dataUrl, theme) {
+// précharge TOUTES les images du modèle (storage URL ou dataUrl) et les met en cache base64
+async function prepareImages(model) {
+    const promises = [];
+    for (const key of Object.keys(model)) {
+        if (key.startsWith('_')) continue; // ignorer _heights etc.
+        const arr = model[key];
+        if (!Array.isArray(arr)) continue;
+        for (const t of arr) {
+            if (!t || t.kind !== 'image') continue;
+            const src = t.url || t.dataUrl;
+            if (!src) continue;
+            const theme = t.theme || 'normal';
+            const cacheKey = (t.storagePath || src.substring(0, 80)) + '__' + theme;
+
+            promises.push((async () => {
+                try {
+                    // toujours charger depuis URL (storage ou data:)
+                    const baseDataUrl = src.startsWith('data:')
+                        ? src
+                        : await loadImageAsDataUrl(src);
+                    const themed = applyThemeToDataUrl(baseDataUrl, theme);
+                    _imgCache[cacheKey] = themed;
+                    // aussi stocker la version normale pour le drawRect
+                    const normalKey = (t.storagePath || src.substring(0, 80)) + '__normal';
+                    if (!_imgCache[normalKey]) _imgCache[normalKey] = baseDataUrl;
+                } catch (e) {
+                    console.warn('Image preload failed:', src, e.message);
+                }
+            })());
+        }
+    }
+    await Promise.all(promises);
+}
     if (theme === 'normal' || !theme) return dataUrl;
 
     const img = new Image();
