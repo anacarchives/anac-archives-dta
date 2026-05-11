@@ -345,7 +345,10 @@ async function buildPDF(typeCode, model, data) {
     // précharger toutes les images (rectangles, R1 commun, arrière-plan)
     if (model) await prepareImages(model);
     if (commonR1.length) await prepareImages({ R1: commonR1 });
-    if (background) await prepareImages({ bg: [background] });
+    if (background && (background.url || background.dataUrl)) {
+        // précharger l'arrière-plan : on simule un objet image
+        await prepareImages({ bg: [{ ...background, kind: 'image', theme: 'normal' }] });
+    }
 
     // 1) Dessiner l'arrière-plan EN PREMIER (sous tout le reste)
     if (background && (background.url || background.dataUrl)) {
