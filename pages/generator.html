@@ -193,11 +193,9 @@
             let input = '';
             const hasOptions = (f.options || []).length > 0;
 
-            // détection : champ "numéro d'autorisation"
-            const isNumeroField =
-                f.id === 'numero' || f.id === 'n' ||
-                (f.name && f.name.toLowerCase().includes('numéro')) ||
-                (f.name && f.name.toLowerCase().includes('numero'));
+            // détection : champ "numéro d'autorisation" — UNIQUEMENT par ID exact
+            // (avant on détectait sur le nom mais ça causait des conflits avec "Numéro Passport" etc.)
+            const isNumeroField = f.id === 'numero' || f.id === 'n';
 
             if (isNumeroField) {
                 // champ verrouillé avec format depuis le type — seul le milieu modifiable
@@ -342,10 +340,7 @@
                 let val = '';
                 const hasOptions = (f.options || []).length > 0;
                 const isCombo = hasOptions && f.type !== 'date' && f.type !== 'number' && f.type !== 'textarea';
-                const isNumeroField =
-                    f.id === 'numero' || f.id === 'n' ||
-                    (f.name && f.name.toLowerCase().includes('numéro')) ||
-                    (f.name && f.name.toLowerCase().includes('numero'));
+                const isNumeroField = f.id === 'numero' || f.id === 'n';
 
                 if (isNumeroField) {
                     // lire depuis le hidden input ou recomposer depuis le champ verrouillé
@@ -368,12 +363,8 @@
                 data[f.id] = val;
             }
 
-            // si un champ personnalisé a "numéro" dans le nom, sa valeur devient le numéro réel
-            const numeroCustom = visible.find(f =>
-                f.id === 'numero' || f.id === 'n' ||
-                (f.name && f.name.toLowerCase().includes('numéro')) ||
-                (f.name && f.name.toLowerCase().includes('numero'))
-            );
+            // si un champ personnalisé a id 'numero' ou 'n', sa valeur devient le numéro réel
+            const numeroCustom = visible.find(f => f.id === 'numero' || f.id === 'n');
             if (numeroCustom && data[numeroCustom.id]) {
                 data.numero = data[numeroCustom.id];
             }
