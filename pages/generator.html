@@ -292,9 +292,15 @@
                 const isManual = man.style.display !== 'none';
                 if (isManual) {
                     man.style.display = 'none'; sel.style.display = '';
+                    // restaurer required sur le select, retirer de l'input
+                    if (sel.dataset.wasRequired === '1') sel.required = true;
+                    man.required = false;
                     e.target.textContent = 'Saisir manuellement';
                 } else {
                     sel.style.display = 'none'; man.style.display = '';
+                    // retirer required du select caché, mettre sur l'input visible
+                    if (sel.required) { sel.dataset.wasRequired = '1'; sel.required = false; }
+                    man.required = (sel.dataset.wasRequired === '1');
                     e.target.textContent = 'Choisir dans la liste';
                     man.focus();
                 }
@@ -310,6 +316,8 @@
                 if (man) {
                     sel.style.display = 'none';
                     man.style.display = '';
+                    if (sel.required) { sel.dataset.wasRequired = '1'; sel.required = false; }
+                    man.required = (sel.dataset.wasRequired === '1');
                     if (link) link.textContent = 'Choisir dans la liste';
                     man.focus();
                 }
